@@ -27,6 +27,7 @@ import { createMetrics } from '../src/core/metrics.js';
 import { createLocalAssetStore } from '../src/core/asset-store.js';
 import { createApiApp } from '../src/server.js';
 import type { AppContext } from '../src/core/context.js';
+import { createMockNotifyListener } from '../src/test/api-fixture.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -87,6 +88,7 @@ function startServer(pool: pg.Pool): Promise<{ server: http.Server; url: string 
       seedFromDb: () => Promise.resolve(),
     },
     assetStore: createLocalAssetStore(ASSET_STORAGE_PATH),
+    notifyListener: createMockNotifyListener(),
     isShuttingDown: false,
   };
 

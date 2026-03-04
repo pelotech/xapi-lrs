@@ -5,6 +5,7 @@ import pino from 'pino';
 import { createMetrics } from '../../core/metrics.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
+import { createMockNotifyListener } from '../../test/api-fixture.js';
 import { createApiApp } from '../../server.js';
 
 export const XAPI_HEADERS = {
@@ -66,6 +67,7 @@ export function startTestServer(pool: import('pg').Pool) {
       seedFromDb: () => Promise.resolve(),
     },
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-test-assets')),
+    notifyListener: createMockNotifyListener(),
     isShuttingDown: false,
   };
   const app = createApiApp(ctx);

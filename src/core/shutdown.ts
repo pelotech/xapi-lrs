@@ -32,7 +32,15 @@ export async function gracefulShutdown(
   adminServer.closeIdleConnections();
   await new Promise<void>((resolve) => adminServer.on('close', resolve));
 
-  // 4. Close DB connection pool
+  // 4. Stop PG LISTEN/NOTIFY listener
+  try {
+    await ctx.notifyListener.stop();
+    logger.info('PG notify listener stopped');
+  } catch (err) {
+    logger.error({ err }, 'Error stopping PG notify listener');
+  }
+
+  // 5. Close DB connection pool
   try {
     await ctx.pool.end();
     logger.info('Database connection pool closed');

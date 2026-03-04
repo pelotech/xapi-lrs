@@ -20,6 +20,10 @@ const ALLOWED_PARAMS: Record<string, ReadonlySet<string>> = {
     'registration', 'related_activities', 'related_agents',
     'since', 'until', 'limit', 'format', 'attachments', 'ascending', 'cursor',
   ]),
+  'GET /xapi/statements/stream': new Set([
+    'verb', 'activity', 'agent', 'registration',
+    'related_activities', 'related_agents', 'since', 'format',
+  ]),
   'PUT /xapi/statements': new Set(['statementId']),
   'POST /xapi/statements': new Set(),
 

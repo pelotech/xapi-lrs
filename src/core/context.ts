@@ -9,6 +9,7 @@ import { connectWithRetry } from './db.js';
 import { createMetrics, registerPoolMetrics } from './metrics.js';
 import { createLocalAssetStore } from './asset-store.js';
 import { createJwtVerifier } from './jwt-verifier.js';
+import { PgNotifyListener } from './pg-notify.js';
 
 /** A pool client with tenant RLS already scoped via transaction-local GUCs. */
 export type ScopedClient = pg.PoolClient;
@@ -20,6 +21,7 @@ export interface AppContext {
   readonly metrics: AppMetrics;
   readonly jwtVerifier: JwtVerifier;
   readonly assetStore: AssetStore;
+  readonly notifyListener: PgNotifyListener;
   isShuttingDown: boolean;
 }
 
@@ -108,6 +110,7 @@ export interface RequestContext {
   readonly xapiGrantedScopes?: readonly string[];
   readonly xapiReadMineOnly?: boolean;
   readonly xapiCredentialIfi?: string;
+  readonly tenantId?: string;
 }
 
 export async function createAppContext(config: AppConfig): Promise<AppContext> {
@@ -128,5 +131,10 @@ export async function createAppContext(config: AppConfig): Promise<AppContext> {
   // 5. Asset store (local filesystem)
   const assetStore = createLocalAssetStore(config.ASSET_STORAGE_PATH);
 
-  return { config, logger, pool, metrics, jwtVerifier, assetStore, isShuttingDown: false };
+  // 6. PG LISTEN/NOTIFY listener for SSE streaming
+  const notifyListener = new PgNotifyListener(config.DATABASE_URL, logger);
+  await notifyListener.start();
+  await notifyListener.listen('xapi_statements_new');
+
+  return { config, logger, pool, metrics, jwtVerifier, assetStore, notifyListener, isShuttingDown: false };
 }

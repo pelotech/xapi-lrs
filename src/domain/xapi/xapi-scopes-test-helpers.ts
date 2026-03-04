@@ -7,6 +7,7 @@ import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
 import { createApiApp } from '../../server.js';
 import type { AppContext } from '../../core/context.js';
+import { createMockNotifyListener } from '../../test/api-fixture.js';
 
 export const TOKEN_ID = '00000000-0000-4000-8000-000000000001';
 export const TOKEN_SECRET = 'test-secret';
@@ -110,6 +111,7 @@ export function startScopedServer(scopes: string[]) {
     metrics: createMetrics(config),
     jwtVerifier: MOCK_JWT_VERIFIER,
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
+    notifyListener: createMockNotifyListener(),
     isShuttingDown: false,
   };
   const app = createApiApp(ctx);

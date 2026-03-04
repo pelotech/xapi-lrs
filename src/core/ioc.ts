@@ -9,11 +9,13 @@ interface JwtAuthUser {
   aud: string;
   sub: string;
   token: string;
+  tenantId?: string;
 }
 
 interface XapiBasicAuthUser {
   key: string;
   secret: string;
+  tenantId: string;
 }
 
 function isJwtAuth(user: unknown): user is JwtAuthUser {
@@ -70,6 +72,11 @@ export const iocContainer: IocContainerFactory<Request> = (request: Request) => 
     };
   }
 
+  // Extract tenantId from auth user
+  let tenantId: string | undefined;
+  if (isJwtAuth(user)) tenantId = user.tenantId;
+  else if (isXapiBasicAuth(user)) tenantId = user.tenantId;
+
   const reqRaw = request as unknown as Record<string, unknown>;
   const reqCtx: RequestContext = {
     log: ctx.logger.child({ requestId }),
@@ -82,6 +89,7 @@ export const iocContainer: IocContainerFactory<Request> = (request: Request) => 
     xapiGrantedScopes: reqRaw.xapiGrantedScopes as string[] | undefined,
     xapiReadMineOnly: reqRaw.xapiReadMineOnly as boolean | undefined,
     xapiCredentialIfi: reqRaw.xapiCredentialIfi as string | undefined,
+    tenantId,
   };
 
   return {

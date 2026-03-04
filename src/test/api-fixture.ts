@@ -22,8 +22,24 @@ import pino from 'pino';
 import { createMetrics } from '../core/metrics.js';
 import { parseConfigFromEnv } from '../core/config.js';
 import { createLocalAssetStore } from '../core/asset-store.js';
+import { EventEmitter } from 'node:events';
 import type { AppContext } from '../core/context.js';
+import type { PgNotifyListener } from '../core/pg-notify.js';
 import { createApiApp } from '../server.js';
+
+/** Mock PgNotifyListener backed by a plain EventEmitter. */
+export function createMockNotifyListener(): PgNotifyListener {
+  const emitter = new EventEmitter();
+  return {
+    start: () => Promise.resolve(),
+    stop: () => Promise.resolve(),
+    listen: () => Promise.resolve(),
+    on: (ch: string, cb: (payload: string) => void) => emitter.on(ch, cb),
+    off: (ch: string, cb: (payload: string) => void) => { emitter.off(ch, cb); },
+    // Expose emitter for tests that need to emit synthetic events
+    emit: (ch: string, payload: string) => emitter.emit(ch, payload),
+  } as unknown as PgNotifyListener;
+}
 
 /** Minimal mock pg.Pool — returns empty result sets for all queries. */
 function createMockPool() {
@@ -61,6 +77,7 @@ function createTestContext(): AppContext {
       seedFromDb: () => Promise.resolve(),
     },
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-test-assets')),
+    notifyListener: createMockNotifyListener(),
     isShuttingDown: false,
   };
 }

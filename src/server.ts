@@ -11,6 +11,7 @@ import { normalizeRoute } from './core/metrics.js';
 import { gracefulShutdown } from './core/shutdown.js';
 import { xapiAlternateSyntaxMiddleware } from './domain/xapi/xapi-alternate-syntax.middleware.js';
 import { xapiQueryParamsMiddleware } from './domain/xapi/xapi-query-params.middleware.js';
+import { statementsStreamHandler } from './domain/xapi/statements-stream.js';
 import { createAdminRoutes } from './domain/admin/routes.js';
 
 export interface ServerHandle {
@@ -136,7 +137,10 @@ export function createApiApp(ctx: AppContext): express.Express {
   // 11. Reject unknown xAPI query parameters (before TSOA routes)
   app.use('/xapi', xapiQueryParamsMiddleware);
 
-  // 12. TSOA-generated routes
+  // 12. SSE streaming endpoint (before TSOA so it's not intercepted)
+  app.get('/xapi/statements/stream', statementsStreamHandler);
+
+  // 13. TSOA-generated routes
   RegisterRoutes(app);
 
   // 13. Terminal 404 handler

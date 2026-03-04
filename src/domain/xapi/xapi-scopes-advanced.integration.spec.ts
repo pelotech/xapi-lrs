@@ -8,6 +8,7 @@ import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
 import { createApiApp } from '../../server.js';
 import type { AppContext } from '../../core/context.js';
+import { createMockNotifyListener } from '../../test/api-fixture.js';
 import {
   TOKEN_ID, basicAuth, xapiHeaders, VALID_STATEMENT,
   MOCK_JWT_VERIFIER, startScopedServer,
@@ -271,6 +272,7 @@ describe('define scope gates activity definition merging', () => {
       metrics: createMetrics(config),
       jwtVerifier: MOCK_JWT_VERIFIER,
       assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
+      notifyListener: createMockNotifyListener(),
       isShuttingDown: false,
     };
     const app = createApiApp(ctx);
@@ -418,6 +420,7 @@ describe('scope: statements/read/mine', () => {
       metrics: createMetrics(config),
       jwtVerifier: { ...MOCK_JWT_VERIFIER },
       assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
+      notifyListener: createMockNotifyListener(),
       isShuttingDown: false,
     };
     const app = createApiApp(ctx);

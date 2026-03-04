@@ -32,7 +32,14 @@ export async function expressAuthentication(
     jwtReq.xapiGrantedScopes = scopes;
     jwtReq.xapiReadMineOnly = readMineOnly;
 
-    return { iss, aud, sub, token };
+    // Resolve tenant_id for SSE filtering
+    const { rows: idpRows } = await ctx.pool.query<{ tenant_id: string }>(
+      'SELECT tenant_id FROM tenant.tenant_idps WHERE jwt_iss = $1 AND jwt_aud = $2',
+      [iss, aud],
+    );
+    const tenantId = idpRows[0]?.tenant_id ?? undefined;
+
+    return { iss, aud, sub, token, tenantId };
   }
 
   if (securityName === 'xapi_basic') {
@@ -56,16 +63,17 @@ export async function expressAuthentication(
       throw authError(401, 'Invalid xAPI token id');
     }
 
-    // Look up token scopes from DB (lightweight PK query, no tenant scoping needed)
+    // Look up token scopes + tenant_id from DB (lightweight PK query, no tenant scoping needed)
     const ctx = request.app.locals['ctx'] as AppContext;
-    const { rows } = await ctx.pool.query<{ scopes: string[] }>(
-      'SELECT scopes FROM xapi.tokens WHERE id = $1',
+    const { rows } = await ctx.pool.query<{ scopes: string[]; tenant_id: string }>(
+      'SELECT scopes, tenant_id FROM xapi.tokens WHERE id = $1',
       [key],
     );
     if (!rows[0]) {
       throw authError(401, 'Unknown xAPI token');
     }
     const scopes = rows[0].scopes ?? ['all'];
+    const tenantId = rows[0].tenant_id;
 
     // Enforce scope against the requested method + path
     const { allowed, readMineOnly } = checkScope(scopes, request.method, request.path);
@@ -83,7 +91,7 @@ export async function expressAuthentication(
       basicReq.xapiCredentialIfi = `account:${proto}://${host}|${key}`;
     }
 
-    return { key, secret };
+    return { key, secret, tenantId };
   }
 
   throw authError(501, `Unknown security scheme: ${securityName}`);
