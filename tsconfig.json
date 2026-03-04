@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "declaration": false,
+    "outDir": "dist",
+    "types": ["node", "vitest/globals"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "sourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "rollup.config.ts"]
+}

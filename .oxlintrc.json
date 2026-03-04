@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "src/build/**"],
+  "overrides": [
+    {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "import/extensions": [
+          "error",
+          "always",
+          {
+            "ignorePackages": true
+          }
+        ],
+        "typescript/no-explicit-any": "error",
+        "typescript/consistent-type-definitions": "off",
+        "typescript/no-inferrable-types": "off",
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ],
+        "no-empty-function": "error",
+        "no-unused-expressions": "error"
+      },
+      "plugins": ["typescript", "import"]
+    },
+    {
+      "files": ["src/domain/**/*controller.ts"],
+      "rules": {
+        "no-unused-vars": [
+          "error",
+          {
+            "args": "none",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/**/*.spec.ts"],
+      "plugins": ["vitest"]
+    }
+  ]
+}

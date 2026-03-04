@@ -1,0 +1,1759 @@
+{
+	"openapi": "3.0.0",
+	"components": {
+		"examples": {},
+		"headers": {},
+		"parameters": {},
+		"requestBodies": {},
+		"responses": {},
+		"schemas": {
+			"Account": {
+				"properties": {
+					"homePage": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"homePage",
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Agent": {
+				"properties": {
+					"mbox": {
+						"type": "string"
+					},
+					"mbox_sha1sum": {
+						"type": "string"
+					},
+					"openid": {
+						"type": "string"
+					},
+					"account": {
+						"$ref": "#/components/schemas/Account"
+					},
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"Agent"
+						],
+						"nullable": false
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AnonymousGroup": {
+				"properties": {
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"Group"
+						],
+						"nullable": false
+					},
+					"name": {
+						"type": "string"
+					},
+					"member": {
+						"items": {
+							"$ref": "#/components/schemas/Agent"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"objectType",
+					"member"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"IdentifiedGroup": {
+				"properties": {
+					"mbox": {
+						"type": "string"
+					},
+					"mbox_sha1sum": {
+						"type": "string"
+					},
+					"openid": {
+						"type": "string"
+					},
+					"account": {
+						"$ref": "#/components/schemas/Account"
+					},
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"Group"
+						],
+						"nullable": false
+					},
+					"name": {
+						"type": "string"
+					},
+					"member": {
+						"items": {
+							"$ref": "#/components/schemas/Agent"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"objectType"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Group": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/AnonymousGroup"
+					},
+					{
+						"$ref": "#/components/schemas/IdentifiedGroup"
+					}
+				]
+			},
+			"Actor": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/Agent"
+					},
+					{
+						"$ref": "#/components/schemas/Group"
+					}
+				]
+			},
+			"Record_string.string_": {
+				"properties": {},
+				"additionalProperties": {
+					"type": "string"
+				},
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
+			"LanguageMap": {
+				"$ref": "#/components/schemas/Record_string.string_",
+				"description": "RFC 5646 language-tagged string map. Keys are language tags, values are human-readable strings."
+			},
+			"Verb": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"display": {
+						"$ref": "#/components/schemas/LanguageMap"
+					}
+				},
+				"required": [
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"InteractionType": {
+				"type": "string",
+				"enum": [
+					"true-false",
+					"choice",
+					"fill-in",
+					"long-fill-in",
+					"matching",
+					"performance",
+					"sequencing",
+					"likert",
+					"numeric",
+					"other"
+				]
+			},
+			"InteractionComponent": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"description": {
+						"$ref": "#/components/schemas/LanguageMap"
+					}
+				},
+				"required": [
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Record_string.unknown_": {
+				"properties": {},
+				"additionalProperties": {},
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
+			"Extensions": {
+				"$ref": "#/components/schemas/Record_string.unknown_",
+				"description": "Open extension map. Keys are IRIs, values are arbitrary JSON."
+			},
+			"ActivityDefinition": {
+				"properties": {
+					"name": {
+						"$ref": "#/components/schemas/LanguageMap"
+					},
+					"description": {
+						"$ref": "#/components/schemas/LanguageMap"
+					},
+					"type": {
+						"type": "string"
+					},
+					"moreInfo": {
+						"type": "string"
+					},
+					"interactionType": {
+						"$ref": "#/components/schemas/InteractionType"
+					},
+					"correctResponsesPattern": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"choices": {
+						"items": {
+							"$ref": "#/components/schemas/InteractionComponent"
+						},
+						"type": "array"
+					},
+					"scale": {
+						"items": {
+							"$ref": "#/components/schemas/InteractionComponent"
+						},
+						"type": "array"
+					},
+					"source": {
+						"items": {
+							"$ref": "#/components/schemas/InteractionComponent"
+						},
+						"type": "array"
+					},
+					"target": {
+						"items": {
+							"$ref": "#/components/schemas/InteractionComponent"
+						},
+						"type": "array"
+					},
+					"steps": {
+						"items": {
+							"$ref": "#/components/schemas/InteractionComponent"
+						},
+						"type": "array"
+					},
+					"extensions": {
+						"$ref": "#/components/schemas/Extensions"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Activity": {
+				"properties": {
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"Activity"
+						],
+						"nullable": false
+					},
+					"id": {
+						"type": "string"
+					},
+					"definition": {
+						"$ref": "#/components/schemas/ActivityDefinition"
+					}
+				},
+				"required": [
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StatementRef": {
+				"properties": {
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"StatementRef"
+						],
+						"nullable": false
+					},
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"objectType",
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Score": {
+				"properties": {
+					"scaled": {
+						"type": "number",
+						"format": "double"
+					},
+					"raw": {
+						"type": "number",
+						"format": "double"
+					},
+					"min": {
+						"type": "number",
+						"format": "double"
+					},
+					"max": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Result": {
+				"properties": {
+					"score": {
+						"$ref": "#/components/schemas/Score"
+					},
+					"success": {
+						"type": "boolean"
+					},
+					"completion": {
+						"type": "boolean"
+					},
+					"response": {
+						"type": "string"
+					},
+					"duration": {
+						"type": "string"
+					},
+					"extensions": {
+						"$ref": "#/components/schemas/Extensions"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ContextActivities": {
+				"properties": {
+					"parent": {
+						"items": {
+							"$ref": "#/components/schemas/Activity"
+						},
+						"type": "array"
+					},
+					"grouping": {
+						"items": {
+							"$ref": "#/components/schemas/Activity"
+						},
+						"type": "array"
+					},
+					"category": {
+						"items": {
+							"$ref": "#/components/schemas/Activity"
+						},
+						"type": "array"
+					},
+					"other": {
+						"items": {
+							"$ref": "#/components/schemas/Activity"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Context": {
+				"properties": {
+					"registration": {
+						"type": "string"
+					},
+					"instructor": {
+						"$ref": "#/components/schemas/Actor"
+					},
+					"team": {
+						"$ref": "#/components/schemas/Group"
+					},
+					"contextActivities": {
+						"$ref": "#/components/schemas/ContextActivities"
+					},
+					"revision": {
+						"type": "string"
+					},
+					"platform": {
+						"type": "string"
+					},
+					"language": {
+						"type": "string"
+					},
+					"statement": {
+						"$ref": "#/components/schemas/StatementRef"
+					},
+					"extensions": {
+						"$ref": "#/components/schemas/Extensions"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Attachment": {
+				"properties": {
+					"usageType": {
+						"type": "string"
+					},
+					"display": {
+						"$ref": "#/components/schemas/LanguageMap"
+					},
+					"description": {
+						"$ref": "#/components/schemas/LanguageMap"
+					},
+					"contentType": {
+						"type": "string"
+					},
+					"length": {
+						"type": "number",
+						"format": "double"
+					},
+					"sha2": {
+						"type": "string"
+					},
+					"fileUrl": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"usageType",
+					"display",
+					"contentType",
+					"length",
+					"sha2"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"SubStatement": {
+				"description": "A SubStatement is like a Statement but cannot be nested, and omits\nid, stored, version, and authority.",
+				"properties": {
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"SubStatement"
+						],
+						"nullable": false
+					},
+					"actor": {
+						"$ref": "#/components/schemas/Actor"
+					},
+					"verb": {
+						"$ref": "#/components/schemas/Verb"
+					},
+					"object": {
+						"anyOf": [
+							{
+								"$ref": "#/components/schemas/Activity"
+							},
+							{
+								"$ref": "#/components/schemas/Agent"
+							},
+							{
+								"$ref": "#/components/schemas/Group"
+							},
+							{
+								"$ref": "#/components/schemas/StatementRef"
+							}
+						]
+					},
+					"result": {
+						"$ref": "#/components/schemas/Result"
+					},
+					"context": {
+						"$ref": "#/components/schemas/Context"
+					},
+					"timestamp": {
+						"type": "string"
+					},
+					"attachments": {
+						"items": {
+							"$ref": "#/components/schemas/Attachment"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"objectType",
+					"actor",
+					"verb",
+					"object"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StatementObject": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/Activity"
+					},
+					{
+						"$ref": "#/components/schemas/Agent"
+					},
+					{
+						"$ref": "#/components/schemas/Group"
+					},
+					{
+						"$ref": "#/components/schemas/StatementRef"
+					},
+					{
+						"$ref": "#/components/schemas/SubStatement"
+					}
+				],
+				"description": "The union of all valid Statement.object types."
+			},
+			"Statement": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"actor": {
+						"$ref": "#/components/schemas/Actor"
+					},
+					"verb": {
+						"$ref": "#/components/schemas/Verb"
+					},
+					"object": {
+						"$ref": "#/components/schemas/StatementObject"
+					},
+					"result": {
+						"$ref": "#/components/schemas/Result"
+					},
+					"context": {
+						"$ref": "#/components/schemas/Context"
+					},
+					"timestamp": {
+						"type": "string"
+					},
+					"stored": {
+						"type": "string"
+					},
+					"authority": {
+						"$ref": "#/components/schemas/Actor"
+					},
+					"version": {
+						"type": "string"
+					},
+					"attachments": {
+						"items": {
+							"$ref": "#/components/schemas/Attachment"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"actor",
+					"verb",
+					"object"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StatementResult": {
+				"description": "Response from a filtered GET /statements query.",
+				"properties": {
+					"statements": {
+						"items": {
+							"$ref": "#/components/schemas/Statement"
+						},
+						"type": "array"
+					},
+					"more": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"statements"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StatementFormat": {
+				"type": "string",
+				"enum": [
+					"ids",
+					"exact",
+					"canonical"
+				]
+			},
+			"Person": {
+				"description": "Response from GET /agents — merged agent identity.",
+				"properties": {
+					"objectType": {
+						"type": "string",
+						"enum": [
+							"Person"
+						],
+						"nullable": false
+					},
+					"name": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"mbox": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"mbox_sha1sum": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"openid": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"account": {
+						"items": {
+							"$ref": "#/components/schemas/Account"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"objectType"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AboutResource": {
+				"description": "Response from GET /about.",
+				"properties": {
+					"version": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"extensions": {
+						"$ref": "#/components/schemas/Extensions"
+					}
+				},
+				"required": [
+					"version"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"HealthcheckResponse": {
+				"properties": {
+					"status": {
+						"type": "string"
+					},
+					"version": {
+						"type": "string"
+					},
+					"uptime": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"status",
+					"version",
+					"uptime"
+				],
+				"type": "object",
+				"additionalProperties": false
+			}
+		},
+		"securitySchemes": {
+			"jwt": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			},
+			"xapi_basic": {
+				"type": "http",
+				"scheme": "basic"
+			}
+		}
+	},
+	"info": {
+		"title": "xAPI LRS",
+		"version": "2.0.0",
+		"contact": {}
+	},
+	"paths": {
+		"/xapi/statements": {
+			"get": {
+				"operationId": "GetStatements",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"anyOf": [
+										{
+											"$ref": "#/components/schemas/StatementResult"
+										},
+										{
+											"$ref": "#/components/schemas/Statement"
+										}
+									]
+								}
+							}
+						}
+					}
+				},
+				"description": "GET /xapi/statements\n\nFetch a single Statement by id, a single voided Statement, or a filtered\nset of Statements. When fetching by id, returns a single Statement.\nOtherwise returns a StatementResult with pagination.",
+				"tags": [
+					"xAPI Statements"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "statementId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "voidedStatementId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "agent",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "verb",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "activity",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "registration",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "related_activities",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
+					},
+					{
+						"in": "query",
+						"name": "related_agents",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
+					},
+					{
+						"in": "query",
+						"name": "since",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "until",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "format",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/StatementFormat"
+						}
+					},
+					{
+						"in": "query",
+						"name": "attachments",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
+					},
+					{
+						"in": "query",
+						"name": "ascending",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "PutStatement",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"description": "PUT /xapi/statements?statementId={id}\n\nStore a single Statement with the given id. The id in the query string\nmust match the Statement's id property (if present).\n\nUses",
+				"tags": [
+					"xAPI Statements"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "statementId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "PostStatements",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"type": "string"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"description": "POST /xapi/statements\n\nStore a single Statement or an array of Statements.\nReturns an array of Statement UUIDs in the same order as submitted.\nSupports both application/json and multipart/mixed (for attachments).\n\nUses",
+				"tags": [
+					"xAPI Statements"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/xapi/activities/state": {
+			"get": {
+				"operationId": "GetState",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"anyOf": [
+										{
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										{}
+									]
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"xAPI State"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "stateId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "registration",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "since",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "PutState",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI State"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "stateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "registration",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "PostState",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI State"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "stateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "registration",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeleteState",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI State"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "stateId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "registration",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/xapi/agents": {
+			"get": {
+				"operationId": "GetAgent",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Person"
+								}
+							}
+						}
+					}
+				},
+				"description": "GET /xapi/agents\n\nReturns a Person object — the merged identity information for the\ngiven agent across all Statements in the LRS.",
+				"tags": [
+					"xAPI Agents"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/xapi/agents/profile": {
+			"get": {
+				"operationId": "GetAgentProfile",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"anyOf": [
+										{
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										{}
+									]
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"xAPI Agent Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "since",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "PutAgentProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Agent Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "PostAgentProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Agent Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeleteAgentProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Agent Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "agent",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/xapi/activities/profile": {
+			"get": {
+				"operationId": "GetActivityProfile",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"anyOf": [
+										{
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										{}
+									]
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"xAPI Activity Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "since",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "PutActivityProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Activity Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "PostActivityProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Activity Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-None-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeleteActivityProfile",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				},
+				"tags": [
+					"xAPI Activity Profile"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "profileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "If-Match",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/xapi/activities": {
+			"get": {
+				"operationId": "GetActivity",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Activity"
+								}
+							}
+						}
+					}
+				},
+				"description": "GET /xapi/activities\n\nReturns the canonical Activity object for the given activityId.\nPer spec, if the LRS has no canonical definition it returns\nan Activity with just the id.",
+				"tags": [
+					"xAPI Activities"
+				],
+				"security": [
+					{
+						"jwt": []
+					},
+					{
+						"xapi_basic": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "activityId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/xapi/about": {
+			"get": {
+				"operationId": "GetAbout",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AboutResource"
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns metadata about this LRS, including supported xAPI versions.\nPer §7.7 this endpoint SHOULD allow unauthenticated access and MUST\nrespond even without the X-Experience-API-Version header (version discovery).",
+				"tags": [
+					"xAPI About"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/v1/healthcheck": {
+			"get": {
+				"operationId": "Healthcheck",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HealthcheckResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"System"
+				],
+				"security": [],
+				"parameters": []
+			}
+		}
+	},
+	"servers": [
+		{
+			"url": "/"
+		}
+	]
+}

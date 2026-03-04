@@ -1,0 +1,29 @@
+{
+  "entryFile": "src/server.ts",
+  "noImplicitAdditionalProperties": "silently-remove-extras",
+  "controllerPathGlobs": ["src/domain/**/*controller.ts"],
+  "spec": {
+    "outputDirectory": "src/build",
+    "specVersion": 3,
+    "version": "2.0.0",
+    "name": "xAPI LRS",
+    "rootSecurity": [],
+    "securityDefinitions": {
+      "jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "xapi_basic": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    }
+  },
+  "routes": {
+    "routesDir": "src/build",
+    "authenticationModule": "./src/core/authentication.ts",
+    "iocModule": "./src/core/ioc.ts",
+    "esm": true
+  }
+}
