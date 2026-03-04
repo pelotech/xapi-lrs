@@ -13,6 +13,7 @@ import { xapiAlternateSyntaxMiddleware } from './domain/xapi/xapi-alternate-synt
 import { xapiQueryParamsMiddleware } from './domain/xapi/xapi-query-params.middleware.js';
 import { statementsStreamHandler } from './domain/xapi/statements-stream.js';
 import { createAdminRoutes } from './domain/admin/routes.js';
+import { ForwardWorker } from './domain/forwarding/forward-worker.js';
 
 export interface ServerHandle {
   shutdown(): Promise<void>;
@@ -35,7 +36,14 @@ export async function startServer(ctx: AppContext): Promise<ServerHandle> {
     apiServer = await listen(apiApp, config.API_PORT, 'API', logger);
   }
 
-  // TODO: start background worker in 'combined' and 'worker' modes
+  // Start forward worker in 'combined' and 'worker' modes
+  if (mode === 'combined' || mode === 'worker') {
+    const forwardWorker = new ForwardWorker(ctx.pool, ctx.notifyListener, ctx.logger, ctx.metrics);
+    ctx.forwardWorker = forwardWorker;
+    forwardWorker.start().catch((err) => {
+      ctx.logger.error({ err }, 'Failed to start forward worker');
+    });
+  }
 
   return {
     apiServer,

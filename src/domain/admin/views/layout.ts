@@ -33,6 +33,7 @@ export function layout(content: string): string {
       <li><a href="/admin/tenants">Tenants</a></li>
       <li><a href="/admin/tokens">Tokens</a></li>
       <li><a href="/admin/statements">Statements</a></li>
+      <li><a href="/admin/forwarding">Forwarding</a></li>
       <li><a href="/admin/logout">Logout</a></li>
     </ul>
   </nav>

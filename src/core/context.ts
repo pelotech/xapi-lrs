@@ -10,6 +10,7 @@ import { createMetrics, registerPoolMetrics } from './metrics.js';
 import { createLocalAssetStore } from './asset-store.js';
 import { createJwtVerifier } from './jwt-verifier.js';
 import { PgNotifyListener } from './pg-notify.js';
+import type { ForwardWorker } from '../domain/forwarding/forward-worker.js';
 
 /** A pool client with tenant RLS already scoped via transaction-local GUCs. */
 export type ScopedClient = pg.PoolClient;
@@ -22,6 +23,7 @@ export interface AppContext {
   readonly jwtVerifier: JwtVerifier;
   readonly assetStore: AssetStore;
   readonly notifyListener: PgNotifyListener;
+  forwardWorker?: ForwardWorker;
   isShuttingDown: boolean;
 }
 

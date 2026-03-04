@@ -7,6 +7,10 @@ export interface AppMetrics {
   httpRequestDuration: client.Histogram;
   httpRequestsTotal: client.Counter;
   httpActiveConnections: client.Gauge;
+  forwardBatchesTotal: client.Counter;
+  forwardStatementsTotal: client.Counter;
+  forwardErrorsTotal: client.Counter;
+  forwardBatchDuration: client.Histogram;
 }
 
 export function createMetrics(config: AppConfig): AppMetrics {
@@ -37,7 +41,45 @@ export function createMetrics(config: AppConfig): AppMetrics {
     registers: [registry],
   });
 
-  return { registry, httpRequestDuration, httpRequestsTotal, httpActiveConnections };
+  const forwardBatchesTotal = new client.Counter({
+    name: 'forward_batches_total',
+    help: 'Total forwarding batches sent',
+    labelNames: ['tenant_id', 'status'] as const,
+    registers: [registry],
+  });
+
+  const forwardStatementsTotal = new client.Counter({
+    name: 'forward_statements_total',
+    help: 'Total statements forwarded',
+    labelNames: ['tenant_id'] as const,
+    registers: [registry],
+  });
+
+  const forwardErrorsTotal = new client.Counter({
+    name: 'forward_errors_total',
+    help: 'Total forwarding errors (max retries exhausted)',
+    labelNames: ['tenant_id'] as const,
+    registers: [registry],
+  });
+
+  const forwardBatchDuration = new client.Histogram({
+    name: 'forward_batch_duration_seconds',
+    help: 'Duration of forwarding batch POST requests in seconds',
+    labelNames: ['tenant_id'] as const,
+    buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30],
+    registers: [registry],
+  });
+
+  return {
+    registry,
+    httpRequestDuration,
+    httpRequestsTotal,
+    httpActiveConnections,
+    forwardBatchesTotal,
+    forwardStatementsTotal,
+    forwardErrorsTotal,
+    forwardBatchDuration,
+  };
 }
 
 export function registerPoolMetrics(pool: pg.Pool, registry: client.Registry): void {

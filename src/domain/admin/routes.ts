@@ -9,6 +9,7 @@ import { dashboardPage } from './views/dashboard.js';
 import { tenantsPage } from './views/tenants-list.js';
 import { tokensPage } from './views/tokens-list.js';
 import { statementsPage, statementDetail } from './views/statements-list.js';
+import { forwardingPage } from './views/forwarding.js';
 import {
   getDashboardStats,
   listTenants,
@@ -16,6 +17,9 @@ import {
   listTokens,
   listStatements,
   getStatementRaw,
+  listForwardTargets,
+  upsertForwardTarget,
+  deleteForwardTarget,
 } from './queries.js';
 
 export function createAdminRoutes(ctx: AppContext): Router {
@@ -102,6 +106,56 @@ export function createAdminRoutes(ctx: AppContext): Router {
       return;
     }
     res.type('html').send(statementDetail(raw));
+  });
+
+  // --- Forwarding ---
+  router.get('/admin/forwarding', async (req: Request, res: Response) => {
+    const [targets, tenants] = await Promise.all([
+      listForwardTargets(pool),
+      listTenantOptions(pool),
+    ]);
+    const html = render(req, forwardingPage(targets, tenants), layout);
+    res.type('html').send(html);
+  });
+
+  router.post('/admin/forwarding', async (req: Request, res: Response) => {
+    const body = req.body as {
+      tenantId?: string;
+      url?: string;
+      authHeader?: string;
+      enabled?: string;
+    };
+    if (!body.tenantId || !body.url) {
+      res.status(400).type('html').send('Missing tenantId or url');
+      return;
+    }
+    await upsertForwardTarget(
+      pool,
+      body.tenantId,
+      body.url,
+      body.authHeader ?? '',
+      body.enabled === 'true',
+    );
+    await ctx.forwardWorker?.reloadTargets();
+
+    const [targets, tenants] = await Promise.all([
+      listForwardTargets(pool),
+      listTenantOptions(pool),
+    ]);
+    const html = render(req, forwardingPage(targets, tenants), layout);
+    res.type('html').send(html);
+  });
+
+  router.delete('/admin/forwarding/:tenantId', async (req: Request, res: Response) => {
+    await deleteForwardTarget(pool, req.params['tenantId'] as string);
+    await ctx.forwardWorker?.reloadTargets();
+
+    const [targets, tenants] = await Promise.all([
+      listForwardTargets(pool),
+      listTenantOptions(pool),
+    ]);
+    const html = render(req, forwardingPage(targets, tenants), layout);
+    res.type('html').send(html);
   });
 
   return router;

@@ -32,7 +32,17 @@ export async function gracefulShutdown(
   adminServer.closeIdleConnections();
   await new Promise<void>((resolve) => adminServer.on('close', resolve));
 
-  // 4. Stop PG LISTEN/NOTIFY listener
+  // 4. Stop forward worker (before notify listener — worker needs both to flush)
+  if (ctx.forwardWorker) {
+    try {
+      await ctx.forwardWorker.stop();
+      logger.info('Forward worker stopped');
+    } catch (err) {
+      logger.error({ err }, 'Error stopping forward worker');
+    }
+  }
+
+  // 5. Stop PG LISTEN/NOTIFY listener
   try {
     await ctx.notifyListener.stop();
     logger.info('PG notify listener stopped');
@@ -40,7 +50,7 @@ export async function gracefulShutdown(
     logger.error({ err }, 'Error stopping PG notify listener');
   }
 
-  // 5. Close DB connection pool
+  // 6. Close DB connection pool
   try {
     await ctx.pool.end();
     logger.info('Database connection pool closed');

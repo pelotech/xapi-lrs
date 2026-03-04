@@ -3,6 +3,7 @@ import type { DashboardStats } from './views/dashboard.js';
 import type { TenantRow } from './views/tenants-list.js';
 import type { TokenRow } from './views/tokens-list.js';
 import type { StatementRow, TenantOption } from './views/statements-list.js';
+import type { ForwardTargetRow } from './views/forwarding.js';
 
 export async function getDashboardStats(pool: pg.Pool): Promise<DashboardStats> {
   const [tenants, tokens, statements, documents] = await Promise.all([
@@ -153,4 +154,46 @@ export async function getStatementRaw(
     [id],
   );
   return rows[0]?.raw ?? null;
+}
+
+// --- Forwarding targets ---
+
+export async function listForwardTargets(pool: pg.Pool): Promise<ForwardTargetRow[]> {
+  const { rows } = await pool.query(`
+    SELECT ft.tenant_id, t.name AS tenant_name, ft.url, ft.auth_header, ft.enabled,
+           ft.last_forwarded_stored, ft.last_error, ft.error_count
+    FROM tenant.forward_targets ft
+    JOIN tenant.tenants t ON t.id = ft.tenant_id
+    ORDER BY t.name
+  `);
+  return rows;
+}
+
+export async function upsertForwardTarget(
+  pool: pg.Pool,
+  tenantId: string,
+  url: string,
+  authHeader: string,
+  enabled: boolean,
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO tenant.forward_targets (tenant_id, url, auth_header, enabled)
+     VALUES ($1::uuid, $2, $3, $4)
+     ON CONFLICT (tenant_id) DO UPDATE
+       SET url = EXCLUDED.url,
+           auth_header = EXCLUDED.auth_header,
+           enabled = EXCLUDED.enabled,
+           updated_at = NOW()`,
+    [tenantId, url, authHeader, enabled],
+  );
+}
+
+export async function deleteForwardTarget(
+  pool: pg.Pool,
+  tenantId: string,
+): Promise<void> {
+  await pool.query(
+    'DELETE FROM tenant.forward_targets WHERE tenant_id = $1::uuid',
+    [tenantId],
+  );
 }
