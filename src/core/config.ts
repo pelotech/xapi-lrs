@@ -28,6 +28,9 @@ const envSchema = z.object({
 
   // Asset storage
   ASSET_STORAGE_PATH: z.string().default('/data/assets'),
+
+  // Admin UI
+  ADMIN_SECRET: z.string().min(16).optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & { logLevel: string };

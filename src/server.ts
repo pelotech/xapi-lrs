@@ -11,6 +11,7 @@ import { normalizeRoute } from './core/metrics.js';
 import { gracefulShutdown } from './core/shutdown.js';
 import { xapiAlternateSyntaxMiddleware } from './domain/xapi/xapi-alternate-syntax.middleware.js';
 import { xapiQueryParamsMiddleware } from './domain/xapi/xapi-query-params.middleware.js';
+import { createAdminRoutes } from './domain/admin/routes.js';
 
 export interface ServerHandle {
   shutdown(): Promise<void>;
@@ -237,7 +238,7 @@ export function createApiApp(ctx: AppContext): express.Express {
 }
 
 function createAdminApp(ctx: AppContext): express.Express {
-  const { metrics, pool } = ctx;
+  const { config, metrics, pool } = ctx;
   const app = express();
   app.disable('x-powered-by');
 
@@ -265,6 +266,12 @@ function createAdminApp(ctx: AppContext): express.Express {
     res.set('Content-Type', metrics.registry.contentType);
     res.end(await metrics.registry.metrics());
   });
+
+  // Admin UI (only when ADMIN_SECRET is configured)
+  if (config.ADMIN_SECRET) {
+    app.use(express.urlencoded({ extended: true }));
+    app.use(createAdminRoutes(ctx));
+  }
 
   return app;
 }
