@@ -43,6 +43,7 @@ export function createAdminRoutes(ctx: AppContext): Router {
     if (secret === config.ADMIN_SECRET) {
       res.cookie('admin_session', secret, {
         httpOnly: true,
+        secure: config.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
       });
