@@ -32,6 +32,9 @@ export async function expressAuthentication(
     const jwtReq = request as unknown as Record<string, unknown>;
     jwtReq.xapiGrantedScopes = scopes;
     jwtReq.xapiReadMineOnly = readMineOnly;
+    if (readMineOnly) {
+      jwtReq.xapiCredentialIfi = `account:${iss}|${sub}`;
+    }
 
     // Resolve tenant_id for SSE filtering
     const { rows: idpRows } = await ctx.pool.query<{ tenant_id: string }>(

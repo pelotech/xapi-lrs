@@ -61,7 +61,7 @@ export const iocContainer: IocContainerFactory<Request> = (request: Request) => 
   const user: unknown = (request as unknown as Record<string, unknown>)['user'];
   const requestId = String(request.id ?? 'unknown');
 
-  // Build xAPI authority from Basic Auth credentials (token_id becomes the account name)
+  // Build xAPI authority from authenticated credential
   let xapiAuthority: XapiAuthority | undefined;
   if (isXapiBasicAuth(user)) {
     const host = request.get('host') ?? 'localhost';
@@ -69,6 +69,11 @@ export const iocContainer: IocContainerFactory<Request> = (request: Request) => 
     xapiAuthority = {
       objectType: 'Agent',
       account: { homePage: `${proto}://${host}`, name: user.key },
+    };
+  } else if (isJwtAuth(user)) {
+    xapiAuthority = {
+      objectType: 'Agent',
+      account: { homePage: user.iss, name: user.sub },
     };
   }
 
