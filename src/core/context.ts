@@ -10,6 +10,7 @@ import { createMetrics, registerPoolMetrics } from './metrics.js';
 import { createLocalAssetStore } from './asset-store.js';
 import { createJwtVerifier } from './jwt-verifier.js';
 import { PgNotifyListener } from './pg-notify.js';
+import { createRateLimiters, type AppRateLimiters } from './rate-limit.js';
 import type { ForwardWorker } from '../domain/forwarding/forward-worker.js';
 
 /** A pool client with tenant RLS already scoped via transaction-local GUCs. */
@@ -23,6 +24,7 @@ export interface AppContext {
   readonly jwtVerifier: JwtVerifier;
   readonly assetStore: AssetStore;
   readonly notifyListener: PgNotifyListener;
+  readonly rateLimiters: AppRateLimiters;
   forwardWorker?: ForwardWorker;
   isShuttingDown: boolean;
 }
@@ -138,5 +140,8 @@ export async function createAppContext(config: AppConfig): Promise<AppContext> {
   await notifyListener.start();
   await notifyListener.listen('xapi_statements_new');
 
-  return { config, logger, pool, metrics, jwtVerifier, assetStore, notifyListener, isShuttingDown: false };
+  // 7. Rate limiters
+  const rateLimiters = createRateLimiters(config);
+
+  return { config, logger, pool, metrics, jwtVerifier, assetStore, notifyListener, rateLimiters, isShuttingDown: false };
 }

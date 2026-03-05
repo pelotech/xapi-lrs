@@ -29,6 +29,16 @@ const envSchema = z.object({
   // Asset storage
   ASSET_STORAGE_PATH: z.string().default('/data/assets'),
 
+  // Rate limiting
+  RATE_LIMIT_IP_WINDOW_MS: z.coerce.number().positive().default(60_000),
+  RATE_LIMIT_IP_MAX_REQUESTS: z.coerce.number().positive().default(300),
+  RATE_LIMIT_TENANT_WINDOW_MS: z.coerce.number().positive().default(60_000),
+  RATE_LIMIT_TENANT_MAX_REQUESTS: z.coerce.number().positive().default(600),
+  RATE_LIMIT_ADMIN_WINDOW_MS: z.coerce.number().positive().default(60_000),
+  RATE_LIMIT_ADMIN_MAX_REQUESTS: z.coerce.number().positive().default(60),
+  RATE_LIMIT_ADMIN_LOGIN_WINDOW_MS: z.coerce.number().positive().default(900_000),
+  RATE_LIMIT_ADMIN_LOGIN_MAX_REQUESTS: z.coerce.number().positive().default(10),
+
   // Admin UI
   ADMIN_SECRET: z.string().min(16).optional(),
 });

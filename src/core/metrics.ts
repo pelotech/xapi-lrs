@@ -11,6 +11,7 @@ export interface AppMetrics {
   forwardStatementsTotal: client.Counter;
   forwardErrorsTotal: client.Counter;
   forwardBatchDuration: client.Histogram;
+  rateLimitHitsTotal: client.Counter;
 }
 
 export function createMetrics(config: AppConfig): AppMetrics {
@@ -70,6 +71,13 @@ export function createMetrics(config: AppConfig): AppMetrics {
     registers: [registry],
   });
 
+  const rateLimitHitsTotal = new client.Counter({
+    name: 'rate_limit_hits_total',
+    help: 'Requests rejected by rate limiting',
+    labelNames: ['layer'] as const,
+    registers: [registry],
+  });
+
   return {
     registry,
     httpRequestDuration,
@@ -79,6 +87,7 @@ export function createMetrics(config: AppConfig): AppMetrics {
     forwardStatementsTotal,
     forwardErrorsTotal,
     forwardBatchDuration,
+    rateLimitHitsTotal,
   };
 }
 

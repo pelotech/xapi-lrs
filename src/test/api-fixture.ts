@@ -22,6 +22,7 @@ import pino from 'pino';
 import { createMetrics } from '../core/metrics.js';
 import { parseConfigFromEnv } from '../core/config.js';
 import { createLocalAssetStore } from '../core/asset-store.js';
+import { createRateLimiters } from '../core/rate-limit.js';
 import { EventEmitter } from 'node:events';
 import type { AppContext } from '../core/context.js';
 import type { PgNotifyListener } from '../core/pg-notify.js';
@@ -78,6 +79,7 @@ function createTestContext(): AppContext {
     },
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-test-assets')),
     notifyListener: createMockNotifyListener(),
+    rateLimiters: createRateLimiters(config),
     isShuttingDown: false,
   };
 }

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import pino from 'pino';
 import { createMetrics } from '../../core/metrics.js';
+import { createRateLimiters } from '../../core/rate-limit.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
 import { createApiApp } from '../../server.js';
@@ -273,6 +274,7 @@ describe('define scope gates activity definition merging', () => {
       jwtVerifier: MOCK_JWT_VERIFIER,
       assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
       notifyListener: createMockNotifyListener(),
+      rateLimiters: createRateLimiters(config),
       isShuttingDown: false,
     };
     const app = createApiApp(ctx);
@@ -421,6 +423,7 @@ describe('scope: statements/read/mine', () => {
       jwtVerifier: { ...MOCK_JWT_VERIFIER },
       assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
       notifyListener: createMockNotifyListener(),
+      rateLimiters: createRateLimiters(config),
       isShuttingDown: false,
     };
     const app = createApiApp(ctx);

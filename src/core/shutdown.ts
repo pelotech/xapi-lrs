@@ -1,5 +1,6 @@
 import type http from 'node:http';
 import type { AppContext } from './context.js';
+import { destroyRateLimiters } from './rate-limit.js';
 
 export async function gracefulShutdown(
   ctx: AppContext,
@@ -50,7 +51,10 @@ export async function gracefulShutdown(
     logger.error({ err }, 'Error stopping PG notify listener');
   }
 
-  // 6. Close DB connection pool
+  // 6. Stop rate limiter prune timers
+  destroyRateLimiters(ctx.rateLimiters);
+
+  // 7. Close DB connection pool
   try {
     await ctx.pool.end();
     logger.info('Database connection pool closed');

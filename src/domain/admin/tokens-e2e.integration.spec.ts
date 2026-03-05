@@ -25,6 +25,7 @@ import express from 'express';
 import { createMetrics } from '../../core/metrics.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
+import { createRateLimiters } from '../../core/rate-limit.js';
 import { createMockNotifyListener } from '../../test/api-fixture.js';
 import { createAdminRoutes } from './routes.js';
 import { createApiApp } from '../../server.js';
@@ -95,6 +96,7 @@ describe.skipIf(!DATABASE_URL)('Token management e2e', () => {
         path.join(os.tmpdir(), 'xapi-lrs-e2e-tokens'),
       ),
       notifyListener: createMockNotifyListener(),
+      rateLimiters: createRateLimiters(config),
       isShuttingDown: false,
     };
 

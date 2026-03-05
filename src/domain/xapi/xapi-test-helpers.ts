@@ -5,6 +5,7 @@ import pino from 'pino';
 import { createMetrics } from '../../core/metrics.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
+import { createRateLimiters } from '../../core/rate-limit.js';
 import { createMockNotifyListener } from '../../test/api-fixture.js';
 import { createApiApp } from '../../server.js';
 
@@ -68,6 +69,7 @@ export function startTestServer(pool: import('pg').Pool) {
     },
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-test-assets')),
     notifyListener: createMockNotifyListener(),
+    rateLimiters: createRateLimiters(config),
     isShuttingDown: false,
   };
   const app = createApiApp(ctx);

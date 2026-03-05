@@ -5,6 +5,7 @@ import pino from 'pino';
 import { createMetrics } from '../../core/metrics.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
+import { createRateLimiters } from '../../core/rate-limit.js';
 import { createApiApp } from '../../server.js';
 import type { AppContext } from '../../core/context.js';
 import { createMockNotifyListener } from '../../test/api-fixture.js';
@@ -112,6 +113,7 @@ export function startScopedServer(scopes: string[]) {
     jwtVerifier: MOCK_JWT_VERIFIER,
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-scope-tests')),
     notifyListener: createMockNotifyListener(),
+    rateLimiters: createRateLimiters(config),
     isShuttingDown: false,
   };
   const app = createApiApp(ctx);

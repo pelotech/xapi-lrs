@@ -9,6 +9,7 @@ import type { AppContext } from './core/context.js';
 import { HttpError } from './core/errors.js';
 import { normalizeRoute } from './core/metrics.js';
 import { gracefulShutdown } from './core/shutdown.js';
+import { ipRateLimitMiddleware, adminRateLimitMiddleware, adminLoginRateLimitMiddleware } from './core/rate-limit-middleware.js';
 import { xapiAlternateSyntaxMiddleware } from './domain/xapi/xapi-alternate-syntax.middleware.js';
 import { xapiQueryParamsMiddleware } from './domain/xapi/xapi-query-params.middleware.js';
 import { statementsStreamHandler } from './domain/xapi/statements-stream.js';
@@ -84,7 +85,10 @@ export function createApiApp(ctx: AppContext): express.Express {
     next();
   });
 
-  // 5. Body parsers
+  // 5. Global IP rate limit (pre-auth, before body parsers)
+  app.use(ipRateLimitMiddleware());
+
+  // 6. Body parsers
   // xAPI document resources accept arbitrary content types — parse as raw Buffer.
   // Exclude urlencoded so that alternate request syntax (POST ?method=…) is parsed
   // by express.urlencoded() instead.
@@ -178,6 +182,21 @@ export function createApiApp(ctx: AppContext): express.Express {
           details: err.fields,
           requestId,
         },
+      });
+      return;
+    }
+
+    // Rate limit errors from per-tenant check (Layer 2)
+    if (
+      err instanceof Error &&
+      'code' in err &&
+      (err as Record<string, unknown>).code === 'RATE_LIMITED'
+    ) {
+      const retryAfter = (err as Record<string, unknown>).retryAfterSec as number;
+      metrics.rateLimitHitsTotal.inc({ layer: 'tenant' });
+      res.setHeader('Retry-After', String(retryAfter));
+      res.status(429).json({
+        error: { status: 429, code: 'RATE_LIMITED', message: err.message, requestId },
       });
       return;
     }
@@ -281,7 +300,10 @@ function createAdminApp(ctx: AppContext): express.Express {
 
   // Admin UI (only when ADMIN_SECRET is configured)
   if (config.ADMIN_SECRET) {
+    app.locals['ctx'] = ctx;
     app.use(express.urlencoded({ extended: true }));
+    app.use(adminRateLimitMiddleware());
+    app.post('/admin/login', adminLoginRateLimitMiddleware());
     app.use(createAdminRoutes(ctx));
   }
 

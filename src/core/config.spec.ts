@@ -14,6 +14,14 @@ describe('parseConfigFromEnv', () => {
     expect(config.RUN_MODE).toBe('combined');
     expect(config.APP_VERSION).toBe('local');
     expect(config.ENABLE_METRICS).toBe(true);
+    expect(config.RATE_LIMIT_IP_WINDOW_MS).toBe(60_000);
+    expect(config.RATE_LIMIT_IP_MAX_REQUESTS).toBe(300);
+    expect(config.RATE_LIMIT_TENANT_WINDOW_MS).toBe(60_000);
+    expect(config.RATE_LIMIT_TENANT_MAX_REQUESTS).toBe(600);
+    expect(config.RATE_LIMIT_ADMIN_WINDOW_MS).toBe(60_000);
+    expect(config.RATE_LIMIT_ADMIN_MAX_REQUESTS).toBe(60);
+    expect(config.RATE_LIMIT_ADMIN_LOGIN_WINDOW_MS).toBe(900_000);
+    expect(config.RATE_LIMIT_ADMIN_LOGIN_MAX_REQUESTS).toBe(10);
   });
 
   it('coerces string ports to numbers', () => {

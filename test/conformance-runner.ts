@@ -25,6 +25,7 @@ import pino from 'pino';
 import { parseConfigFromEnv } from '../src/core/config.js';
 import { createMetrics } from '../src/core/metrics.js';
 import { createLocalAssetStore } from '../src/core/asset-store.js';
+import { createRateLimiters } from '../src/core/rate-limit.js';
 import { createApiApp } from '../src/server.js';
 import type { AppContext } from '../src/core/context.js';
 import { createMockNotifyListener } from '../src/test/api-fixture.js';
@@ -89,6 +90,7 @@ function startServer(pool: pg.Pool): Promise<{ server: http.Server; url: string 
     },
     assetStore: createLocalAssetStore(ASSET_STORAGE_PATH),
     notifyListener: createMockNotifyListener(),
+    rateLimiters: createRateLimiters(config),
     isShuttingDown: false,
   };
 

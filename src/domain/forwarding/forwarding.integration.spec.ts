@@ -7,6 +7,7 @@ import express from 'express';
 import { createMetrics } from '../../core/metrics.js';
 import { parseConfigFromEnv } from '../../core/config.js';
 import { createLocalAssetStore } from '../../core/asset-store.js';
+import { createRateLimiters } from '../../core/rate-limit.js';
 import { createMockNotifyListener } from '../../test/api-fixture.js';
 import { createAdminRoutes } from '../admin/routes.js';
 import type { AppContext } from '../../core/context.js';
@@ -46,6 +47,7 @@ function startAdminServer(pool: import('pg').Pool) {
     } as AppContext['jwtVerifier'],
     assetStore: createLocalAssetStore(path.join(os.tmpdir(), 'xapi-lrs-test-assets')),
     notifyListener: createMockNotifyListener(),
+    rateLimiters: createRateLimiters(config),
     isShuttingDown: false,
   };
 

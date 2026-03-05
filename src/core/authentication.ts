@@ -1,6 +1,7 @@
 import type { Request } from 'express';
 import type { AppContext } from './context.js';
 import { checkScope } from '../domain/xapi/xapi-scopes.js';
+import { checkTenantRateLimit } from './rate-limit-middleware.js';
 
 function authError(status: number, message: string): Error {
   const err = new Error(message);
@@ -39,6 +40,10 @@ export async function expressAuthentication(
     );
     const tenantId = idpRows[0]?.tenant_id ?? undefined;
 
+    if (tenantId) {
+      checkTenantRateLimit(ctx.rateLimiters.tenant, tenantId);
+    }
+
     return { iss, aud, sub, token, tenantId };
   }
 
@@ -74,6 +79,8 @@ export async function expressAuthentication(
     }
     const scopes = rows[0].scopes ?? ['all'];
     const tenantId = rows[0].tenant_id;
+
+    checkTenantRateLimit(ctx.rateLimiters.tenant, tenantId);
 
     // Enforce scope against the requested method + path
     const { allowed, readMineOnly } = checkScope(scopes, request.method, request.path);
