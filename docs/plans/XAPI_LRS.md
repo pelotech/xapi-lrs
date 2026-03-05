@@ -151,15 +151,54 @@ For clients that can't send custom headers or methods beyond GET/POST:
 - ETag / If-Match / If-None-Match concurrency for profile documents
 - Profile PUT ETag behavior: 409 for existing resource, 400 for new resource without ETag
 
+### Token Management (complete)
+
+Admin UI with full CRUD for `xapi.tokens`:
+- htmx-powered dashboard at `/admin/xapi/tokens`
+- Create tokens with scoped permissions, bcrypt-hashed secrets
+- List, search, and delete tokens
+- Session cookie authentication with secure flag
+
+### Statement Forwarding (complete)
+
+Per-tenant forward targets with background worker:
+- `xapi.forward_targets` table with per-tenant configuration
+- `ForwardWorker` with batched delivery, exponential backoff retry
+- Strips `stored`/`authority` before forwarding per spec
+- Catch-up queries from watermark for missed statements
+
+### SSE Streaming (complete)
+
+Real-time statement streaming via Server-Sent Events:
+- `GET /xapi/statements/stream` endpoint
+- PostgreSQL LISTEN/NOTIFY for push-based delivery
+- Tenant-scoped streaming with scope enforcement
+
+### Rate Limiting (complete)
+
+Three-layer rate limiting:
+- IP-based rate limiting (global)
+- Per-tenant rate limiting (xAPI endpoints)
+- Admin endpoint rate limiting
+
+### JWS Signature Verification (complete)
+
+Full cryptographic verification of signed statements per xAPI §2.6:
+- Validates JWS compact serialization structure
+- Extracts x5c certificate chain from JWS header
+- Imports X.509 certificate and verifies RS256/RS384/RS512 signatures via `jose`
+- Rejects forged signatures, tampered payloads, missing certificates
+
 ### Test Coverage
 
-22 test files, 475 tests (all passing):
+32 test files, 537 tests (all passing):
 
 | Category | Files | Focus |
 |----------|-------|-------|
-| Unit | `statement-format.spec.ts`, `statement.schema.spec.ts`, `agent-ifi.spec.ts`, `xapi-version.middleware.spec.ts`, `xapi-alternate-syntax.middleware.spec.ts`, `xapi-query-params.middleware.spec.ts`, `xapi-scopes.spec.ts` | Validation, formatting, middleware logic |
+| Unit | `statement-format.spec.ts`, `statement.schema.spec.ts`, `agent-ifi.spec.ts`, `xapi-version.middleware.spec.ts`, `xapi-alternate-syntax.middleware.spec.ts`, `xapi-query-params.middleware.spec.ts`, `xapi-scopes.spec.ts`, `jws-signature.spec.ts` | Validation, formatting, middleware, JWS verification |
 | Query | `pg-xapi.statements.spec.ts`, `pg-xapi.query.spec.ts`, `pg-xapi.documents.spec.ts`, `pg-xapi.resources.spec.ts` | SQL generation, cursor encoding, document CRUD |
-| Integration | `xapi-protocol.integration.spec.ts`, `xapi-statements.integration.spec.ts`, `xapi-statements-query.integration.spec.ts`, `xapi-documents.integration.spec.ts`, `xapi-scopes-basic.integration.spec.ts`, `xapi-scopes-advanced.integration.spec.ts` | Full HTTP stack with mock pool |
+| Integration | `xapi-protocol.integration.spec.ts`, `xapi-statements.integration.spec.ts`, `xapi-statements-query.integration.spec.ts`, `xapi-documents.integration.spec.ts`, `xapi-scopes-basic.integration.spec.ts`, `xapi-scopes-advanced.integration.spec.ts`, `xapi-statements-stream.integration.spec.ts` | Full HTTP stack with mock pool |
+| Admin / E2E | `admin-routes.spec.ts`, `tokens-list.spec.ts`, `forward-targets-list.spec.ts`, `forward-worker.spec.ts`, `rate-limit-middleware.spec.ts`, `e2e-tokens.spec.ts` | Admin UI, forwarding, rate limiting, token E2E |
 
 ---
 
@@ -173,15 +212,6 @@ Statements should carry an `authority` field identifying the credential that sub
 - Basic Auth tokens → authority from token metadata
 - OIDC JWT → authority from JWT claims (iss/sub)
 
-### Token Management API
-
-No CRUD endpoints exist for `xapi.tokens`. Tokens are currently seeded directly in the database.
-
-- `POST /admin/xapi/tokens` — create token with scopes
-- `GET /admin/xapi/tokens` — list tokens
-- `DELETE /admin/xapi/tokens/:id` — revoke token
-- Scope validation on create
-
 ### S3 / Shared AssetStore
 
 The current `AssetStore` writes to the local filesystem (`os.tmpdir()`). For production:
@@ -189,14 +219,6 @@ The current `AssetStore` writes to the local filesystem (`os.tmpdir()`). For pro
 - Implement S3-backed `AssetStore`
 - Select backend via config (`ASSET_STORE_TYPE=local|s3`)
 - Same content-addressed interface (SHA-256 key)
-
-### Background Worker Stub
-
-No background processing exists. Potential uses:
-
-- Statement forwarding to upstream LRS
-- Activity definition canonicalization queue
-- Attachment cleanup (orphaned blobs)
 
 ---
 
@@ -210,7 +232,7 @@ pnpm typecheck            # tsc --noEmit, 0 errors
 pnpm lint                 # oxlint, 0 errors
 
 # Tests
-pnpm test                 # vitest, 475 tests pass
+pnpm test                 # vitest, 537 tests pass
 
 # TSOA generation
 pnpm tsoa:generate        # routes.ts + swagger.json

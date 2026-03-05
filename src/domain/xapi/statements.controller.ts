@@ -24,6 +24,7 @@ import { extractBoundary, parseMultipartRequest, buildMultipartResponse } from '
 import type { AttachmentBlob } from './multipart.js';
 import { hasDefineScope } from './xapi-scopes.js';
 import { actorToIfi } from './agent-ifi.js';
+import { compactVerify, importX509 } from 'jose';
 
 @Route('xapi')
 @Tags('xAPI Statements')
@@ -402,7 +403,7 @@ export class StatementsController extends Controller {
     }
 
     // Validate JWS signed statement attachments (§2.6)
-    this.validateSignedStatements(batch, parsed.attachments);
+    await this.validateSignedStatements(batch, parsed.attachments);
 
     const ids = batch.map((s) => s.id).filter(Boolean);
     if (new Set(ids).size !== ids.length) {
@@ -433,11 +434,12 @@ export class StatementsController extends Controller {
 
   /**
    * Validate JWS signed statement requirements per xAPI §2.6.
+   * Performs full cryptographic signature verification using the x5c certificate chain.
    */
-  private validateSignedStatements(
+  private async validateSignedStatements(
     batch: readonly Statement[],
     attachmentParts: ReadonlyArray<{ sha2: string; contentType: string; content: Buffer }>,
-  ): void {
+  ): Promise<void> {
     const SIGNATURE_USAGE_TYPE = 'http://adlnet.gov/expapi/attachments/signature';
     const VALID_JWS_ALGORITHMS = new Set(['RS256', 'RS384', 'RS512']);
 
@@ -481,11 +483,26 @@ export class StatementsController extends Controller {
           throw new HttpError(400, 'BAD_REQUEST', `Invalid JWS: algorithm "${String(alg)}" not allowed; must be RS256, RS384, or RS512`);
         }
 
-        // §2.6.s4.b3: Payload must be valid JSON serialization of the statement
+        // §2.6.s4.b2: x5c header must be present with at least one certificate
+        const x5c = header.x5c;
+        if (!Array.isArray(x5c) || x5c.length === 0) {
+          throw new HttpError(400, 'BAD_REQUEST', 'Invalid JWS: x5c header must contain at least one certificate');
+        }
+
+        // Import the signing certificate (first entry in x5c chain) and verify the signature
+        const certDer = x5c[0] as string;
+        const pem = `-----BEGIN CERTIFICATE-----\n${certDer}\n-----END CERTIFICATE-----`;
+        let publicKey: CryptoKey;
         try {
-          JSON.parse(Buffer.from(jwsParts[1]!, 'base64url').toString('utf8'));
+          publicKey = await importX509(pem, alg);
         } catch {
-          throw new HttpError(400, 'BAD_REQUEST', 'Invalid JWS: payload is not valid JSON');
+          throw new HttpError(400, 'BAD_REQUEST', 'Invalid JWS: cannot import x5c certificate');
+        }
+
+        try {
+          await compactVerify(jwsStr, publicKey, { algorithms: ['RS256', 'RS384', 'RS512'] });
+        } catch {
+          throw new HttpError(400, 'BAD_REQUEST', 'Invalid JWS: signature verification failed');
         }
       }
     }
