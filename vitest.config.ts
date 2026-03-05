@@ -8,7 +8,7 @@ export default defineConfig({
       NODE_ENV: 'test',
       API_PORT: '0',
       ADMIN_PORT: '0',
-      DATABASE_URL: 'postgresql://localhost:5432/test',
+      ...(process.env['DATABASE_URL'] ? { DATABASE_URL: process.env['DATABASE_URL'] } : {}),
     },
     exclude: ['node_modules/**', '.docker-build/**', 'test/lrs-conformance-test-suite/**'],
     include: ['src/**/*.spec.ts'],

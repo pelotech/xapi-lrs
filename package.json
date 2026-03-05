@@ -16,9 +16,9 @@
     "test:conformance:xapi": "tsx test/conformance-runner.ts",
     "start": "node .",
     "start:local-dev": "cd src && dotenvx run -f ../.env.local-dev -- tsx watch --clear-screen=false main.ts",
-    "migrate": "graphile-migrate migrate",
-    "migrate:commit": "graphile-migrate commit",
-    "migrate:uncommit": "graphile-migrate uncommit",
+    "db:migrate": "graphile-migrate migrate",
+    "db:migration:commit": "graphile-migrate commit",
+    "db:migration:uncommit": "graphile-migrate uncommit",
     "lint": "oxlint ${CI:+--format=github --quiet}",
     "typecheck": "tsc --noEmit"
   },
