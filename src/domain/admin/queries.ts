@@ -197,3 +197,28 @@ export async function deleteForwardTarget(
     [tenantId],
   );
 }
+
+// --- Tokens ---
+
+export async function createToken(
+  pool: pg.Pool,
+  tenantId: string,
+  userSub: string,
+  secretHash: string,
+  scopes: string[],
+): Promise<string> {
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO xapi.tokens (tenant_id, user_sub, secret_hash, scopes)
+     VALUES ($1::uuid, $2, $3, $4::text[])
+     RETURNING id`,
+    [tenantId, userSub, secretHash, scopes],
+  );
+  return rows[0]!.id;
+}
+
+export async function deleteToken(
+  pool: pg.Pool,
+  id: string,
+): Promise<void> {
+  await pool.query('DELETE FROM xapi.tokens WHERE id = $1::uuid', [id]);
+}

@@ -10,6 +10,7 @@ import { tenantsPage } from './views/tenants-list.js';
 import { tokensPage } from './views/tokens-list.js';
 import { statementsPage, statementDetail } from './views/statements-list.js';
 import { forwardingPage } from './views/forwarding.js';
+import crypto from 'node:crypto';
 import {
   getDashboardStats,
   listTenants,
@@ -20,7 +21,10 @@ import {
   listForwardTargets,
   upsertForwardTarget,
   deleteForwardTarget,
+  createToken,
+  deleteToken,
 } from './queries.js';
+import { VALID_SCOPES } from '../xapi/xapi-scopes.js';
 
 export function createAdminRoutes(ctx: AppContext): Router {
   const { config, pool } = ctx;
@@ -70,8 +74,79 @@ export function createAdminRoutes(ctx: AppContext): Router {
   // --- Tokens ---
   router.get('/admin/tokens', async (req: Request, res: Response) => {
     const search = (req.query['search'] as string) ?? '';
-    const tokens = await listTokens(pool, { search, limit: 50, offset: 0 });
-    const html = render(req, tokensPage(tokens, search), layout);
+    const [tokens, tenants] = await Promise.all([
+      listTokens(pool, { search, limit: 50, offset: 0 }),
+      listTenantOptions(pool),
+    ]);
+    const html = render(req, tokensPage(tokens, search, tenants), layout);
+    res.type('html').send(html);
+  });
+
+  router.post('/admin/tokens', async (req: Request, res: Response) => {
+    const body = req.body as {
+      tenantId?: string;
+      userSub?: string;
+      scopes?: string | string[];
+    };
+
+    if (!body.tenantId || !body.userSub) {
+      res.status(400).type('html').send('Missing tenantId or userSub');
+      return;
+    }
+
+    const scopes = Array.isArray(body.scopes)
+      ? body.scopes
+      : body.scopes
+        ? [body.scopes]
+        : [];
+
+    if (scopes.length === 0) {
+      res.status(400).type('html').send('At least one scope is required');
+      return;
+    }
+
+    const invalidScopes = scopes.filter(
+      (s) => !VALID_SCOPES.includes(s as typeof VALID_SCOPES[number]),
+    );
+    if (invalidScopes.length > 0) {
+      res
+        .status(400)
+        .type('html')
+        .send(`Invalid scopes: ${invalidScopes.join(', ')}`);
+      return;
+    }
+
+    const secret = crypto.randomBytes(32).toString('base64url');
+    const { rows } = await pool.query<{ hash: string }>(
+      `SELECT crypt($1, gen_salt('bf')) AS hash`,
+      [secret],
+    );
+    const secretHash = rows[0]!.hash;
+
+    const id = await createToken(pool, body.tenantId, body.userSub, secretHash, scopes);
+
+    const search = '';
+    const [tokens, tenants] = await Promise.all([
+      listTokens(pool, { search, limit: 50, offset: 0 }),
+      listTenantOptions(pool),
+    ]);
+    const html = render(
+      req,
+      tokensPage(tokens, search, tenants, { id, secret }),
+      layout,
+    );
+    res.type('html').send(html);
+  });
+
+  router.delete('/admin/tokens/:id', async (req: Request, res: Response) => {
+    await deleteToken(pool, req.params['id'] as string);
+
+    const search = '';
+    const [tokens, tenants] = await Promise.all([
+      listTokens(pool, { search, limit: 50, offset: 0 }),
+      listTenantOptions(pool),
+    ]);
+    const html = render(req, tokensPage(tokens, search, tenants), layout);
     res.type('html').send(html);
   });
 
