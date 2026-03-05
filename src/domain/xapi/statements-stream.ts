@@ -50,8 +50,11 @@ interface NotifyPayload {
 // SSE helpers
 // ---------------------------------------------------------------------------
 
-function sseWrite(res: Response, event: string, data: string): boolean {
-  return res.write(`event: ${event}\ndata: ${data}\n\n`);
+function sseWrite(res: Response, event: string, data: string, id?: string): boolean {
+  let frame = `event: ${event}\ndata: ${data}\n`;
+  if (id) frame += `id: ${id}\n`;
+  frame += '\n';
+  return res.write(frame);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +142,7 @@ async function catchUp(
 
     for (const row of rows) {
       const formatted = formatStatement(row.raw, filters.format, acceptLanguage);
-      sseWrite(res, 'statement', JSON.stringify(formatted));
+      sseWrite(res, 'statement', JSON.stringify(formatted), row.stored);
       lastStored = row.stored;
       cursorStored = row.stored;
       cursorId = row.id;
@@ -296,6 +299,13 @@ async function handleStream(req: Request, res: Response): Promise<void> {
 
   // 2. Parse filters from query params
   const filters = parseFilters(req);
+
+  // Support SSE reconnect: Last-Event-ID takes priority over since
+  const lastEventId = req.get('Last-Event-ID');
+  if (lastEventId) {
+    filters.since = filters.since && filters.since > lastEventId ? filters.since : lastEventId;
+  }
+
   const acceptLanguage = req.get('Accept-Language');
 
   // 3. Set SSE headers
@@ -338,7 +348,7 @@ async function handleStream(req: Request, res: Response): Promise<void> {
       if (!stmt) return;
 
       const formatted = formatStatement(stmt, filters.format, acceptLanguage);
-      sseWrite(res, 'statement', JSON.stringify(formatted));
+      sseWrite(res, 'statement', JSON.stringify(formatted), payload.stored);
     } catch (err) {
       req.log?.error({ err }, 'Error processing notify payload');
     }
