@@ -1,0 +1,34 @@
+{
+  extends: [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  lockFileMaintenance: {
+    enabled: true
+  },
+  minimumReleaseAge: "14 days",
+  dependencyDashboard: true,
+  packageRules: [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "matchManagers": ["dockerfile", "npm"],
+      "matchPackageNames": ["node"],
+      "rangeStrategy": "bump",
+      "groupName": "node version"
+    },
+    {
+      "groupName": "all npm patch dependencies",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ]
+    }
+  ]
+}
