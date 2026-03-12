@@ -10,7 +10,7 @@ import type { AdminSession } from "./types.ts";
 const SESSION_COOKIE = "admin_session";
 const CSRF_COOKIE = "admin_csrf";
 const CSRF_HEADER = "x-csrf-token";
-const SESSION_MAX_AGE_S = 86400; // 24 hours
+const SESSION_MAX_AGE_S = 900; // 15 minutes (sliding window — renewed on each request)
 
 // ============================================================================
 // HMAC-signed cookie helpers
@@ -120,6 +120,10 @@ export function adminAuthMiddleware(secret: string): MiddlewareHandler {
       }
       return c.redirect("/admin/login");
     }
+
+    // Sliding window: renew session expiry on each authenticated request
+    session.exp = Date.now() + SESSION_MAX_AGE_S * 1000;
+    createSession(c, session, secret);
 
     c.set("adminSession" as never, session);
     return next();

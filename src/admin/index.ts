@@ -253,7 +253,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     const session: AdminSession = {
       accountId: account.id,
       username: account.username,
-      exp: Date.now() + 86400_000, // 24h
+      exp: Date.now() + 900_000, // 15 min (sliding window renews on each request)
     };
 
     createSession(c, session, deps.sessionSecret);
