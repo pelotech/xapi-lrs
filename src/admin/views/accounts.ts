@@ -25,7 +25,7 @@ export function accountsPage(accounts: AccountRow[], csrfToken: string): RawHtml
           </label>
           <label>
             Password
-            <input type="password" name="password" required minlength="4" />
+            <input type="password" name="password" required minlength="12" />
           </label>
           <div style="display:flex;align-items:end">
             <button type="submit">Create</button>
@@ -66,7 +66,7 @@ export function accountList(accounts: AccountRow[]): RawHtml {
                 hx-swap="outerHTML"
               >
                 <div class="grid">
-                  <input type="password" name="password" placeholder="New password" required minlength="4" />
+                  <input type="password" name="password" placeholder="New password" required minlength="12" />
                   <button type="submit" style="padding:0.25em 0.5em">Set</button>
                 </div>
               </form>

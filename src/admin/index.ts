@@ -321,6 +321,9 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     if (username.length > 64 || password.length > 1024) {
       return c.text("Username or password too long", 400);
     }
+    if (password.length < 12) {
+      return c.text("Password must be at least 12 characters", 400);
+    }
 
     await createAccount(deps.pool, deps.metrics, username, password);
     deps.logger.info(
@@ -361,6 +364,9 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     }
     if (password.length > 1024) {
       return c.text("Password too long", 400);
+    }
+    if (password.length < 12) {
+      return c.text("Password must be at least 12 characters", 400);
     }
 
     await changePassword(deps.pool, deps.metrics, accountId, password);
