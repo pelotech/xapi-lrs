@@ -20,6 +20,7 @@ import {
 } from "../repositories/statements.ts";
 import { insertAttachment, getAttachmentsByStatement } from "../repositories/attachments.ts";
 import { canonicalAgentIfi, validateSince, validateRegistration } from "../helpers/agent.ts";
+import { agentFromAuth, agentIfiFromAuth, hasOnlyMineScope } from "../helpers/auth-agent.ts";
 import { enrichStatement, formatStatement, buildAuthority } from "../helpers/enrichment.ts";
 import { validateStatement, statementsMatch } from "../xapi/statement-validator.ts";
 import { buildMultipartResponse } from "../xapi/multipart.ts";
@@ -286,6 +287,16 @@ export function createStatementsApp() {
       throw new HttpError(400, "Cannot use both statementId and voidedStatementId");
     }
 
+    // Enforce statements/read/mine: restrict to authenticated agent's own statements
+    const auth = c.var.auth;
+    const mineOnly = hasOnlyMineScope(auth.payload.scopes);
+    let effectiveAgent = agent;
+    let effectiveRelatedAgents = related_agents;
+    if (mineOnly && !statementId && !voidedStatementId) {
+      effectiveAgent = JSON.stringify(agentFromAuth(auth));
+      effectiveRelatedAgents = true;
+    }
+
     const effectiveFormat = format ?? "exact";
     if (
       effectiveFormat !== "exact" &&
@@ -323,6 +334,9 @@ export function createStatementsApp() {
         if (!row || row.is_voided) {
           throw new HttpError(404, "Statement not found");
         }
+        if (mineOnly) {
+          assertStatementBelongsToAgent(row.payload, auth);
+        }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
         if (attachments) {
           const parts = await collectAttachmentParts(client, stmt);
@@ -336,6 +350,9 @@ export function createStatementsApp() {
         if (!row || !row.is_voided) {
           throw new HttpError(404, "Voided statement not found");
         }
+        if (mineOnly) {
+          assertStatementBelongsToAgent(row.payload, auth);
+        }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
         if (attachments) {
           const parts = await collectAttachmentParts(client, stmt);
@@ -345,12 +362,12 @@ export function createStatementsApp() {
       }
 
       const { rows, hasMore } = await queryStatements(client, {
-        agent,
+        agent: effectiveAgent,
         verb,
         activity,
         registration,
         related_activities,
-        related_agents,
+        related_agents: effectiveRelatedAgents,
         since,
         until,
         limit,
@@ -499,6 +516,26 @@ function authorityFromAuth(auth: AuthInfo): Record<string, unknown> {
     objectType: "Agent",
     account: { homePage: auth.payload.iss, name: auth.payload.sub },
   };
+}
+
+/**
+ * Verify that a statement's actor matches the authenticated agent.
+ * Throws 403 if the statement does not belong to the authenticated user.
+ */
+function assertStatementBelongsToAgent(payload: Record<string, unknown>, auth: AuthInfo): void {
+  const actor = payload.actor as Record<string, unknown> | undefined;
+  if (!actor) throw new HttpError(403, "Forbidden");
+
+  try {
+    const stmtIfi = canonicalAgentIfi(actor);
+    const authIfi = agentIfiFromAuth(auth);
+    if (stmtIfi !== authIfi) {
+      throw new HttpError(403, "Forbidden");
+    }
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(403, "Forbidden");
+  }
 }
 
 async function collectAttachmentParts(

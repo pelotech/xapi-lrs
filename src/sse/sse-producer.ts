@@ -8,12 +8,15 @@ import { streamSSE } from "hono/streaming";
 import type { Pool } from "pg";
 import type { LrsMetrics } from "../metrics.ts";
 import type { Logger } from "../logger.ts";
+import type { AuthInfo } from "../auth/types.ts";
 import type { PgListener } from "./pg-listener.ts";
 import {
   XAPI_NOTIFY_CHANNEL,
   HEARTBEAT_INTERVAL_MS,
   buildStatementEvent,
 } from "./statement-event.ts";
+import { hasOnlyMineScope, agentIfiFromAuth } from "../helpers/auth-agent.ts";
+import { canonicalAgentIfi } from "../helpers/agent.ts";
 
 export interface SseProducerDeps {
   pool: Pool;
@@ -34,6 +37,9 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
 
   app.get("/stream", (c) => {
     const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const auth = (c as unknown as { var: { auth: AuthInfo } }).var.auth;
+    const mineOnly = auth ? hasOnlyMineScope(auth.payload.scopes) : false;
+    const authIfi = mineOnly ? agentIfiFromAuth(auth) : null;
     const ipCount = perIpCount.get(ip) ?? 0;
 
     if (globalCount >= deps.maxConnectionsGlobal) {
@@ -56,6 +62,19 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
             if (!event) {
               logger.warn("Statement not found for SSE event");
               return;
+            }
+
+            // Filter events for statements/read/mine scope
+            if (authIfi && event.statement) {
+              const actor = (event.statement as Record<string, unknown>).actor as
+                | Record<string, unknown>
+                | undefined;
+              if (!actor) return;
+              try {
+                if (canonicalAgentIfi(actor) !== authIfi) return;
+              } catch {
+                return;
+              }
             }
 
             await stream.writeSSE({

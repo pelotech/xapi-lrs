@@ -69,9 +69,6 @@ const VALID_SCOPES = new Set<string>([
   "state/read",
 ]);
 
-/** Default JWT scopes when no scope claim is present in the token */
-const JWT_DEFAULT_SCOPES: XapiScope[] = ["all"];
-
 /**
  * Extract xAPI scopes from JWT claims.
  * Checks `scope` (space-delimited string per RFC 8693) and `scopes` (array).
@@ -122,7 +119,10 @@ export async function verifyJwt(
 
   const realmRoles = (payload as { realm_access?: { roles?: string[] } }).realm_access?.roles;
 
-  const scopes = extractScopes(payload) ?? JWT_DEFAULT_SCOPES;
+  const scopes = extractScopes(payload);
+  if (!scopes) {
+    throw new Error("JWT missing required xAPI scope claim");
+  }
 
   return {
     sub: payload.sub ?? "",

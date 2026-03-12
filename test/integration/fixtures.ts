@@ -56,7 +56,7 @@ export const test = baseTest.extend<IntegrationFixtures>({
   ],
 
   authToken: async ({ server }, use) => {
-    const token = await server.createToken({ sub: "test-user" });
+    const token = await server.createToken({ sub: "test-user", scope: "all" });
     await use(token);
   },
 });
