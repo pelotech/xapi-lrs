@@ -2,20 +2,20 @@
  * Admin credentials page — list, create, delete, rotate secret, edit scopes.
  */
 
-import { html, raw } from './html.ts';
-import type { RawHtml } from './html.ts';
-import type { CredentialRow, AccountRow } from '../repositories.ts';
+import { html, raw } from "./html.ts";
+import type { RawHtml } from "./html.ts";
+import type { CredentialRow, AccountRow } from "../repositories.ts";
 
 const ALL_SCOPES = [
-  'statements/write',
-  'statements/read',
-  'statements/read/mine',
-  'all/read',
-  'all',
-  'define',
-  'profile',
-  'state',
-  'state/read',
+  "statements/write",
+  "statements/read",
+  "statements/read/mine",
+  "all/read",
+  "all",
+  "define",
+  "profile",
+  "state",
+  "state/read",
 ] as const;
 
 export function credentialsPage(
@@ -27,7 +27,9 @@ export function credentialsPage(
   return html`
     <h2>API Credentials</h2>
 
-    ${newCredential ? html`
+    ${
+      newCredential
+        ? html`
       <article style="border:2px solid var(--pico-primary);margin-bottom:1em">
         <header><strong>New Credential Created — copy the secret now!</strong></header>
         <p>
@@ -40,7 +42,9 @@ export function credentialsPage(
         </p>
         <p class="text-muted">The secret will not be shown again.</p>
       </article>
-    ` : false}
+    `
+        : false
+    }
 
     <details>
       <summary role="button" class="outline">Create Credential</summary>
@@ -55,11 +59,13 @@ export function credentialsPage(
         </label>
         <fieldset>
           <legend>Scopes</legend>
-          ${ALL_SCOPES.map((scope) => html`
+          ${ALL_SCOPES.map(
+            (scope) => html`
             <label>
               <input type="checkbox" name="scopes" value="${scope}" />
               ${scope}
-            </label>`)}
+            </label>`,
+          )}
         </fieldset>
         <button type="submit">Create</button>
       </form>
@@ -82,7 +88,8 @@ export function credentialList(credentials: CredentialRow[]): RawHtml {
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>${credentials.map((cred) => html`
+      <tbody>${credentials.map(
+        (cred) => html`
         <tr id="cred-${cred.id}">
           <td class="mono">${cred.api_key.slice(0, 12)}...</td>
           <td>${cred.account_name}</td>
@@ -112,7 +119,8 @@ export function credentialList(credentials: CredentialRow[]): RawHtml {
               Delete
             </button>
           </td>
-        </tr>`)}</tbody>
+        </tr>`,
+      )}</tbody>
     </table>
   </figure>`;
 }
@@ -126,17 +134,19 @@ function scopeEditor(credentialId: string, scopes: string[]): RawHtml {
       hx-swap="innerHTML"
       style="margin:0"
     >
-      ${ALL_SCOPES.map((scope) => html`
+      ${ALL_SCOPES.map(
+        (scope) => html`
         <label style="display:inline-block;margin-right:0.5em;font-size:0.8em">
           <input
             type="checkbox"
             name="scopes"
             value="${scope}"
-            ${scopes.includes(scope) ? raw('checked') : false}
+            ${scopes.includes(scope) ? raw("checked") : false}
             style="margin-right:0.2em"
           />
           ${scope}
-        </label>`)}
+        </label>`,
+      )}
       <span id="scope-status-${credentialId}" class="text-muted" style="font-size:0.8em"></span>
     </form>
   `;
@@ -154,9 +164,11 @@ export function rotatedSecret(secretKey: string): RawHtml {
 }
 
 export function scopeUpdated(): RawHtml {
-  return html`<small style="color:var(--pico-primary)">Saved</small>`;
+  return html`
+    <small style="color: var(--pico-primary)">Saved</small>
+  `;
 }
 
 export function deletedRow(): RawHtml {
-  return raw('');
+  return raw("");
 }

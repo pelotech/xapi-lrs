@@ -26,12 +26,7 @@ function formatObject(obj: Record<string, unknown>): string {
     const def = obj.definition as Record<string, unknown>;
     if (def.name && typeof def.name === "object") {
       const names = def.name as Record<string, string>;
-      return (
-        names["en-US"] ||
-        names.en ||
-        Object.values(names)[0] ||
-        String(obj.id ?? "")
-      );
+      return names["en-US"] || names.en || Object.values(names)[0] || String(obj.id ?? "");
     }
   }
   return String(obj.id ?? JSON.stringify(obj).slice(0, 60));
@@ -78,9 +73,12 @@ export function dashboardPage(
     </div>
 
     <h3>Recent Statements</h3>
-    ${recent.length === 0
-      ? html`<p class="text-muted">No statements yet.</p>`
-      : html`<figure>
+    ${
+      recent.length === 0
+        ? html`
+            <p class="text-muted">No statements yet.</p>
+          `
+        : html`<figure>
           <table>
             <thead>
               <tr>
@@ -106,7 +104,8 @@ export function dashboardPage(
               )}
             </tbody>
           </table>
-        </figure>`}
+        </figure>`
+    }
 
     <h3>Server Info</h3>
     <figure>

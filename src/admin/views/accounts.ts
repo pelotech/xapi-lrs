@@ -2,9 +2,9 @@
  * Admin accounts page — list, create, delete, change password.
  */
 
-import { html } from './html.ts';
-import type { RawHtml } from './html.ts';
-import type { AccountRow } from '../repositories.ts';
+import { html } from "./html.ts";
+import type { RawHtml } from "./html.ts";
+import type { AccountRow } from "../repositories.ts";
 
 export function accountsPage(accounts: AccountRow[], csrfToken: string): RawHtml {
   return html`
@@ -50,7 +50,8 @@ export function accountList(accounts: AccountRow[]): RawHtml {
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>${accounts.map((a) => html`
+      <tbody>${accounts.map(
+        (a) => html`
         <tr id="account-${a.id}">
           <td>${a.username}</td>
           <td>${String(a.credential_count ?? 0)}</td>
@@ -81,7 +82,8 @@ export function accountList(accounts: AccountRow[]): RawHtml {
               Delete
             </button>
           </td>
-        </tr>`)}</tbody>
+        </tr>`,
+      )}</tbody>
     </table>
   </figure>`;
 }

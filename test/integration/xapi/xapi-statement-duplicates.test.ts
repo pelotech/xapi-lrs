@@ -6,10 +6,10 @@
  * is not yet implemented in the LRS — those tests are marked .todo().
  */
 
-import { randomUUID } from 'node:crypto';
-import { test, describe, expect } from '../fixtures.ts';
+import { randomUUID } from "node:crypto";
+import { test, describe, expect } from "../fixtures.ts";
 
-const V = { 'X-Experience-API-Version': '1.0.3' } as const;
+const V = { "X-Experience-API-Version": "1.0.3" } as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -18,25 +18,25 @@ const V = { 'X-Experience-API-Version': '1.0.3' } as const;
 function makeStatement(id: string): Record<string, unknown> {
   return {
     id,
-    actor: { mbox: 'mailto:test@example.com' },
-    verb: { id: 'http://example.com/verbs/did', display: { 'en-US': 'did' } },
-    object: { id: 'http://example.com/activities/1' },
-    timestamp: '2024-01-15T12:00:00.000Z',
+    actor: { mbox: "mailto:test@example.com" },
+    verb: { id: "http://example.com/verbs/did", display: { "en-US": "did" } },
+    object: { id: "http://example.com/activities/1" },
+    timestamp: "2024-01-15T12:00:00.000Z",
   };
 }
 
 async function postStatement(apiUrl: string, auth: string, stmt: unknown) {
   return fetch(`${apiUrl}/xapi/statements`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}`, ...V },
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Basic ${auth}`, ...V },
     body: JSON.stringify(stmt),
   });
 }
 
 async function putStatement(apiUrl: string, auth: string, statementId: string, stmt: unknown) {
   return fetch(`${apiUrl}/xapi/statements?statementId=${statementId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}`, ...V },
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Basic ${auth}`, ...V },
     body: JSON.stringify(stmt),
   });
 }
@@ -45,8 +45,8 @@ async function putStatement(apiUrl: string, auth: string, statementId: string, s
 // POST duplicate detection (idempotency)
 // =========================================================================
 
-describe('POST duplicate statement detection', () => {
-  test('POST same statement twice is idempotent (200)', async ({ server, basicAuth }) => {
+describe("POST duplicate statement detection", () => {
+  test("POST same statement twice is idempotent (200)", async ({ server, basicAuth }) => {
     const id = randomUUID();
     const stmt = makeStatement(id);
 
@@ -60,7 +60,7 @@ describe('POST duplicate statement detection', () => {
     expect(ids[0]).toBe(id);
   });
 
-  test('POST different statement with same ID returns 409', async ({ server, basicAuth }) => {
+  test("POST different statement with same ID returns 409", async ({ server, basicAuth }) => {
     const id = randomUUID();
     const stmt1 = makeStatement(id);
     const resp1 = await postStatement(server.apiUrl, basicAuth, stmt1);
@@ -69,7 +69,7 @@ describe('POST duplicate statement detection', () => {
     // Different verb -> different content
     const stmt2 = {
       ...makeStatement(id),
-      verb: { id: 'http://example.com/verbs/other', display: { 'en-US': 'other' } },
+      verb: { id: "http://example.com/verbs/other", display: { "en-US": "other" } },
     };
     const resp2 = await postStatement(server.apiUrl, basicAuth, stmt2);
     expect(resp2.status).toBe(409);
@@ -80,8 +80,8 @@ describe('POST duplicate statement detection', () => {
 // PUT duplicate detection (idempotency)
 // =========================================================================
 
-describe('PUT duplicate statement detection', () => {
-  test('PUT same statement twice is idempotent (204)', async ({ server, basicAuth }) => {
+describe("PUT duplicate statement detection", () => {
+  test("PUT same statement twice is idempotent (204)", async ({ server, basicAuth }) => {
     const id = randomUUID();
     const stmt = makeStatement(id);
 
@@ -92,7 +92,7 @@ describe('PUT duplicate statement detection', () => {
     expect(resp2.status).toBe(204);
   });
 
-  test('PUT different statement with same ID returns 409', async ({ server, basicAuth }) => {
+  test("PUT different statement with same ID returns 409", async ({ server, basicAuth }) => {
     const id = randomUUID();
     const stmt1 = makeStatement(id);
     const resp1 = await putStatement(server.apiUrl, basicAuth, id, stmt1);
@@ -101,7 +101,7 @@ describe('PUT duplicate statement detection', () => {
     // Different verb -> different content
     const stmt2 = {
       ...makeStatement(id),
-      verb: { id: 'http://example.com/verbs/other', display: { 'en-US': 'other' } },
+      verb: { id: "http://example.com/verbs/other", display: { "en-US": "other" } },
     };
     const resp2 = await putStatement(server.apiUrl, basicAuth, id, stmt2);
     expect(resp2.status).toBe(409);

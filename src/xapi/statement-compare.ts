@@ -12,7 +12,14 @@
  * these fields) is logically equivalent to the received statement (which has
  * them filled in by the LRS).
  */
-const EXCEPTION_FIELDS = ['id', 'authority', 'stored', 'timestamp', 'version', 'attachments'] as const;
+const EXCEPTION_FIELDS = [
+  "id",
+  "authority",
+  "stored",
+  "timestamp",
+  "version",
+  "attachments",
+] as const;
 
 function stripExceptions(stmt: Record<string, unknown>): Record<string, unknown> {
   const copy = { ...stmt };
@@ -38,7 +45,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
     return a.every((v, i) => deepEqual(v, b[i]));
   }
 
-  if (typeof a === 'object') {
+  if (typeof a === "object") {
     const aObj = a as Record<string, unknown>;
     const bObj = b as Record<string, unknown>;
     const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
@@ -57,6 +64,9 @@ function deepEqual(a: unknown, b: unknown): boolean {
  *
  * Returns true if the statements are logically equivalent.
  */
-export function statementsEquivalent(signed: Record<string, unknown>, received: Record<string, unknown>): boolean {
+export function statementsEquivalent(
+  signed: Record<string, unknown>,
+  received: Record<string, unknown>,
+): boolean {
   return deepEqual(stripExceptions(signed), stripExceptions(received));
 }

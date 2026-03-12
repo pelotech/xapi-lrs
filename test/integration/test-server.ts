@@ -4,23 +4,23 @@
  * Creates an LRS Hono app on an ephemeral port with lrsql-compatible schema.
  */
 
-import type { Server } from 'node:http';
-import { serve } from '@hono/node-server';
-import type { OpenAPIHono } from '@hono/zod-openapi';
-import pg from 'pg';
-import { pino } from 'pino';
-import { createApp } from '../../src/app.ts';
-import type { AppDeps } from '../../src/app.ts';
-import type { HonoEnv } from '../../src/hono-env.ts';
-import type { LrsConfig } from '../../src/config.ts';
-import { createMetrics } from '../../src/metrics.ts';
-import { JwksCache } from '../../src/auth/jwt.ts';
-import type { JwtConfig } from '../../src/auth/jwt.ts';
-import { PgListener } from '../../src/sse/pg-listener.ts';
-import type { Logger } from '../../src/logger.ts';
-import { defaultTestDbConfig } from './test-db.ts';
-import { startJwksServer, signTestJWT } from './test-jwks.ts';
-import type { JwksServerHandle } from './test-jwks.ts';
+import type { Server } from "node:http";
+import { serve } from "@hono/node-server";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import pg from "pg";
+import { pino } from "pino";
+import { createApp } from "../../src/app.ts";
+import type { AppDeps } from "../../src/app.ts";
+import type { HonoEnv } from "../../src/hono-env.ts";
+import type { LrsConfig } from "../../src/config.ts";
+import { createMetrics } from "../../src/metrics.ts";
+import { JwksCache } from "../../src/auth/jwt.ts";
+import type { JwtConfig } from "../../src/auth/jwt.ts";
+import { PgListener } from "../../src/sse/pg-listener.ts";
+import type { Logger } from "../../src/logger.ts";
+import { defaultTestDbConfig } from "./test-db.ts";
+import { startJwksServer, signTestJWT } from "./test-jwks.ts";
+import type { JwksServerHandle } from "./test-jwks.ts";
 
 const { Pool } = pg;
 
@@ -40,7 +40,9 @@ export interface LrsTestServerOptions {
   xapiVerifySignatures?: boolean;
 }
 
-export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<LrsTestServerHandle> {
+export async function createLrsTestServer(
+  opts?: LrsTestServerOptions,
+): Promise<LrsTestServerHandle> {
   const jwksServer: JwksServerHandle = await startJwksServer();
 
   const config: LrsConfig = {
@@ -54,17 +56,17 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     pgPoolSize: 5,
     dbConnectRetries: 1,
     dbConnectRetryDelayMs: 100,
-    jwtIssuer: 'test-issuer',
-    jwtAudience: 'test-audience',
+    jwtIssuer: "test-issuer",
+    jwtAudience: "test-audience",
     oidcDiscoveryUrl: undefined,
     jwksUri: jwksServer.jwksUrl,
-    corsOrigin: '*',
+    corsOrigin: "*",
     maxRequestBodyBytes: 50 * 1024 * 1024,
     sseMaxConnectionsGlobal: 100,
     sseMaxConnectionsPerIp: 5,
     xapiVerifySignatures: opts?.xapiVerifySignatures ?? false,
-    logLevel: 'silent',
-    nodeEnv: 'test',
+    logLevel: "silent",
+    nodeEnv: "test",
   };
 
   const pool = new Pool({
@@ -76,7 +78,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     max: config.pgPoolSize,
   });
 
-  const logger: Logger = pino({ level: 'silent' });
+  const logger: Logger = pino({ level: "silent" });
   const metrics = createMetrics();
   const jwksCache = new JwksCache();
 
@@ -88,17 +90,27 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
 
   const pgListener = new PgListener(config, logger);
 
-  const deps: AppDeps = { config, pool, jwksCache, jwtConfig, metrics, logger, pgListener, sessionSecret: 'test-secret', startedAt: new Date() };
+  const deps: AppDeps = {
+    config,
+    pool,
+    jwksCache,
+    jwtConfig,
+    metrics,
+    logger,
+    pgListener,
+    sessionSecret: "test-secret",
+    startedAt: new Date(),
+  };
   const app = createApp(deps);
 
   const server = await new Promise<Server>((resolve, reject) => {
     const s = serve({ fetch: app.fetch, port: 0 }, () => resolve(s as unknown as Server));
-    s.on('error', (err: NodeJS.ErrnoException) => reject(err));
+    s.on("error", (err: NodeJS.ErrnoException) => reject(err));
   });
 
   const address = server.address();
-  if (!address || typeof address === 'string') {
-    throw new Error('Failed to get LRS test server address');
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to get LRS test server address");
   }
 
   const apiUrl = `http://localhost:${address.port}`;
@@ -112,8 +124,18 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
   };
 
   const createToken = async (payload: Record<string, unknown>): Promise<string> => {
-    return signTestJWT({ aud: 'test-audience', ...payload });
+    return signTestJWT({ aud: "test-audience", ...payload });
   };
 
-  return { app, server, apiUrl, jwksUrl: jwksServer.jwksUrl, pool, pgListener, config, close, createToken };
+  return {
+    app,
+    server,
+    apiUrl,
+    jwksUrl: jwksServer.jwksUrl,
+    pool,
+    pgListener,
+    config,
+    close,
+    createToken,
+  };
 }

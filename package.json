@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "xAPI Learning Record Store — standalone service for xAPI statement storage and document resources",
   "type": "module",
-  "packageManager": "pnpm@10.29.1",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -48,5 +47,6 @@
     "tsx": "^4.21.0",
     "typescript": "6.0.0-dev.20260218",
     "vitest": "^4.0.18"
-  }
+  },
+  "packageManager": "pnpm@10.29.1"
 }

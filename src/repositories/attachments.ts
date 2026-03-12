@@ -4,19 +4,19 @@
  * Stores raw attachment binaries (bytea) in the DB per statement.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { PoolClient, QueryConfig } from "pg";
 
-type Query = Omit<QueryConfig, 'values'>;
+type Query = Omit<QueryConfig, "values">;
 
 const INSERT_ATTACHMENT = {
-  name: 'insert_attachment',
+  name: "insert_attachment",
   text: `INSERT INTO attachment (id, statement_id, attachment_sha, content_type, content_length, contents)
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
          ON CONFLICT (statement_id, attachment_sha) DO NOTHING`,
 } as const satisfies Query;
 
 const SELECT_ATTACHMENTS_BY_STATEMENT = {
-  name: 'select_attachments_by_statement',
+  name: "select_attachments_by_statement",
   text: `SELECT attachment_sha, content_type, contents FROM attachment
          WHERE statement_id = $1`,
 } as const satisfies Query;

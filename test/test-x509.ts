@@ -5,9 +5,9 @@
  * tests using openssl (available in all dev/CI environments).
  */
 
-import { execSync } from 'node:child_process';
-import { generateKeyPairSync } from 'node:crypto';
-import { importPKCS8 } from 'jose';
+import { execSync } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
+import { importPKCS8 } from "jose";
 
 export interface TestCertKeyPair {
   privateKeyPem: string;
@@ -24,21 +24,26 @@ export interface TestCertKeyPair {
  * Uses `openssl req` to create a short-lived (1 day) self-signed cert.
  * Returns the PEM cert, base64 DER (for x5c), and jose-compatible CryptoKey.
  */
-export async function generateTestCert(alg: 'RS256' | 'RS384' | 'RS512' = 'RS256'): Promise<TestCertKeyPair> {
-  const { privateKey: privPem } = generateKeyPairSync('rsa', {
+export async function generateTestCert(
+  alg: "RS256" | "RS384" | "RS512" = "RS256",
+): Promise<TestCertKeyPair> {
+  const { privateKey: privPem } = generateKeyPairSync("rsa", {
     modulusLength: 2048,
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: "spki", format: "pem" },
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
   });
 
-  const certPem = execSync('openssl req -new -x509 -key /dev/stdin -days 1 -subj /CN=xapi-test -outform PEM', {
-    input: privPem,
-    encoding: 'utf8',
-  }).trim();
+  const certPem = execSync(
+    "openssl req -new -x509 -key /dev/stdin -days 1 -subj /CN=xapi-test -outform PEM",
+    {
+      input: privPem,
+      encoding: "utf8",
+    },
+  ).trim();
 
   const x5cB64 = certPem
-    .replace(/-----[^-]+-----/g, '')
-    .replace(/\n/g, '')
+    .replace(/-----[^-]+-----/g, "")
+    .replace(/\n/g, "")
     .trim();
 
   const privateKey = await importPKCS8(privPem, alg);

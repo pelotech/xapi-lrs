@@ -9,11 +9,11 @@
  */
 
 const ESCAPE_MAP: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
 };
 
 const ESCAPE_RE = /[&<>"']/g;
@@ -23,7 +23,7 @@ function escapeHtml(str: string): string {
 }
 
 /** Marker for pre-escaped HTML that should not be double-escaped. */
-const RAW = Symbol('raw');
+const RAW = Symbol("raw");
 
 export interface RawHtml {
   [RAW]: true;
@@ -36,12 +36,12 @@ export function raw(value: string): RawHtml {
 }
 
 function isRaw(v: unknown): v is RawHtml {
-  return v !== null && typeof v === 'object' && RAW in v;
+  return v !== null && typeof v === "object" && RAW in v;
 }
 
 /** Tagged template literal that auto-escapes interpolated values. */
 export function html(strings: TemplateStringsArray, ...values: unknown[]): RawHtml {
-  let result = '';
+  let result = "";
   for (let i = 0; i < strings.length; i++) {
     result += strings[i];
     if (i < values.length) {

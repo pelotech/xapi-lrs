@@ -4,12 +4,12 @@
  * No RLS, no tenant context, no role switching.
  */
 
-import { Pool } from 'pg';
-import type { PoolClient, QueryConfig, QueryResult, QueryResultRow } from 'pg';
-import type { LrsConfig } from './config.ts';
-import type { Logger } from './logger.ts';
-import type { LrsMetrics } from './metrics.ts';
-import { startTimer } from './metrics.ts';
+import { Pool } from "pg";
+import type { PoolClient, QueryConfig, QueryResult, QueryResultRow } from "pg";
+import type { LrsConfig } from "./config.ts";
+import type { Logger } from "./logger.ts";
+import type { LrsMetrics } from "./metrics.ts";
+import { startTimer } from "./metrics.ts";
 
 // ============================================================================
 // Pool creation
@@ -30,8 +30,8 @@ export async function createPool(config: LrsConfig, logger: Logger): Promise<Poo
     keepAliveInitialDelayMillis: 10_000,
   });
 
-  pool.on('error', (err) => {
-    logger.error(err, 'Unexpected database pool error');
+  pool.on("error", (err) => {
+    logger.error(err, "Unexpected database pool error");
   });
 
   for (let attempt = 1; attempt <= config.dbConnectRetries; attempt++) {
@@ -44,7 +44,7 @@ export async function createPool(config: LrsConfig, logger: Logger): Promise<Poo
         const delay = config.dbConnectRetryDelayMs * attempt;
         logger.warn(
           { attempt, maxRetries: config.dbConnectRetries, retryInMs: delay },
-          'Database connection failed, retrying',
+          "Database connection failed, retrying",
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -59,21 +59,21 @@ export async function createPool(config: LrsConfig, logger: Logger): Promise<Poo
 // Static query definitions
 // ============================================================================
 
-type Query = Omit<QueryConfig, 'values'>;
+type Query = Omit<QueryConfig, "values">;
 
-const BEGIN = { name: 'begin', text: 'BEGIN' } as const satisfies Query;
-const COMMIT = { name: 'commit', text: 'COMMIT' } as const satisfies Query;
-const ROLLBACK = { name: 'rollback', text: 'ROLLBACK' } as const satisfies Query;
+const BEGIN = { name: "begin", text: "BEGIN" } as const satisfies Query;
+const COMMIT = { name: "commit", text: "COMMIT" } as const satisfies Query;
+const ROLLBACK = { name: "rollback", text: "ROLLBACK" } as const satisfies Query;
 
 // ============================================================================
 // Query instrumentation
 // ============================================================================
 
 function extractQueryName(arg: unknown): string {
-  if (arg !== null && arg !== undefined && typeof arg === 'object' && 'name' in arg) {
+  if (arg !== null && arg !== undefined && typeof arg === "object" && "name" in arg) {
     return (arg as { name: string }).name;
   }
-  return 'unknown';
+  return "unknown";
 }
 
 function instrumentQuery(client: PoolClient, metrics: LrsMetrics): PoolClient {
@@ -82,7 +82,7 @@ function instrumentQuery(client: PoolClient, metrics: LrsMetrics): PoolClient {
     const queryName = extractQueryName(args[0]);
     const end = startTimer(metrics.dbQueryDuration, { query_name: queryName });
     const result = (originalQuery as Function)(...args);
-    if (result && typeof result.then === 'function') {
+    if (result && typeof result.then === "function") {
       return result.then(
         (res: unknown) => {
           end();
@@ -131,7 +131,7 @@ export async function poolQuery<R extends QueryResultRow = QueryResultRow>(
   metrics: LrsMetrics,
   config: QueryConfig,
 ): Promise<QueryResult<R>> {
-  const end = startTimer(metrics.dbQueryDuration, { query_name: config.name ?? 'unknown' });
+  const end = startTimer(metrics.dbQueryDuration, { query_name: config.name ?? "unknown" });
   try {
     return await pool.query<R>(config);
   } finally {
@@ -148,7 +148,7 @@ export class HttpError extends Error {
 
   constructor(status: number, message: string) {
     super(message);
-    this.name = 'HttpError';
+    this.name = "HttpError";
     this.status = status;
   }
 }

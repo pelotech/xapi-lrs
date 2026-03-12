@@ -5,8 +5,8 @@
  * attachments and fileUrl-only attachments.
  */
 
-import { createHash, randomUUID } from 'node:crypto';
-import { test, describe, expect } from '../fixtures.ts';
+import { createHash, randomUUID } from "node:crypto";
+import { test, describe, expect } from "../fixtures.ts";
 
 const V = { "X-Experience-API-Version": "1.0.3" } as const;
 
@@ -69,7 +69,10 @@ function buildMultipartBody(
 
 describe("xAPI Statement Attachments", () => {
   describe("POST /xapi/statements (JSON with fileUrl attachment)", () => {
-    test("should accept statement with fileUrl-only attachment (no binary part)", async ({ server, basicAuth }) => {
+    test("should accept statement with fileUrl-only attachment (no binary part)", async ({
+      server,
+      basicAuth,
+    }) => {
       const stmt = minimalStatement({
         attachments: [
           {
@@ -97,17 +100,20 @@ describe("xAPI Statement Attachments", () => {
   // Multipart/mixed — POST
   // =========================================================================
 
-  describe('POST /xapi/statements (multipart/mixed)', () => {
-    test('should store statement with binary attachment and return 200', async ({ server, basicAuth }) => {
-      const attachmentData = Buffer.from('This is test attachment content');
-      const sha2 = createHash('sha256').update(attachmentData).digest('hex');
+  describe("POST /xapi/statements (multipart/mixed)", () => {
+    test("should store statement with binary attachment and return 200", async ({
+      server,
+      basicAuth,
+    }) => {
+      const attachmentData = Buffer.from("This is test attachment content");
+      const sha2 = createHash("sha256").update(attachmentData).digest("hex");
 
       const stmt = minimalStatement({
         attachments: [
           {
-            usageType: 'http://example.com/attachment-usage/test',
-            display: { 'en-US': 'Binary attachment' },
-            contentType: 'text/plain',
+            usageType: "http://example.com/attachment-usage/test",
+            display: { "en-US": "Binary attachment" },
+            contentType: "text/plain",
             length: attachmentData.length,
             sha2,
           },
@@ -115,12 +121,12 @@ describe("xAPI Statement Attachments", () => {
       });
 
       const { body, contentType } = buildMultipartBody(stmt, [
-        { data: attachmentData, contentType: 'text/plain', sha2 },
+        { data: attachmentData, contentType: "text/plain", sha2 },
       ]);
 
       const resp = await fetch(`${server.apiUrl}/xapi/statements`, {
-        method: 'POST',
-        headers: { 'Content-Type': contentType, Authorization: `Basic ${basicAuth}`, ...V },
+        method: "POST",
+        headers: { "Content-Type": contentType, Authorization: `Basic ${basicAuth}`, ...V },
         body: new Uint8Array(body),
       });
 
@@ -129,18 +135,18 @@ describe("xAPI Statement Attachments", () => {
       expect(ids).toHaveLength(1);
     });
 
-    test('should reject when statement attachment has no fileUrl and no matching binary', async ({
+    test("should reject when statement attachment has no fileUrl and no matching binary", async ({
       server,
       basicAuth,
     }) => {
-      const sha2 = createHash('sha256').update('missing data').digest('hex');
+      const sha2 = createHash("sha256").update("missing data").digest("hex");
 
       const stmt = minimalStatement({
         attachments: [
           {
-            usageType: 'http://example.com/attachment-usage/test',
-            display: { 'en-US': 'Missing binary' },
-            contentType: 'text/plain',
+            usageType: "http://example.com/attachment-usage/test",
+            display: { "en-US": "Missing binary" },
+            contentType: "text/plain",
             length: 12,
             sha2,
           },
@@ -152,9 +158,9 @@ describe("xAPI Statement Attachments", () => {
       const jsonPart = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(stmt)}\r\n--${boundary}--\r\n`;
 
       const resp = await fetch(`${server.apiUrl}/xapi/statements`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': `multipart/mixed; boundary=${boundary}`,
+          "Content-Type": `multipart/mixed; boundary=${boundary}`,
           Authorization: `Basic ${basicAuth}`,
           ...V,
         },
@@ -163,19 +169,22 @@ describe("xAPI Statement Attachments", () => {
 
       expect(resp.status).toBe(400);
       const json = (await resp.json()) as { error: string };
-      expect(json.error).toContain('Missing binary data for attachment');
+      expect(json.error).toContain("Missing binary data for attachment");
     });
 
-    test('should reject when attachment hash does not match binary data', async ({ server, basicAuth }) => {
-      const binaryData = Buffer.from('actual data');
-      const fakeSha2 = createHash('sha256').update('different data').digest('hex');
+    test("should reject when attachment hash does not match binary data", async ({
+      server,
+      basicAuth,
+    }) => {
+      const binaryData = Buffer.from("actual data");
+      const fakeSha2 = createHash("sha256").update("different data").digest("hex");
 
       const stmt = minimalStatement({
         attachments: [
           {
-            usageType: 'http://example.com/attachment-usage/test',
-            display: { 'en-US': 'Bad hash' },
-            contentType: 'text/plain',
+            usageType: "http://example.com/attachment-usage/test",
+            display: { "en-US": "Bad hash" },
+            contentType: "text/plain",
             length: binaryData.length,
             sha2: fakeSha2,
           },
@@ -183,13 +192,13 @@ describe("xAPI Statement Attachments", () => {
       });
 
       const { body, contentType } = buildMultipartBody(stmt, [
-        { data: binaryData, contentType: 'text/plain', sha2: fakeSha2 },
+        { data: binaryData, contentType: "text/plain", sha2: fakeSha2 },
       ]);
 
       const resp = await fetch(`${server.apiUrl}/xapi/statements`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': contentType,
+          "Content-Type": contentType,
           Authorization: `Basic ${basicAuth}`,
           ...V,
         },
@@ -198,7 +207,7 @@ describe("xAPI Statement Attachments", () => {
 
       expect(resp.status).toBe(400);
       const json = (await resp.json()) as { error: string };
-      expect(json.error).toContain('Attachment hash mismatch');
+      expect(json.error).toContain("Attachment hash mismatch");
     });
   });
 
@@ -248,7 +257,10 @@ describe("xAPI Statement Attachments", () => {
   // =========================================================================
 
   describe("GET /xapi/statements?attachments=true", () => {
-    test("should return multipart/mixed response with attachment data", async ({ server, basicAuth }) => {
+    test("should return multipart/mixed response with attachment data", async ({
+      server,
+      basicAuth,
+    }) => {
       const binaryData = Buffer.from("GET attachment round-trip");
       const sha2 = createHash("sha256").update(binaryData).digest("hex");
 
@@ -265,7 +277,9 @@ describe("xAPI Statement Attachments", () => {
       });
 
       // POST the statement with attachment
-      const { body, boundary } = buildMultipartBody(stmt, [{ sha2, contentType: "text/plain", data: binaryData }]);
+      const { body, boundary } = buildMultipartBody(stmt, [
+        { sha2, contentType: "text/plain", data: binaryData },
+      ]);
       const postResp = await fetch(`${server.apiUrl}/xapi/statements`, {
         method: "POST",
         headers: {
@@ -315,7 +329,9 @@ describe("xAPI Statement Attachments", () => {
       });
 
       // POST with attachment
-      const { body, boundary } = buildMultipartBody(stmt, [{ sha2, contentType: "text/plain", data: binaryData }]);
+      const { body, boundary } = buildMultipartBody(stmt, [
+        { sha2, contentType: "text/plain", data: binaryData },
+      ]);
       const postResp = await fetch(`${server.apiUrl}/xapi/statements`, {
         method: "POST",
         headers: {
@@ -341,7 +357,10 @@ describe("xAPI Statement Attachments", () => {
       expect(ct).toContain("application/json");
     });
 
-    test("should return multipart/mixed for list query with attachments=true", async ({ server, basicAuth }) => {
+    test("should return multipart/mixed for list query with attachments=true", async ({
+      server,
+      basicAuth,
+    }) => {
       const binaryData = Buffer.from("list query attachment");
       const sha2 = createHash("sha256").update(binaryData).digest("hex");
 
@@ -358,7 +377,9 @@ describe("xAPI Statement Attachments", () => {
       });
 
       // POST with attachment
-      const { body, boundary } = buildMultipartBody(stmt, [{ sha2, contentType: "text/plain", data: binaryData }]);
+      const { body, boundary } = buildMultipartBody(stmt, [
+        { sha2, contentType: "text/plain", data: binaryData },
+      ]);
       const postResp = await fetch(`${server.apiUrl}/xapi/statements`, {
         method: "POST",
         headers: {
@@ -371,12 +392,9 @@ describe("xAPI Statement Attachments", () => {
       expect(postResp.status).toBe(200);
 
       // GET list query with attachments=true
-      const getResp = await fetch(
-        `${server.apiUrl}/xapi/statements?attachments=true`,
-        {
-          headers: { Authorization: `Basic ${basicAuth}`, ...V },
-        },
-      );
+      const getResp = await fetch(`${server.apiUrl}/xapi/statements?attachments=true`, {
+        headers: { Authorization: `Basic ${basicAuth}`, ...V },
+      });
 
       expect(getResp.status).toBe(200);
       const ct = getResp.headers.get("content-type") ?? "";

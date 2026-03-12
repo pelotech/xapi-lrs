@@ -196,7 +196,12 @@ export interface XAPIGroupObject {
   member?: XAPIAgent[];
 }
 
-export type XAPIObject = XAPIActivity | XAPIStatementRef | XAPISubStatement | XAPIAgentObject | XAPIGroupObject;
+export type XAPIObject =
+  | XAPIActivity
+  | XAPIStatementRef
+  | XAPISubStatement
+  | XAPIAgentObject
+  | XAPIGroupObject;
 
 // ============================================================================
 // Result

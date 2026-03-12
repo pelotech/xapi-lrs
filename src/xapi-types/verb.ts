@@ -15,8 +15,14 @@ export const CMI5_VERBS = {
   SATISFIED: { id: "https://w3id.org/xapi/adl/verbs/satisfied", display: { "en-US": "satisfied" } },
 
   // AU-issued verbs
-  INITIALIZED: { id: "http://adlnet.gov/expapi/verbs/initialized", display: { "en-US": "initialized" } },
-  TERMINATED: { id: "http://adlnet.gov/expapi/verbs/terminated", display: { "en-US": "terminated" } },
+  INITIALIZED: {
+    id: "http://adlnet.gov/expapi/verbs/initialized",
+    display: { "en-US": "initialized" },
+  },
+  TERMINATED: {
+    id: "http://adlnet.gov/expapi/verbs/terminated",
+    display: { "en-US": "terminated" },
+  },
   PASSED: { id: "http://adlnet.gov/expapi/verbs/passed", display: { "en-US": "passed" } },
   FAILED: { id: "http://adlnet.gov/expapi/verbs/failed", display: { "en-US": "failed" } },
   COMPLETED: { id: "http://adlnet.gov/expapi/verbs/completed", display: { "en-US": "completed" } },

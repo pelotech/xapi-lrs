@@ -2,8 +2,8 @@
  * Pino logger for the LRS service.
  */
 
-import { pino } from 'pino';
-import type { LrsConfig } from './config.ts';
+import { pino } from "pino";
+import type { LrsConfig } from "./config.ts";
 
 export type Logger = pino.Logger;
 

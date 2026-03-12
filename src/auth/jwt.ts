@@ -10,8 +10,8 @@
  * No per-tenant IdP resolution — single static provider.
  */
 
-import * as jose from 'jose';
-import type { AuthPayloadJWT, XapiScope } from './types.ts';
+import * as jose from "jose";
+import type { AuthPayloadJWT, XapiScope } from "./types.ts";
 
 type KeyResolver = ReturnType<typeof jose.createRemoteJWKSet>;
 
@@ -35,7 +35,7 @@ export async function discoverJwksUri(discoveryUrl: string): Promise<string> {
   }
   const doc = (await response.json()) as { jwks_uri?: string };
   if (!doc.jwks_uri) {
-    throw new Error('OIDC discovery document missing jwks_uri');
+    throw new Error("OIDC discovery document missing jwks_uri");
   }
   return doc.jwks_uri;
 }
@@ -58,12 +58,19 @@ export interface JwtResult {
 
 /** Valid xAPI scopes for validation */
 const VALID_SCOPES = new Set<string>([
-  'statements/write', 'statements/read', 'statements/read/mine',
-  'all/read', 'all', 'define', 'profile', 'state', 'state/read',
+  "statements/write",
+  "statements/read",
+  "statements/read/mine",
+  "all/read",
+  "all",
+  "define",
+  "profile",
+  "state",
+  "state/read",
 ]);
 
 /** Default JWT scopes when no scope claim is present in the token */
-const JWT_DEFAULT_SCOPES: XapiScope[] = ['all'];
+const JWT_DEFAULT_SCOPES: XapiScope[] = ["all"];
 
 /**
  * Extract xAPI scopes from JWT claims.
@@ -74,14 +81,16 @@ function extractScopes(payload: jose.JWTPayload): XapiScope[] | null {
   const p = payload as Record<string, unknown>;
 
   // RFC 8693: "scope" as space-delimited string
-  if (typeof p.scope === 'string' && p.scope.length > 0) {
+  if (typeof p.scope === "string" && p.scope.length > 0) {
     const parsed = p.scope.split(/\s+/).filter((s) => VALID_SCOPES.has(s)) as XapiScope[];
     if (parsed.length > 0) return parsed;
   }
 
   // Alternative: "scopes" as array
   if (Array.isArray(p.scopes)) {
-    const parsed = p.scopes.filter((s): s is XapiScope => typeof s === 'string' && VALID_SCOPES.has(s));
+    const parsed = p.scopes.filter(
+      (s): s is XapiScope => typeof s === "string" && VALID_SCOPES.has(s),
+    );
     if (parsed.length > 0) return parsed;
   }
 
@@ -98,7 +107,7 @@ export async function verifyJwt(
   const aud = normalizeAudience(unverified.aud);
 
   if (!iss || !aud) {
-    throw new Error('JWT missing iss or aud claim');
+    throw new Error("JWT missing iss or aud claim");
   }
 
   if (iss !== jwtConfig.issuer) {
@@ -116,12 +125,12 @@ export async function verifyJwt(
   const scopes = extractScopes(payload) ?? JWT_DEFAULT_SCOPES;
 
   return {
-    sub: payload.sub ?? '',
+    sub: payload.sub ?? "",
     roles: Array.isArray(realmRoles) ? realmRoles : [],
     payload: {
-      sub: payload.sub ?? '',
-      iss: payload.iss ?? '',
-      aud: payload.aud ?? '',
+      sub: payload.sub ?? "",
+      iss: payload.iss ?? "",
+      aud: payload.aud ?? "",
       scopes,
       realm_access: (payload as { realm_access?: { roles?: string[] } }).realm_access,
     },

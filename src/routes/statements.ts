@@ -3,13 +3,13 @@
  * POST/PUT/GET /xapi/statements
  */
 
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
-import { createHash } from 'node:crypto';
-import { Readable } from 'node:stream';
-import type { HonoEnv } from '../hono-env.ts';
-import type { LrsDeps } from '../deps.ts';
-import type { AuthInfo } from '../auth/types.ts';
-import { HttpError, withClient } from '../db.ts';
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { createHash } from "node:crypto";
+import { Readable } from "node:stream";
+import type { HonoEnv } from "../hono-env.ts";
+import type { LrsDeps } from "../deps.ts";
+import type { AuthInfo } from "../auth/types.ts";
+import { HttpError, withClient } from "../db.ts";
 import {
   insertStatement,
   insertStatements,
@@ -17,50 +17,50 @@ import {
   queryStatements,
   voidStatement,
   getConsistentThrough,
-} from '../repositories/statements.ts';
-import { insertAttachment, getAttachmentsByStatement } from '../repositories/attachments.ts';
-import { canonicalAgentIfi, validateSince, validateRegistration } from '../helpers/agent.ts';
-import { enrichStatement, formatStatement, buildAuthority } from '../helpers/enrichment.ts';
-import { validateStatement, statementsMatch } from '../xapi/statement-validator.ts';
-import { buildMultipartResponse } from '../xapi/multipart.ts';
-import type { MultipartAttachmentPart, ResponseAttachmentPart } from '../xapi/multipart.ts';
-import { validateSignedStatements } from '../xapi/signature.ts';
+} from "../repositories/statements.ts";
+import { insertAttachment, getAttachmentsByStatement } from "../repositories/attachments.ts";
+import { canonicalAgentIfi, validateSince, validateRegistration } from "../helpers/agent.ts";
+import { enrichStatement, formatStatement, buildAuthority } from "../helpers/enrichment.ts";
+import { validateStatement, statementsMatch } from "../xapi/statement-validator.ts";
+import { buildMultipartResponse } from "../xapi/multipart.ts";
+import type { MultipartAttachmentPart, ResponseAttachmentPart } from "../xapi/multipart.ts";
+import { validateSignedStatements } from "../xapi/signature.ts";
 
-const VOIDED_VERB_ID = 'http://adlnet.gov/expapi/verbs/voided';
+const VOIDED_VERB_ID = "http://adlnet.gov/expapi/verbs/voided";
 
 // ============================================================================
 // OpenAPI route definitions (for doc generation)
 // ============================================================================
 
 const postStatementsRoute = createRoute({
-  method: 'post',
-  path: '/statements',
-  operationId: 'PostStatements',
-  tags: ['xAPI Statements'],
+  method: "post",
+  path: "/statements",
+  operationId: "PostStatements",
+  tags: ["xAPI Statements"],
   security: [{ basic: [] }, { jwt: [] }],
   responses: {
     200: {
-      description: 'Ok',
-      content: { 'application/json': { schema: z.array(z.string()) } },
+      description: "Ok",
+      content: { "application/json": { schema: z.array(z.string()) } },
     },
   },
 });
 
 const putStatementRoute = createRoute({
-  method: 'put',
-  path: '/statements',
-  operationId: 'PutStatement',
-  tags: ['xAPI Statements'],
+  method: "put",
+  path: "/statements",
+  operationId: "PutStatement",
+  tags: ["xAPI Statements"],
   security: [{ basic: [] }, { jwt: [] }],
   request: { query: z.object({ statementId: z.string() }) },
-  responses: { 204: { description: 'No content' } },
+  responses: { 204: { description: "No content" } },
 });
 
 const getStatementsRoute = createRoute({
-  method: 'get',
-  path: '/statements',
-  operationId: 'GetStatements',
-  tags: ['xAPI Statements'],
+  method: "get",
+  path: "/statements",
+  operationId: "GetStatements",
+  tags: ["xAPI Statements"],
   security: [{ basic: [] }, { jwt: [] }],
   request: {
     query: z.object({
@@ -80,7 +80,7 @@ const getStatementsRoute = createRoute({
       attachments: z.coerce.boolean().optional(),
     }),
   },
-  responses: { 204: { description: 'No content' } },
+  responses: { 204: { description: "No content" } },
 });
 
 // ============================================================================
@@ -105,7 +105,7 @@ export function createStatementsApp() {
     for (const raw of rawArray) {
       const result = validateStatement(raw);
       if (!result.valid) {
-        throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
+        throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join("; "));
       }
       validated.push(result.statement as unknown as Record<string, unknown>);
     }
@@ -125,14 +125,14 @@ export function createStatementsApp() {
         }
       }
 
-      metrics.statementsReceived.add(validated.length, { method: 'POST' });
+      metrics.statementsReceived.add(validated.length, { method: "POST" });
       const results = await insertStatements(client, validated, authority);
 
       for (let i = 0; i < results.length; i++) {
         if (!results[i].inserted) {
           const existing = await getStatementById(client, validated[i].id as string);
           if (existing && !statementsMatch(existing.payload, validated[i])) {
-            throw new HttpError(409, 'Statement already exists with different content');
+            throw new HttpError(409, "Statement already exists with different content");
           }
         }
       }
@@ -146,7 +146,12 @@ export function createStatementsApp() {
             const sha2 = att.sha2 as string;
             const part = attachmentParts.get(sha2);
             if (part) {
-              await insertAttachment(client, { statementId: stmtId, sha2, contentType: part.contentType, data: part.data });
+              await insertAttachment(client, {
+                statementId: stmtId,
+                sha2,
+                contentType: part.contentType,
+                data: part.data,
+              });
             }
           }
         }
@@ -163,7 +168,7 @@ export function createStatementsApp() {
     const deps = c.var.deps;
     const auth = c.var.auth;
     const { pool, metrics } = deps;
-    const statementId = c.req.query('statementId')!;
+    const statementId = c.req.query("statementId")!;
     const attachmentParts = c.var.attachmentParts;
 
     const raw = (c.var.parsedBody ?? {}) as Record<string, unknown>;
@@ -171,7 +176,10 @@ export function createStatementsApp() {
 
     const validationResult = validateStatement(raw);
     if (!validationResult.valid) {
-      throw new HttpError(400, validationResult.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
+      throw new HttpError(
+        400,
+        validationResult.errors.map((e) => `${e.path}: ${e.message}`).join("; "),
+      );
     }
     const stmt = validationResult.statement as unknown as Record<string, unknown>;
 
@@ -180,19 +188,19 @@ export function createStatementsApp() {
     }
 
     if (stmt.id !== statementId) {
-      throw new HttpError(409, 'Statement id does not match statementId parameter');
+      throw new HttpError(409, "Statement id does not match statementId parameter");
     }
 
     const verbId = (stmt.verb as Record<string, unknown>)?.id as string | undefined;
     const authority = authorityFromAuth(auth);
 
     await withClient(pool, metrics, async (client) => {
-      metrics.statementsReceived.add(1, { method: 'PUT' });
+      metrics.statementsReceived.add(1, { method: "PUT" });
 
       const existing = await getStatementById(client, statementId);
       if (existing) {
         if (!statementsMatch(existing.payload, stmt)) {
-          throw new HttpError(409, 'Statement already exists with different content');
+          throw new HttpError(409, "Statement already exists with different content");
         }
         return;
       }
@@ -210,7 +218,12 @@ export function createStatementsApp() {
             const sha2 = att.sha2 as string;
             const part = attachmentParts.get(sha2);
             if (part) {
-              await insertAttachment(client, { statementId, sha2, contentType: part.contentType, data: part.data });
+              await insertAttachment(client, {
+                statementId,
+                sha2,
+                contentType: part.contentType,
+                data: part.data,
+              });
             }
           }
         }
@@ -222,12 +235,14 @@ export function createStatementsApp() {
 
   // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements responses
   // (including errors). Must run before the route handler so it applies to error responses.
-  app.use('/statements', async (c, next) => {
-    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') return next();
+  app.use("/statements", async (c, next) => {
+    if (c.req.method !== "GET" && c.req.method !== "HEAD") return next();
     const { pool, metrics } = c.var.deps;
-    const consistentThrough = await withClient(pool, metrics, (client) => getConsistentThrough(client));
+    const consistentThrough = await withClient(pool, metrics, (client) =>
+      getConsistentThrough(client),
+    );
     await next();
-    c.res.headers.set('X-Experience-API-Consistent-Through', consistentThrough);
+    c.res.headers.set("X-Experience-API-Consistent-Through", consistentThrough);
   });
 
   // GET /xapi/statements
@@ -235,24 +250,24 @@ export function createStatementsApp() {
     const deps = c.var.deps;
     const { pool, metrics } = deps;
 
-    const statementId = c.req.query('statementId');
-    const voidedStatementId = c.req.query('voidedStatementId');
-    const agent = c.req.query('agent');
-    const verb = c.req.query('verb');
-    const activity = c.req.query('activity');
-    const registration = c.req.query('registration');
-    const related_activities = c.req.query('related_activities') === 'true';
-    const related_agents = c.req.query('related_agents') === 'true';
-    const format = c.req.query('format');
-    const since = c.req.query('since');
-    const until = c.req.query('until');
-    const limitStr = c.req.query('limit');
+    const statementId = c.req.query("statementId");
+    const voidedStatementId = c.req.query("voidedStatementId");
+    const agent = c.req.query("agent");
+    const verb = c.req.query("verb");
+    const activity = c.req.query("activity");
+    const registration = c.req.query("registration");
+    const related_activities = c.req.query("related_activities") === "true";
+    const related_agents = c.req.query("related_agents") === "true";
+    const format = c.req.query("format");
+    const since = c.req.query("since");
+    const until = c.req.query("until");
+    const limitStr = c.req.query("limit");
     const limit = limitStr ? Number(limitStr) : undefined;
     if (limit !== undefined && (!Number.isFinite(limit) || limit < 1)) {
-      throw new HttpError(400, 'limit must be a positive integer');
+      throw new HttpError(400, "limit must be a positive integer");
     }
-    const ascending = c.req.query('ascending') === 'true';
-    const attachments = c.req.query('attachments') === 'true';
+    const ascending = c.req.query("ascending") === "true";
+    const attachments = c.req.query("attachments") === "true";
 
     // Reject unknown query params
     const url = new URL(c.req.url);
@@ -268,12 +283,16 @@ export function createStatementsApp() {
     if (agent) canonicalAgentIfi(agent);
 
     if (statementId && voidedStatementId) {
-      throw new HttpError(400, 'Cannot use both statementId and voidedStatementId');
+      throw new HttpError(400, "Cannot use both statementId and voidedStatementId");
     }
 
-    const effectiveFormat = format ?? 'exact';
-    if (effectiveFormat !== 'exact' && effectiveFormat !== 'ids' && effectiveFormat !== 'canonical') {
-      throw new HttpError(400, 'format must be one of: ids, exact, canonical');
+    const effectiveFormat = format ?? "exact";
+    if (
+      effectiveFormat !== "exact" &&
+      effectiveFormat !== "ids" &&
+      effectiveFormat !== "canonical"
+    ) {
+      throw new HttpError(400, "format must be one of: ids, exact, canonical");
     }
 
     if (statementId || voidedStatementId) {
@@ -282,24 +301,27 @@ export function createStatementsApp() {
         verb !== undefined ||
         activity !== undefined ||
         registration !== undefined ||
-        c.req.query('related_activities') !== undefined ||
-        c.req.query('related_agents') !== undefined ||
+        c.req.query("related_activities") !== undefined ||
+        c.req.query("related_agents") !== undefined ||
         since !== undefined ||
         until !== undefined ||
         limitStr !== undefined ||
-        c.req.query('ascending') !== undefined
+        c.req.query("ascending") !== undefined
       ) {
-        throw new HttpError(400, 'Cannot combine statementId or voidedStatementId with other filter parameters');
+        throw new HttpError(
+          400,
+          "Cannot combine statementId or voidedStatementId with other filter parameters",
+        );
       }
     }
 
-    const acceptLanguage = c.req.header('accept-language');
+    const acceptLanguage = c.req.header("accept-language");
 
     return withClient(pool, metrics, async (client) => {
       if (statementId) {
         const row = await getStatementById(client, statementId);
         if (!row || row.is_voided) {
-          throw new HttpError(404, 'Statement not found');
+          throw new HttpError(404, "Statement not found");
         }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
         if (attachments) {
@@ -312,7 +334,7 @@ export function createStatementsApp() {
       if (voidedStatementId) {
         const row = await getStatementById(client, voidedStatementId);
         if (!row || !row.is_voided) {
-          throw new HttpError(404, 'Voided statement not found');
+          throw new HttpError(404, "Voided statement not found");
         }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
         if (attachments) {
@@ -335,29 +357,31 @@ export function createStatementsApp() {
         ascending,
       });
 
-      const statements = rows.map((row) => formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage));
-      const result: { statements: unknown[]; more: string } = { statements, more: '' };
+      const statements = rows.map((row) =>
+        formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage),
+      );
+      const result: { statements: unknown[]; more: string } = { statements, more: "" };
 
       if (hasMore) {
         const lastRow = rows.at(-1)!;
         const moreParams = new URLSearchParams();
-        if (agent) moreParams.set('agent', agent);
-        if (verb) moreParams.set('verb', verb);
-        if (activity) moreParams.set('activity', activity);
-        if (registration) moreParams.set('registration', registration);
-        if (related_activities) moreParams.set('related_activities', 'true');
-        if (related_agents) moreParams.set('related_agents', 'true');
-        if (limit) moreParams.set('limit', limit.toString());
-        if (effectiveFormat !== 'exact') moreParams.set('format', effectiveFormat);
+        if (agent) moreParams.set("agent", agent);
+        if (verb) moreParams.set("verb", verb);
+        if (activity) moreParams.set("activity", activity);
+        if (registration) moreParams.set("registration", registration);
+        if (related_activities) moreParams.set("related_activities", "true");
+        if (related_agents) moreParams.set("related_agents", "true");
+        if (limit) moreParams.set("limit", limit.toString());
+        if (effectiveFormat !== "exact") moreParams.set("format", effectiveFormat);
 
         const lastStored = lastRow.payload.stored as string;
         if (ascending) {
-          moreParams.set('ascending', 'true');
-          moreParams.set('since', lastStored);
-          if (until) moreParams.set('until', until);
+          moreParams.set("ascending", "true");
+          moreParams.set("since", lastStored);
+          if (until) moreParams.set("until", until);
         } else {
-          moreParams.set('until', lastStored);
-          if (since) moreParams.set('since', since);
+          moreParams.set("until", lastStored);
+          if (since) moreParams.set("since", since);
         }
 
         result.more = `/xapi/statements?${moreParams.toString()}`;
@@ -380,36 +404,39 @@ export function createStatementsApp() {
 // ============================================================================
 
 const STATEMENTS_KNOWN_PARAMS = new Set([
-  'statementId',
-  'voidedStatementId',
-  'agent',
-  'verb',
-  'activity',
-  'registration',
-  'related_activities',
-  'related_agents',
-  'format',
-  'since',
-  'until',
-  'limit',
-  'ascending',
-  'attachments',
+  "statementId",
+  "voidedStatementId",
+  "agent",
+  "verb",
+  "activity",
+  "registration",
+  "related_activities",
+  "related_agents",
+  "format",
+  "since",
+  "until",
+  "limit",
+  "ascending",
+  "attachments",
 ]);
 
-async function handleVoiding(client: import('pg').PoolClient, stmt: Record<string, unknown>): Promise<void> {
+async function handleVoiding(
+  client: import("pg").PoolClient,
+  stmt: Record<string, unknown>,
+): Promise<void> {
   const obj = stmt.object as Record<string, unknown> | undefined;
   const targetId = obj?.id as string | undefined;
   const objectType = obj?.objectType as string | undefined;
 
-  if (objectType !== 'StatementRef' || !targetId) {
-    throw new HttpError(400, 'Voiding statement must reference a StatementRef');
+  if (objectType !== "StatementRef" || !targetId) {
+    throw new HttpError(400, "Voiding statement must reference a StatementRef");
   }
 
   const target = await getStatementById(client, targetId);
   if (target) {
     const targetVerb = (target.payload as Record<string, unknown>).verb as Record<string, unknown>;
     if (targetVerb?.id === VOIDED_VERB_ID) {
-      throw new HttpError(400, 'Cannot void a voiding statement');
+      throw new HttpError(400, "Cannot void a voiding statement");
     }
   }
 
@@ -438,7 +465,10 @@ async function validateAttachmentParts(
 
   for (const sha2 of parts.keys()) {
     if (!allHashes.has(sha2)) {
-      throw new HttpError(400, `Excess multipart section with hash ${sha2} does not match any statement attachment`);
+      throw new HttpError(
+        400,
+        `Excess multipart section with hash ${sha2} does not match any statement attachment`,
+      );
     }
   }
 
@@ -449,7 +479,7 @@ async function validateAttachmentParts(
   }
 
   for (const [sha2, part] of parts) {
-    const actualHash = createHash('sha256').update(part.data).digest('hex');
+    const actualHash = createHash("sha256").update(part.data).digest("hex");
     if (actualHash !== sha2) {
       throw new HttpError(400, `Attachment hash mismatch: expected ${sha2}, got ${actualHash}`);
     }
@@ -462,17 +492,17 @@ async function validateAttachmentParts(
 }
 
 function authorityFromAuth(auth: AuthInfo): Record<string, unknown> {
-  if (auth.type === 'basic') {
+  if (auth.type === "basic") {
     return buildAuthority(auth.payload.accountName);
   }
   return {
-    objectType: 'Agent',
+    objectType: "Agent",
     account: { homePage: auth.payload.iss, name: auth.payload.sub },
   };
 }
 
 async function collectAttachmentParts(
-  client: import('pg').PoolClient,
+  client: import("pg").PoolClient,
   stmt: unknown,
 ): Promise<ResponseAttachmentPart[]> {
   const parts: ResponseAttachmentPart[] = [];
@@ -492,7 +522,7 @@ async function collectAttachmentParts(
 }
 
 async function collectAttachmentPartsFromList(
-  client: import('pg').PoolClient,
+  client: import("pg").PoolClient,
   statements: unknown[],
 ): Promise<ResponseAttachmentPart[]> {
   const parts: ResponseAttachmentPart[] = [];

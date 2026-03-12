@@ -7,12 +7,12 @@
  * Void:   UPDATE xapi_statement SET is_voided = true WHERE statement_id = $1.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
-import { HttpError } from '../db.ts';
-import { squuid, squuidMin } from '../helpers/squuid.ts';
-import { canonicalAgentIfi, agentActorType } from '../helpers/agent.ts';
+import type { PoolClient, QueryConfig } from "pg";
+import { HttpError } from "../db.ts";
+import { squuid, squuidMin } from "../helpers/squuid.ts";
+import { canonicalAgentIfi, agentActorType } from "../helpers/agent.ts";
 
-type Query = Omit<QueryConfig, 'values'>;
+type Query = Omit<QueryConfig, "values">;
 
 // ============================================================================
 // Types
@@ -44,7 +44,7 @@ export interface StatementQueryParams {
 // ============================================================================
 
 const INSERT_XAPI_STATEMENT = {
-  name: 'insert_xapi_statement',
+  name: "insert_xapi_statement",
   text: `INSERT INTO xapi_statement (id, statement_id, verb_iri, is_voided, payload)
          VALUES ($1, $2, $3, false, $4)
          ON CONFLICT (statement_id) DO NOTHING`,
@@ -55,7 +55,7 @@ const INSERT_XAPI_STATEMENT = {
  * Uses a CTE with UNNEST to avoid per-row round-trips.
  */
 const BATCH_UPSERT_ACTORS = {
-  name: 'batch_upsert_actors',
+  name: "batch_upsert_actors",
   text: `WITH unique_actors AS (
            SELECT DISTINCT ON (ifi, atype)
                   ifi, atype, apayload
@@ -80,7 +80,7 @@ const BATCH_UPSERT_ACTORS = {
  * Uses a CTE with UNNEST to avoid per-row round-trips.
  */
 const BATCH_UPSERT_ACTIVITIES = {
-  name: 'batch_upsert_activities',
+  name: "batch_upsert_activities",
   text: `WITH unique_activities AS (
            SELECT DISTINCT ON (iri)
                   iri, payload
@@ -102,7 +102,7 @@ const BATCH_UPSERT_ACTIVITIES = {
 } as const satisfies Query;
 
 const INSERT_STATEMENT_TO_STATEMENT = {
-  name: 'insert_statement_to_statement',
+  name: "insert_statement_to_statement",
   text: `INSERT INTO statement_to_statement (id, ancestor_id, descendant_id)
          VALUES (gen_random_uuid(), $1, $2)
          ON CONFLICT DO NOTHING`,
@@ -124,24 +124,31 @@ function actorPayload(agent: Record<string, unknown>): Record<string, unknown> {
   return p;
 }
 
-type ActorEntry = { ifi: string; type: 'Agent' | 'Group'; usage: string; payload: Record<string, unknown> };
+type ActorEntry = {
+  ifi: string;
+  type: "Agent" | "Group";
+  usage: string;
+  payload: Record<string, unknown>;
+};
 
 /** Extract actors from a statement for junction table insertion. */
 function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const actors: ActorEntry[] = [];
 
-  function tryPush(agent: Record<string, unknown>, type: 'Agent' | 'Group', usage: string): void {
+  function tryPush(agent: Record<string, unknown>, type: "Agent" | "Group", usage: string): void {
     try {
       actors.push({ ifi: canonicalAgentIfi(agent), type, usage, payload: actorPayload(agent) });
-    } catch { /* skip agents without valid IFI */ }
+    } catch {
+      /* skip agents without valid IFI */
+    }
   }
 
   const actor = stmt.actor as Record<string, unknown> | undefined;
   if (actor) {
-    tryPush(actor, agentActorType(actor), 'Actor');
+    tryPush(actor, agentActorType(actor), "Actor");
     if (Array.isArray(actor.member)) {
       for (const m of actor.member as Record<string, unknown>[]) {
-        tryPush(m, 'Agent', 'Member');
+        tryPush(m, "Agent", "Member");
       }
     }
   }
@@ -149,17 +156,17 @@ function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const obj = stmt.object as Record<string, unknown> | undefined;
   if (obj) {
     const objectType = obj.objectType as string | undefined;
-    if (objectType === 'Agent' || objectType === 'Group') {
-      tryPush(obj, agentActorType(obj), 'Object');
+    if (objectType === "Agent" || objectType === "Group") {
+      tryPush(obj, agentActorType(obj), "Object");
     }
   }
 
   const authority = stmt.authority as Record<string, unknown> | undefined;
   if (authority) {
-    tryPush(authority, agentActorType(authority), 'Authority');
+    tryPush(authority, agentActorType(authority), "Authority");
     if (Array.isArray(authority.member)) {
       for (const m of authority.member as Record<string, unknown>[]) {
-        tryPush(m, 'Agent', 'Authority');
+        tryPush(m, "Agent", "Authority");
       }
     }
   }
@@ -167,25 +174,25 @@ function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const ctx = stmt.context as Record<string, unknown> | undefined;
   if (ctx) {
     const instructor = ctx.instructor as Record<string, unknown> | undefined;
-    if (instructor) tryPush(instructor, agentActorType(instructor), 'Instructor');
+    if (instructor) tryPush(instructor, agentActorType(instructor), "Instructor");
     const team = ctx.team as Record<string, unknown> | undefined;
     if (team) {
-      tryPush(team, agentActorType(team), 'Team');
+      tryPush(team, agentActorType(team), "Team");
       if (Array.isArray(team.member)) {
         for (const m of team.member as Record<string, unknown>[]) {
-          tryPush(m, 'Agent', 'Member');
+          tryPush(m, "Agent", "Member");
         }
       }
     }
   }
 
   // SubStatement actors
-  if (obj && (obj.objectType as string) === 'SubStatement') {
+  if (obj && (obj.objectType as string) === "SubStatement") {
     const subActor = obj.actor as Record<string, unknown> | undefined;
-    if (subActor) tryPush(subActor, agentActorType(subActor), 'Actor');
+    if (subActor) tryPush(subActor, agentActorType(subActor), "Actor");
     const subObj = obj.object as Record<string, unknown> | undefined;
-    if (subObj && (subObj.objectType === 'Agent' || subObj.objectType === 'Group')) {
-      tryPush(subObj, agentActorType(subObj), 'Object');
+    if (subObj && (subObj.objectType === "Agent" || subObj.objectType === "Group")) {
+      tryPush(subObj, agentActorType(subObj), "Object");
     }
   }
 
@@ -200,20 +207,20 @@ function extractActivities(
 
   const obj = stmt.object as Record<string, unknown> | undefined;
   if (obj) {
-    const objectType = (obj.objectType as string | undefined) ?? 'Activity';
-    if (objectType === 'Activity' && obj.id) {
-      activities.push({ iri: obj.id as string, usage: 'Object', payload: obj });
+    const objectType = (obj.objectType as string | undefined) ?? "Activity";
+    if (objectType === "Activity" && obj.id) {
+      activities.push({ iri: obj.id as string, usage: "Object", payload: obj });
     }
   }
 
   const ctx = stmt.context as Record<string, unknown> | undefined;
-  if (ctx?.contextActivities && typeof ctx.contextActivities === 'object') {
+  if (ctx?.contextActivities && typeof ctx.contextActivities === "object") {
     const ca = ctx.contextActivities as Record<string, unknown>;
     const usageMap: Record<string, string> = {
-      parent: 'Parent',
-      grouping: 'Grouping',
-      category: 'Category',
-      other: 'Other',
+      parent: "Parent",
+      grouping: "Grouping",
+      category: "Category",
+      other: "Other",
     };
     for (const [key, usage] of Object.entries(usageMap)) {
       if (Array.isArray(ca[key])) {
@@ -227,21 +234,21 @@ function extractActivities(
   }
 
   // SubStatement activities
-  if (obj && (obj.objectType as string) === 'SubStatement') {
+  if (obj && (obj.objectType as string) === "SubStatement") {
     const subObj = obj.object as Record<string, unknown> | undefined;
-    const subObjType = (subObj?.objectType as string | undefined) ?? 'Activity';
-    if (subObj && subObjType === 'Activity' && subObj.id) {
-      activities.push({ iri: subObj.id as string, usage: 'SubObject', payload: subObj });
+    const subObjType = (subObj?.objectType as string | undefined) ?? "Activity";
+    if (subObj && subObjType === "Activity" && subObj.id) {
+      activities.push({ iri: subObj.id as string, usage: "SubObject", payload: subObj });
     }
 
     const subCtx = obj.context as Record<string, unknown> | undefined;
-    if (subCtx?.contextActivities && typeof subCtx.contextActivities === 'object') {
+    if (subCtx?.contextActivities && typeof subCtx.contextActivities === "object") {
       const sca = subCtx.contextActivities as Record<string, unknown>;
       const subUsageMap: Record<string, string> = {
-        parent: 'SubParent',
-        grouping: 'SubGrouping',
-        category: 'SubCategory',
-        other: 'SubOther',
+        parent: "SubParent",
+        grouping: "SubGrouping",
+        category: "SubCategory",
+        other: "SubOther",
       };
       for (const [key, usage] of Object.entries(subUsageMap)) {
         if (Array.isArray(sca[key])) {
@@ -270,7 +277,7 @@ export async function insertStatement(
   authority: Record<string, unknown>,
 ): Promise<InsertStatementResult> {
   const statementId = statement.id as string;
-  const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? '';
+  const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? "";
   const now = new Date();
   const storedIso = now.toISOString();
   const id = squuid(now.getTime());
@@ -314,7 +321,7 @@ export async function insertStatement(
 
   // StatementRef relationships
   const obj = payload.object as Record<string, unknown> | undefined;
-  if (obj?.objectType === 'StatementRef' && obj.id) {
+  if (obj?.objectType === "StatementRef" && obj.id) {
     await client.query({
       ...INSERT_STATEMENT_TO_STATEMENT,
       values: [obj.id as string, statementId],
@@ -341,7 +348,7 @@ export async function insertStatements(
 // ============================================================================
 
 const SELECT_STATEMENT_BY_ID = {
-  name: 'select_statement_by_id',
+  name: "select_statement_by_id",
   text: `SELECT id, statement_id, payload, is_voided, stored
          FROM xapi_statement WHERE statement_id = $1`,
 } as const satisfies Query;
@@ -356,7 +363,7 @@ export async function getStatementById(
   return {
     id: row.id,
     statement_id: row.statement_id,
-    payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
+    payload: typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload,
     is_voided: row.is_voided,
     stored: row.stored,
   };
@@ -367,7 +374,7 @@ export async function getStatementById(
 // ============================================================================
 
 const VOID_STATEMENT = {
-  name: 'void_statement',
+  name: "void_statement",
   text: `UPDATE xapi_statement SET is_voided = true WHERE statement_id = $1 AND is_voided = false`,
 } as const satisfies Query;
 
@@ -381,7 +388,7 @@ export async function voidStatement(client: PoolClient, statementId: string): Pr
 // ============================================================================
 
 const SELECT_CONSISTENT_THROUGH = {
-  name: 'select_consistent_through',
+  name: "select_consistent_through",
   text: `SELECT now() AS consistent_through`,
 } as const satisfies Query;
 
@@ -402,7 +409,7 @@ export async function getActivityDefinition(
   // Query all statement payloads that reference this activity as their object,
   // so we can merge definitions from multiple statements.
   const result = await client.query({
-    name: 'get_activity_definitions',
+    name: "get_activity_definitions",
     text: `SELECT s.payload
            FROM xapi_statement s
            JOIN statement_to_activity sta ON sta.statement_id = s.statement_id
@@ -411,21 +418,31 @@ export async function getActivityDefinition(
   });
 
   if (result.rows.length === 0) {
-    return { objectType: 'Activity', id: activityIri };
+    return { objectType: "Activity", id: activityIri };
   }
 
   // Merge definitions from all statements that reference this activity
   let mergedDef: Record<string, unknown> = {};
   for (const row of result.rows) {
-    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+    const payload = typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload;
     const obj = payload.object as Record<string, unknown> | undefined;
-    if (obj?.definition && typeof obj.definition === 'object') {
+    if (obj?.definition && typeof obj.definition === "object") {
       const def = obj.definition as Record<string, unknown>;
       // Deep-merge Language Maps within the definition
       for (const [key, value] of Object.entries(def)) {
-        if (value && typeof value === 'object' && !Array.isArray(value) && mergedDef[key] && typeof mergedDef[key] === 'object' && !Array.isArray(mergedDef[key])) {
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          mergedDef[key] &&
+          typeof mergedDef[key] === "object" &&
+          !Array.isArray(mergedDef[key])
+        ) {
           // Merge Language Maps (name, description) or other nested objects
-          mergedDef[key] = { ...(mergedDef[key] as Record<string, unknown>), ...(value as Record<string, unknown>) };
+          mergedDef[key] = {
+            ...(mergedDef[key] as Record<string, unknown>),
+            ...(value as Record<string, unknown>),
+          };
         } else {
           mergedDef[key] = value;
         }
@@ -433,7 +450,7 @@ export async function getActivityDefinition(
     }
   }
 
-  const activity: Record<string, unknown> = { objectType: 'Activity', id: activityIri };
+  const activity: Record<string, unknown> = { objectType: "Activity", id: activityIri };
   if (Object.keys(mergedDef).length > 0) {
     activity.definition = mergedDef;
   }
@@ -471,15 +488,23 @@ export async function queryStatements(
     try {
       agentIfi = canonicalAgentIfi(params.agent);
     } catch {
-      throw new HttpError(400, 'agent parameter is not valid JSON');
+      throw new HttpError(400, "agent parameter is not valid JSON");
     }
 
     if (params.related_agents) {
-      directContentConds.push(`EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.actor_ifi = $${paramIndex})`);
-      voidedContentConds.push(`EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = v.statement_id AND sta.actor_ifi = $${paramIndex})`);
+      directContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.actor_ifi = $${paramIndex})`,
+      );
+      voidedContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = v.statement_id AND sta.actor_ifi = $${paramIndex})`,
+      );
     } else {
-      directContentConds.push(`EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.usage = 'Actor' AND sta.actor_ifi = $${paramIndex})`);
-      voidedContentConds.push(`EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = v.statement_id AND sta.usage = 'Actor' AND sta.actor_ifi = $${paramIndex})`);
+      directContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.usage = 'Actor' AND sta.actor_ifi = $${paramIndex})`,
+      );
+      voidedContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = v.statement_id AND sta.usage = 'Actor' AND sta.actor_ifi = $${paramIndex})`,
+      );
     }
     values.push(agentIfi);
     paramIndex++;
@@ -487,11 +512,19 @@ export async function queryStatements(
 
   if (params.activity) {
     if (params.related_activities) {
-      directContentConds.push(`EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = s.statement_id AND stact.activity_iri = $${paramIndex})`);
-      voidedContentConds.push(`EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = v.statement_id AND stact.activity_iri = $${paramIndex})`);
+      directContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = s.statement_id AND stact.activity_iri = $${paramIndex})`,
+      );
+      voidedContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = v.statement_id AND stact.activity_iri = $${paramIndex})`,
+      );
     } else {
-      directContentConds.push(`EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = s.statement_id AND stact.usage = 'Object' AND stact.activity_iri = $${paramIndex})`);
-      voidedContentConds.push(`EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = v.statement_id AND stact.usage = 'Object' AND stact.activity_iri = $${paramIndex})`);
+      directContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = s.statement_id AND stact.usage = 'Object' AND stact.activity_iri = $${paramIndex})`,
+      );
+      voidedContentConds.push(
+        `EXISTS (SELECT 1 FROM statement_to_activity stact WHERE stact.statement_id = v.statement_id AND stact.usage = 'Object' AND stact.activity_iri = $${paramIndex})`,
+      );
     }
     values.push(params.activity);
     paramIndex++;
@@ -522,21 +555,21 @@ export async function queryStatements(
   }
 
   const effectiveLimit = Math.min(params.limit ?? 100, 1000);
-  const orderDir = params.ascending ? 'ASC' : 'DESC';
+  const orderDir = params.ascending ? "ASC" : "DESC";
 
   // Build WHERE: direct matches OR statements targeting voided matches
-  const directWhere = ['s.is_voided = false', ...directContentConds, ...timeConds].join(' AND ');
+  const directWhere = ["s.is_voided = false", ...directContentConds, ...timeConds].join(" AND ");
 
   let whereClause: string;
   if (voidedContentConds.length > 0) {
-    const voidedFilter = voidedContentConds.join(' AND ');
+    const voidedFilter = voidedContentConds.join(" AND ");
     const targetingExists = `EXISTS (
       SELECT 1 FROM statement_to_statement sts
       JOIN xapi_statement v ON v.statement_id = sts.ancestor_id
         AND v.is_voided = true AND ${voidedFilter}
       WHERE sts.descendant_id = s.statement_id
     )`;
-    const targetingWhere = ['s.is_voided = false', ...timeConds, targetingExists].join(' AND ');
+    const targetingWhere = ["s.is_voided = false", ...timeConds, targetingExists].join(" AND ");
     whereClause = `(${directWhere}) OR (${targetingWhere})`;
   } else {
     whereClause = directWhere;
@@ -554,7 +587,7 @@ export async function queryStatements(
   const rows: XapiStatementRow[] = result.rows.map((r) => ({
     id: r.id,
     statement_id: r.statement_id,
-    payload: typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload,
+    payload: typeof r.payload === "string" ? JSON.parse(r.payload) : r.payload,
     is_voided: r.is_voided,
     stored: r.stored,
   }));

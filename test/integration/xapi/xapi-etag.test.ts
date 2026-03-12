@@ -3,24 +3,28 @@
  * Tests If-Match, If-None-Match across document resources
  */
 
-import { test, describe, expect } from '../fixtures.ts';
+import { test, describe, expect } from "../fixtures.ts";
 
-const V = { 'X-Experience-API-Version': '1.0.3' } as const;
+const V = { "X-Experience-API-Version": "1.0.3" } as const;
 
 const agentJson = JSON.stringify({
-  objectType: 'Agent',
-  account: { homePage: 'https://example.com', name: 'test-user' },
+  objectType: "Agent",
+  account: { homePage: "https://example.com", name: "test-user" },
 });
-const activityId = 'https://example.com/activities/test-activity';
+const activityId = "https://example.com/activities/test-activity";
 
-describe('xAPI ETag Concurrency Control', () => {
-  describe('Activity State — ETag', () => {
-    test('GET single state should return ETag and Last-Modified', async ({ server, basicAuth }) => {
-      const qs = new URLSearchParams({ stateId: 'etag-test', activityId, agent: agentJson }).toString();
+describe("xAPI ETag Concurrency Control", () => {
+  describe("Activity State — ETag", () => {
+    test("GET single state should return ETag and Last-Modified", async ({ server, basicAuth }) => {
+      const qs = new URLSearchParams({
+        stateId: "etag-test",
+        activityId,
+        agent: agentJson,
+      }).toString();
 
       await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Basic ${basicAuth}`, ...V },
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Basic ${basicAuth}`, ...V },
         body: JSON.stringify({ data: 1 }),
       });
 
@@ -29,21 +33,28 @@ describe('xAPI ETag Concurrency Control', () => {
       });
 
       expect(resp.status).toBe(200);
-      expect(resp.headers.get('ETag')).toBeDefined();
-      expect(resp.headers.get('ETag')).toMatch(/^"/);
-      expect(resp.headers.get('Last-Modified')).toBeDefined();
+      expect(resp.headers.get("ETag")).toBeDefined();
+      expect(resp.headers.get("ETag")).toMatch(/^"/);
+      expect(resp.headers.get("Last-Modified")).toBeDefined();
     });
 
-    test('PUT with If-None-Match: * should fail when document exists', async ({ server, basicAuth }) => {
-      const qs = new URLSearchParams({ stateId: 'ifnm-test', activityId, agent: agentJson }).toString();
+    test("PUT with If-None-Match: * should fail when document exists", async ({
+      server,
+      basicAuth,
+    }) => {
+      const qs = new URLSearchParams({
+        stateId: "ifnm-test",
+        activityId,
+        agent: agentJson,
+      }).toString();
 
       // First PUT succeeds
       const resp1 = await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Basic ${basicAuth}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 1 }),
@@ -52,11 +63,11 @@ describe('xAPI ETag Concurrency Control', () => {
 
       // Second PUT with If-None-Match: * should fail
       const resp2 = await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Basic ${basicAuth}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 2 }),
@@ -64,21 +75,25 @@ describe('xAPI ETag Concurrency Control', () => {
       expect(resp2.status).toBe(412);
     });
 
-    test('PUT with wrong If-Match should return 412', async ({ server, basicAuth }) => {
-      const qs = new URLSearchParams({ stateId: 'ifm-test', activityId, agent: agentJson }).toString();
+    test("PUT with wrong If-Match should return 412", async ({ server, basicAuth }) => {
+      const qs = new URLSearchParams({
+        stateId: "ifm-test",
+        activityId,
+        agent: agentJson,
+      }).toString();
 
       await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Basic ${basicAuth}`, ...V },
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Basic ${basicAuth}`, ...V },
         body: JSON.stringify({ v: 1 }),
       });
 
       const resp = await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Basic ${basicAuth}`,
-          'If-Match': '"wrong-etag"',
+          "If-Match": '"wrong-etag"',
           ...V,
         },
         body: JSON.stringify({ v: 2 }),
@@ -86,12 +101,16 @@ describe('xAPI ETag Concurrency Control', () => {
       expect(resp.status).toBe(412);
     });
 
-    test('PUT with correct If-Match should succeed', async ({ server, basicAuth }) => {
-      const qs = new URLSearchParams({ stateId: 'ifm-ok', activityId, agent: agentJson }).toString();
+    test("PUT with correct If-Match should succeed", async ({ server, basicAuth }) => {
+      const qs = new URLSearchParams({
+        stateId: "ifm-ok",
+        activityId,
+        agent: agentJson,
+      }).toString();
 
       await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Basic ${basicAuth}`, ...V },
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Basic ${basicAuth}`, ...V },
         body: JSON.stringify({ v: 1 }),
       });
 
@@ -99,15 +118,15 @@ describe('xAPI ETag Concurrency Control', () => {
       const getResp = await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
         headers: { Authorization: `Basic ${basicAuth}`, ...V },
       });
-      const etag = getResp.headers.get('ETag')!;
+      const etag = getResp.headers.get("ETag")!;
 
       // PUT with matching ETag
       const resp = await fetch(`${server.apiUrl}/xapi/activities/state?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Basic ${basicAuth}`,
-          'If-Match': etag,
+          "If-Match": etag,
           ...V,
         },
         body: JSON.stringify({ v: 2 }),
@@ -116,16 +135,16 @@ describe('xAPI ETag Concurrency Control', () => {
     });
   });
 
-  describe('Activity Profile — ETag', () => {
-    test('If-None-Match: * should prevent overwrite', async ({ server, authToken }) => {
-      const qs = new URLSearchParams({ profileId: 'etag-act-prof', activityId }).toString();
+  describe("Activity Profile — ETag", () => {
+    test("If-None-Match: * should prevent overwrite", async ({ server, authToken }) => {
+      const qs = new URLSearchParams({ profileId: "etag-act-prof", activityId }).toString();
 
       const resp1 = await fetch(`${server.apiUrl}/xapi/activities/profile?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 1 }),
@@ -133,11 +152,11 @@ describe('xAPI ETag Concurrency Control', () => {
       expect(resp1.status).toBe(204);
 
       const resp2 = await fetch(`${server.apiUrl}/xapi/activities/profile?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 2 }),
@@ -146,16 +165,16 @@ describe('xAPI ETag Concurrency Control', () => {
     });
   });
 
-  describe('Agent Profile — ETag', () => {
-    test('If-None-Match: * should prevent overwrite', async ({ server, authToken }) => {
-      const qs = new URLSearchParams({ profileId: 'etag-agent-prof', agent: agentJson }).toString();
+  describe("Agent Profile — ETag", () => {
+    test("If-None-Match: * should prevent overwrite", async ({ server, authToken }) => {
+      const qs = new URLSearchParams({ profileId: "etag-agent-prof", agent: agentJson }).toString();
 
       const resp1 = await fetch(`${server.apiUrl}/xapi/agents/profile?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 1 }),
@@ -163,11 +182,11 @@ describe('xAPI ETag Concurrency Control', () => {
       expect(resp1.status).toBe(204);
 
       const resp2 = await fetch(`${server.apiUrl}/xapi/agents/profile?${qs}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
-          'If-None-Match': '*',
+          "If-None-Match": "*",
           ...V,
         },
         body: JSON.stringify({ v: 2 }),

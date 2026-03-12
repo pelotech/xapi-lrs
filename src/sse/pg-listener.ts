@@ -3,15 +3,15 @@
  * Maintains a dedicated connection for receiving pg_notify events.
  */
 
-import { Client } from 'pg';
-import type { Notification } from 'pg';
-import type { Logger } from '../logger.ts';
-import type { LrsConfig } from '../config.ts';
+import { Client } from "pg";
+import type { Notification } from "pg";
+import type { Logger } from "../logger.ts";
+import type { LrsConfig } from "../config.ts";
 
 export type NotificationHandler = (payload: string) => void;
 
 /** Allowlisted channel names to prevent SQL injection in LISTEN commands. */
-const ALLOWED_CHANNELS = new Set(['xapi_statement_stored']);
+const ALLOWED_CHANNELS = new Set(["xapi_statement_stored"]);
 
 function validateChannel(channel: string): void {
   if (!ALLOWED_CHANNELS.has(channel)) {
@@ -90,7 +90,7 @@ export class PgListener {
         password: this.config.pgPassword,
       });
 
-      client.on('notification', (msg: Notification) => {
+      client.on("notification", (msg: Notification) => {
         if (msg.payload) {
           const handlers = this.handlers.get(msg.channel);
           if (handlers) {
@@ -98,21 +98,21 @@ export class PgListener {
               try {
                 handler(msg.payload);
               } catch (err) {
-                this.logger.error(err, 'Error in notification handler');
+                this.logger.error(err, "Error in notification handler");
               }
             }
           }
         }
       });
 
-      client.on('error', (err) => {
-        this.logger.error(err, 'PgListener connection error');
+      client.on("error", (err) => {
+        this.logger.error(err, "PgListener connection error");
         this.scheduleReconnect();
       });
 
-      client.on('end', () => {
+      client.on("end", () => {
         if (!this.stopped) {
-          this.logger.warn('PgListener connection closed unexpectedly');
+          this.logger.warn("PgListener connection closed unexpectedly");
           this.scheduleReconnect();
         }
       });
@@ -125,9 +125,12 @@ export class PgListener {
         await client.query(`LISTEN ${channel}`);
       }
 
-      this.logger.info({ channels: [...this.handlers.keys()] }, 'PgListener connected and listening');
+      this.logger.info(
+        { channels: [...this.handlers.keys()] },
+        "PgListener connected and listening",
+      );
     } catch (err) {
-      this.logger.error(err, 'PgListener failed to connect');
+      this.logger.error(err, "PgListener failed to connect");
       this.scheduleReconnect();
     }
   }

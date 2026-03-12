@@ -2,26 +2,26 @@
  * Admin document browser — tabbed view for state, activity profile, agent profile.
  */
 
-import { html, raw } from './html.ts';
-import type { RawHtml } from './html.ts';
+import { html, raw } from "./html.ts";
+import type { RawHtml } from "./html.ts";
 import type {
   StateDocumentListRow,
   ActivityProfileListRow,
   AgentProfileListRow,
   DocumentDetail,
-} from '../repositories.ts';
+} from "../repositories.ts";
 
-type DocType = 'state' | 'activity-profile' | 'agent-profile';
+type DocType = "state" | "activity-profile" | "agent-profile";
 
 function fmtTime(d: Date): string {
-  return new Date(d).toISOString().slice(0, 19).replace('T', ' ');
+  return new Date(d).toISOString().slice(0, 19).replace("T", " ");
 }
 
 // ============================================================================
 // Document browser (full page)
 // ============================================================================
 
-export function documentsPage(activeTab: DocType = 'state'): RawHtml {
+export function documentsPage(activeTab: DocType = "state"): RawHtml {
   return html`
     <h2>Document Browser</h2>
 
@@ -31,7 +31,7 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
       <button
         type="button"
         role="tab"
-        ${activeTab === 'state' ? raw('aria-selected="true"') : raw('aria-selected="false"')}
+        ${activeTab === "state" ? raw('aria-selected="true"') : raw('aria-selected="false"')}
         hx-get="/admin/documents/list?type=state"
         hx-target="#doc-table"
         hx-swap="innerHTML"
@@ -41,7 +41,7 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
       <button
         type="button"
         role="tab"
-        ${activeTab === 'activity-profile' ? raw('aria-selected="true"') : raw('aria-selected="false"')}
+        ${activeTab === "activity-profile" ? raw('aria-selected="true"') : raw('aria-selected="false"')}
         hx-get="/admin/documents/list?type=activity-profile"
         hx-target="#doc-table"
         hx-swap="innerHTML"
@@ -51,7 +51,7 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
       <button
         type="button"
         role="tab"
-        ${activeTab === 'agent-profile' ? raw('aria-selected="true"') : raw('aria-selected="false"')}
+        ${activeTab === "agent-profile" ? raw('aria-selected="true"') : raw('aria-selected="false"')}
         hx-get="/admin/documents/list?type=agent-profile"
         hx-target="#doc-table"
         hx-swap="innerHTML"
@@ -100,12 +100,20 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
 // State document list partial
 // ============================================================================
 
-export function stateDocumentTable(rows: StateDocumentListRow[], total: number, page: number, pageSize: number): RawHtml {
+export function stateDocumentTable(
+  rows: StateDocumentListRow[],
+  total: number,
+  page: number,
+  pageSize: number,
+): RawHtml {
   return html`
-    <p class="text-muted">${String(total)} state document${total !== 1 ? 's' : ''}</p>
-    ${rows.length === 0
-      ? html`<p class="text-muted">No state documents.</p>`
-      : html`<figure>
+    <p class="text-muted">${String(total)} state document${total !== 1 ? "s" : ""}</p>
+    ${
+      rows.length === 0
+        ? html`
+            <p class="text-muted">No state documents.</p>
+          `
+        : html`<figure>
           <table>
             <thead>
               <tr>
@@ -119,12 +127,13 @@ export function stateDocumentTable(rows: StateDocumentListRow[], total: number, 
                 <th></th>
               </tr>
             </thead>
-            <tbody>${rows.map((d) => html`
+            <tbody>${rows.map(
+              (d) => html`
               <tr>
                 <td class="mono" style="font-size:0.8em">${d.state_id}</td>
                 <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
                 <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
-                <td class="mono" style="font-size:0.75em">${d.registration ?? '\u2014'}</td>
+                <td class="mono" style="font-size:0.75em">${d.registration ?? "\u2014"}</td>
                 <td>${d.content_type}</td>
                 <td>${String(d.content_length)}B</td>
                 <td class="text-muted">${fmtTime(d.last_modified)}</td>
@@ -141,10 +150,12 @@ export function stateDocumentTable(rows: StateDocumentListRow[], total: number, 
                     Delete
                   </button>
                 </td>
-              </tr>`)}</tbody>
+              </tr>`,
+            )}</tbody>
           </table>
-        </figure>`}
-    ${pagination('state', page, pageSize, total)}
+        </figure>`
+    }
+    ${pagination("state", page, pageSize, total)}
   `;
 }
 
@@ -152,12 +163,20 @@ export function stateDocumentTable(rows: StateDocumentListRow[], total: number, 
 // Activity profile list partial
 // ============================================================================
 
-export function activityProfileTable(rows: ActivityProfileListRow[], total: number, page: number, pageSize: number): RawHtml {
+export function activityProfileTable(
+  rows: ActivityProfileListRow[],
+  total: number,
+  page: number,
+  pageSize: number,
+): RawHtml {
   return html`
-    <p class="text-muted">${String(total)} activity profile${total !== 1 ? 's' : ''}</p>
-    ${rows.length === 0
-      ? html`<p class="text-muted">No activity profiles.</p>`
-      : html`<figure>
+    <p class="text-muted">${String(total)} activity profile${total !== 1 ? "s" : ""}</p>
+    ${
+      rows.length === 0
+        ? html`
+            <p class="text-muted">No activity profiles.</p>
+          `
+        : html`<figure>
           <table>
             <thead>
               <tr>
@@ -169,7 +188,8 @@ export function activityProfileTable(rows: ActivityProfileListRow[], total: numb
                 <th></th>
               </tr>
             </thead>
-            <tbody>${rows.map((d) => html`
+            <tbody>${rows.map(
+              (d) => html`
               <tr>
                 <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
                 <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
@@ -189,10 +209,12 @@ export function activityProfileTable(rows: ActivityProfileListRow[], total: numb
                     Delete
                   </button>
                 </td>
-              </tr>`)}</tbody>
+              </tr>`,
+            )}</tbody>
           </table>
-        </figure>`}
-    ${pagination('activity-profile', page, pageSize, total)}
+        </figure>`
+    }
+    ${pagination("activity-profile", page, pageSize, total)}
   `;
 }
 
@@ -200,12 +222,20 @@ export function activityProfileTable(rows: ActivityProfileListRow[], total: numb
 // Agent profile list partial
 // ============================================================================
 
-export function agentProfileTable(rows: AgentProfileListRow[], total: number, page: number, pageSize: number): RawHtml {
+export function agentProfileTable(
+  rows: AgentProfileListRow[],
+  total: number,
+  page: number,
+  pageSize: number,
+): RawHtml {
   return html`
-    <p class="text-muted">${String(total)} agent profile${total !== 1 ? 's' : ''}</p>
-    ${rows.length === 0
-      ? html`<p class="text-muted">No agent profiles.</p>`
-      : html`<figure>
+    <p class="text-muted">${String(total)} agent profile${total !== 1 ? "s" : ""}</p>
+    ${
+      rows.length === 0
+        ? html`
+            <p class="text-muted">No agent profiles.</p>
+          `
+        : html`<figure>
           <table>
             <thead>
               <tr>
@@ -217,7 +247,8 @@ export function agentProfileTable(rows: AgentProfileListRow[], total: number, pa
                 <th></th>
               </tr>
             </thead>
-            <tbody>${rows.map((d) => html`
+            <tbody>${rows.map(
+              (d) => html`
               <tr>
                 <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
                 <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
@@ -237,10 +268,12 @@ export function agentProfileTable(rows: AgentProfileListRow[], total: number, pa
                     Delete
                   </button>
                 </td>
-              </tr>`)}</tbody>
+              </tr>`,
+            )}</tbody>
           </table>
-        </figure>`}
-    ${pagination('agent-profile', page, pageSize, total)}
+        </figure>`
+    }
+    ${pagination("agent-profile", page, pageSize, total)}
   `;
 }
 
@@ -250,11 +283,13 @@ export function agentProfileTable(rows: AgentProfileListRow[], total: number, pa
 
 function pagination(type: DocType, page: number, pageSize: number, total: number): RawHtml {
   const totalPages = Math.ceil(total / pageSize);
-  if (totalPages <= 1) return raw('');
+  if (totalPages <= 1) return raw("");
 
   return html`
     <div style="display:flex;gap:0.5em;align-items:center">
-      ${page > 1 ? html`
+      ${
+        page > 1
+          ? html`
         <button
           class="outline"
           style="padding:0.25em 0.5em"
@@ -264,11 +299,15 @@ function pagination(type: DocType, page: number, pageSize: number, total: number
         >
           Previous
         </button>
-      ` : false}
+      `
+          : false
+      }
       <span class="text-muted">
         Page ${String(page)} of ${String(totalPages)}
       </span>
-      ${page < totalPages ? html`
+      ${
+        page < totalPages
+          ? html`
         <button
           class="outline"
           style="padding:0.25em 0.5em"
@@ -278,7 +317,9 @@ function pagination(type: DocType, page: number, pageSize: number, total: number
         >
           Next
         </button>
-      ` : false}
+      `
+          : false
+      }
     </div>
   `;
 }
@@ -288,13 +329,13 @@ function pagination(type: DocType, page: number, pageSize: number, total: number
 // ============================================================================
 
 export function documentDetailView(doc: DocumentDetail): RawHtml {
-  const isJson = doc.content_type.includes('json');
+  const isJson = doc.content_type.includes("json");
   let displayContent: string;
   try {
     if (isJson) {
-      displayContent = JSON.stringify(JSON.parse(doc.contents.toString('utf8')), null, 2);
-    } else if (doc.content_type.startsWith('text/')) {
-      displayContent = doc.contents.toString('utf8');
+      displayContent = JSON.stringify(JSON.parse(doc.contents.toString("utf8")), null, 2);
+    } else if (doc.content_type.startsWith("text/")) {
+      displayContent = doc.contents.toString("utf8");
     } else {
       displayContent = `[Binary content: ${doc.content_length} bytes, ${doc.content_type}]`;
     }
@@ -302,17 +343,19 @@ export function documentDetailView(doc: DocumentDetail): RawHtml {
     displayContent = `[Unable to decode: ${doc.content_length} bytes]`;
   }
 
-  const entries = Object.entries(doc).filter(([k]) => k !== 'contents');
+  const entries = Object.entries(doc).filter(([k]) => k !== "contents");
 
   return html`
     <h2>Document Detail</h2>
     <figure>
       <table>
-        <tbody>${entries.map(([k, v]) => html`
+        <tbody>${entries.map(
+          ([k, v]) => html`
           <tr>
             <td><strong>${k}</strong></td>
             <td class="mono">${v instanceof Date ? v.toISOString() : String(v)}</td>
-          </tr>`)}</tbody>
+          </tr>`,
+        )}</tbody>
       </table>
     </figure>
     <h3>Contents</h3>
@@ -322,9 +365,9 @@ export function documentDetailView(doc: DocumentDetail): RawHtml {
 }
 
 export function bulkDeleteResult(count: number): RawHtml {
-  return html`<p>Deleted ${String(count)} state document${count !== 1 ? 's' : ''}.</p>`;
+  return html`<p>Deleted ${String(count)} state document${count !== 1 ? "s" : ""}.</p>`;
 }
 
 export function deletedDocRow(): RawHtml {
-  return raw('');
+  return raw("");
 }

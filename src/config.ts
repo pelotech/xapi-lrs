@@ -3,7 +3,7 @@
  * Environment-driven configuration with Zod validation.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 const configSchema = z.object({
   /** Express port for xAPI endpoints */
@@ -13,11 +13,11 @@ const configSchema = z.object({
 
   /** PostgreSQL connection */
   databaseUrl: z.string().optional(),
-  pgHost: z.string().default('localhost'),
+  pgHost: z.string().default("localhost"),
   pgPort: z.coerce.number().int().positive().default(5432),
-  pgDatabase: z.string().default('xapi_lrs'),
-  pgUser: z.string().default('xapi_lrs'),
-  pgPassword: z.string().default(''),
+  pgDatabase: z.string().default("xapi_lrs"),
+  pgUser: z.string().default("xapi_lrs"),
+  pgPassword: z.string().default(""),
   pgPoolSize: z.coerce.number().int().positive().default(10),
 
   /** DB connection retry */
@@ -36,23 +36,29 @@ const configSchema = z.object({
   adminSessionSecret: z.string().optional(),
 
   /** Request body size limit (bytes, default 50 MB) */
-  maxRequestBodyBytes: z.coerce.number().int().positive().default(50 * 1024 * 1024),
+  maxRequestBodyBytes: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(50 * 1024 * 1024),
 
   /** CORS allowed origin (default '*' for xAPI spec compliance) */
-  corsOrigin: z.string().default('*'),
+  corsOrigin: z.string().default("*"),
 
   /** SSE connection limits */
   sseMaxConnectionsGlobal: z.coerce.number().int().positive().default(100),
   sseMaxConnectionsPerIp: z.coerce.number().int().positive().default(5),
 
   /** Feature flags */
-  xapiVerifySignatures: z.preprocess((v) => String(v ?? 'false') === 'true', z.boolean()).default(false),
+  xapiVerifySignatures: z
+    .preprocess((v) => String(v ?? "false") === "true", z.boolean())
+    .default(false),
 
   /** Log level */
-  logLevel: z.enum(['silent', 'fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  logLevel: z.enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
   /** Node environment */
-  nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
+  nodeEnv: z.enum(["development", "production", "test"]).default("development"),
 });
 
 export type LrsConfig = z.infer<typeof configSchema>;

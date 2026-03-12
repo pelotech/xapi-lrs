@@ -3,40 +3,39 @@
  * Creates and configures the Hono app with xAPI middleware and OpenAPI routes.
  */
 
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { cors } from 'hono/cors';
-import type { Pool } from 'pg';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { HonoEnv } from './hono-env.ts';
-import type { Logger } from './logger.ts';
-import type { LrsMetrics } from './metrics.ts';
-import type { LrsConfig } from './config.ts';
-import type { JwksCache, JwtConfig } from './auth/jwt.ts';
-import type { LrsDeps } from './deps.ts';
-import type { PgListener } from './sse/pg-listener.ts';
-import { HttpError } from './db.ts';
-import { authMiddleware } from './middleware/authentication.ts';
-import { scopeMiddleware } from './middleware/authorization.ts';
-import { createAboutApp } from './routes/about.ts';
-import { createStatementsApp } from './routes/statements.ts';
-import { createActivitiesApp } from './routes/activities.ts';
-import { createAgentsApp } from './routes/agents.ts';
-import { createSseRoute } from './sse/sse-producer.ts';
-import { parseMultipartMixed, extractBoundary } from './xapi/multipart.ts';
-import { createAdminApp } from './admin/index.ts';
-import type { AdminDeps } from './admin/index.ts';
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { cors } from "hono/cors";
+import type { Pool } from "pg";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import type { HonoEnv } from "./hono-env.ts";
+import type { Logger } from "./logger.ts";
+import type { LrsMetrics } from "./metrics.ts";
+import type { LrsConfig } from "./config.ts";
+import type { JwksCache, JwtConfig } from "./auth/jwt.ts";
+import type { LrsDeps } from "./deps.ts";
+import type { PgListener } from "./sse/pg-listener.ts";
+import { HttpError } from "./db.ts";
+import { authMiddleware } from "./middleware/authentication.ts";
+import { scopeMiddleware } from "./middleware/authorization.ts";
+import { createAboutApp } from "./routes/about.ts";
+import { createStatementsApp } from "./routes/statements.ts";
+import { createActivitiesApp } from "./routes/activities.ts";
+import { createAgentsApp } from "./routes/agents.ts";
+import { createSseRoute } from "./sse/sse-producer.ts";
+import { parseMultipartMixed, extractBoundary } from "./xapi/multipart.ts";
+import { createAdminApp } from "./admin/index.ts";
 
 // ============================================================================
 // xAPI Alternate Request Syntax (§1.3) — header fields allowed in form body
 // ============================================================================
 
 const ALTERNATE_HEADER_FIELDS = new Set([
-  'Authorization',
-  'X-Experience-API-Version',
-  'Content-Type',
-  'Content-Length',
-  'If-Match',
-  'If-None-Match',
+  "Authorization",
+  "X-Experience-API-Version",
+  "Content-Type",
+  "Content-Length",
+  "If-Match",
+  "If-None-Match",
 ]);
 
 // ============================================================================
@@ -75,47 +74,54 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     if (err instanceof HttpError) {
       return c.json({ error: err.message }, err.status as ContentfulStatusCode);
     }
-    if ('status' in err && typeof (err as Record<string, unknown>).status === 'number') {
+    if ("status" in err && typeof (err as Record<string, unknown>).status === "number") {
       const status = (err as Record<string, unknown>).status as number;
-      return c.json({ error: err.message || 'Authentication failed' }, status as ContentfulStatusCode);
+      return c.json(
+        { error: err.message || "Authentication failed" },
+        status as ContentfulStatusCode,
+      );
     }
-    deps.logger.error(err, 'Unhandled error');
-    return c.json({ error: 'Internal server error' }, 500);
+    deps.logger.error(err, "Unhandled error");
+    return c.json({ error: "Internal server error" }, 500);
   });
 
   // --------------------------------------------------------------------------
   // Structured request logging
   // --------------------------------------------------------------------------
 
-  app.use('*', async (c, next) => {
+  app.use("*", async (c, next) => {
     const start = Date.now();
     await next();
     const duration = Date.now() - start;
-    const auth = c.get('auth') as HonoEnv['Variables']['auth'] | undefined;
-    const identity = auth?.type === 'basic'
-      ? auth.payload.accountName
-      : auth?.type === 'jwt'
-        ? auth.payload.sub
-        : undefined;
-    deps.logger.info({
-      method: c.req.method,
-      path: c.req.path,
-      query: c.req.query(),
-      status: c.res.status,
-      duration,
-      identity,
-    }, `${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`);
+    const auth = c.get("auth") as HonoEnv["Variables"]["auth"] | undefined;
+    const identity =
+      auth?.type === "basic"
+        ? auth.payload.accountName
+        : auth?.type === "jwt"
+          ? auth.payload.sub
+          : undefined;
+    deps.logger.info(
+      {
+        method: c.req.method,
+        path: c.req.path,
+        query: c.req.query(),
+        status: c.res.status,
+        duration,
+        identity,
+      },
+      `${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`,
+    );
   });
 
   // --------------------------------------------------------------------------
   // Security headers
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', async (c, next) => {
-    c.header('X-Content-Type-Options', 'nosniff');
-    c.header('X-Frame-Options', 'DENY');
-    if (deps.config.nodeEnv === 'production') {
-      c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  app.use("/xapi/*", async (c, next) => {
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("X-Frame-Options", "DENY");
+    if (deps.config.nodeEnv === "production") {
+      c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
     }
     return next();
   });
@@ -124,8 +130,8 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // Deps injection — make LrsDeps available to all route handlers
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', async (c, next) => {
-    c.set('deps', lrsDeps);
+  app.use("/xapi/*", async (c, next) => {
+    c.set("deps", lrsDeps);
     await next();
   });
 
@@ -134,12 +140,23 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // --------------------------------------------------------------------------
 
   app.use(
-    '/xapi/*',
+    "/xapi/*",
     cors({
       origin: deps.config.corsOrigin,
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Authorization', 'Content-Type', 'X-Experience-API-Version', 'If-Match', 'If-None-Match'],
-      exposeHeaders: ['ETag', 'Last-Modified', 'X-Experience-API-Version', 'X-Experience-API-Consistent-Through'],
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowHeaders: [
+        "Authorization",
+        "Content-Type",
+        "X-Experience-API-Version",
+        "If-Match",
+        "If-None-Match",
+      ],
+      exposeHeaders: [
+        "ETag",
+        "Last-Modified",
+        "X-Experience-API-Version",
+        "X-Experience-API-Consistent-Through",
+      ],
     }),
   );
 
@@ -151,14 +168,14 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // We re-dispatch with the correct HTTP method via app.fetch().
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', async (c, next) => {
-    if (c.req.method !== 'POST') return next();
+  app.use("/xapi/*", async (c, next) => {
+    if (c.req.method !== "POST") return next();
 
-    const methodOverride = c.req.query('method')?.toUpperCase();
-    if (!methodOverride || !['GET', 'PUT', 'DELETE'].includes(methodOverride)) return next();
+    const methodOverride = c.req.query("method")?.toUpperCase();
+    if (!methodOverride || !["GET", "PUT", "DELETE"].includes(methodOverride)) return next();
 
-    const ct = c.req.header('content-type') ?? '';
-    if (!ct.includes('application/x-www-form-urlencoded')) return next();
+    const ct = c.req.header("content-type") ?? "";
+    if (!ct.includes("application/x-www-form-urlencoded")) return next();
 
     // Parse form body
     const formText = await c.req.text();
@@ -170,11 +187,11 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
 
     // Build new URL without ?method=
     const url = new URL(c.req.url);
-    url.searchParams.delete('method');
+    url.searchParams.delete("method");
 
     // Check for duplicate params between URL query and form body
     for (const key of url.searchParams.keys()) {
-      if (key !== 'method' && key in formData) {
+      if (key !== "method" && key in formData) {
         return c.json({ error: `Duplicate parameter in query string and body: ${key}` }, 400);
       }
     }
@@ -189,13 +206,13 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
 
     // Move non-header, non-content fields from form body to query string
     for (const [key, value] of Object.entries(formData)) {
-      if (!ALTERNATE_HEADER_FIELDS.has(key) && key !== 'content') {
+      if (!ALTERNATE_HEADER_FIELDS.has(key) && key !== "content") {
         url.searchParams.set(key, value);
       }
     }
 
     // Content-Length from the original form POST is wrong for the re-dispatched request
-    newHeaders.delete('content-length');
+    newHeaders.delete("content-length");
 
     // Build new request with overridden method
     const reqInit: RequestInit = {
@@ -204,15 +221,15 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     };
 
     // Include body for methods that support it
-    if ((methodOverride === 'PUT' || methodOverride === 'POST') && formData.content) {
+    if ((methodOverride === "PUT" || methodOverride === "POST") && formData.content) {
       reqInit.body = formData.content;
       // Default to application/json when form body didn't specify Content-Type
-      if (!formData['Content-Type']) {
-        newHeaders.set('content-type', 'application/json');
+      if (!formData["Content-Type"]) {
+        newHeaders.set("content-type", "application/json");
       }
-    } else if (methodOverride === 'GET' || methodOverride === 'DELETE') {
+    } else if (methodOverride === "GET" || methodOverride === "DELETE") {
       // No body for GET/DELETE — remove content headers
-      newHeaders.delete('content-type');
+      newHeaders.delete("content-type");
     }
 
     const newReq = new Request(url.toString(), reqInit);
@@ -223,26 +240,26 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // xAPI Version Header Validation (§3.2)
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', async (c, next) => {
-    const version = c.req.header('x-experience-api-version');
+  app.use("/xapi/*", async (c, next) => {
+    const version = c.req.header("x-experience-api-version");
     const path = c.req.path;
 
     // /about and /stream: version header is optional but must be 1.0.x if present
-    if (path === '/xapi/about' || path === '/xapi/stream') {
-      if (version && !version.startsWith('1.0')) {
+    if (path === "/xapi/about" || path === "/xapi/stream") {
+      if (version && !version.startsWith("1.0")) {
         return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
       }
-      c.header('X-Experience-API-Version', '1.0.3');
+      c.header("X-Experience-API-Version", "1.0.3");
       return next();
     }
 
     // All other xAPI routes: version header is required
-    c.header('X-Experience-API-Version', '1.0.3');
+    c.header("X-Experience-API-Version", "1.0.3");
 
     if (!version) {
-      return c.json({ error: 'X-Experience-API-Version header is required' }, 400);
+      return c.json({ error: "X-Experience-API-Version header is required" }, 400);
     }
-    if (!version.startsWith('1.0')) {
+    if (!version.startsWith("1.0")) {
       return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
     }
     return next();
@@ -253,12 +270,12 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // --------------------------------------------------------------------------
 
   const maxBody = deps.config.maxRequestBodyBytes;
-  app.use('/xapi/*', async (c, next) => {
-    const cl = c.req.header('content-length');
+  app.use("/xapi/*", async (c, next) => {
+    const cl = c.req.header("content-length");
     if (cl) {
       const len = Number(cl);
       if (!Number.isNaN(len) && len > maxBody) {
-        return c.json({ error: 'Request body too large' }, 413);
+        return c.json({ error: "Request body too large" }, 413);
       }
     }
     return next();
@@ -268,45 +285,50 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // Body parsing: read raw body and parse JSON/multipart
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', async (c, next) => {
+  app.use("/xapi/*", async (c, next) => {
     // No body for safe methods
-    if (c.req.method === 'GET' || c.req.method === 'DELETE' || c.req.method === 'HEAD' || c.req.method === 'OPTIONS') {
-      c.set('parsedBody', undefined);
-      c.set('rawBody', Buffer.alloc(0));
-      c.set('attachmentParts', undefined);
+    if (
+      c.req.method === "GET" ||
+      c.req.method === "DELETE" ||
+      c.req.method === "HEAD" ||
+      c.req.method === "OPTIONS"
+    ) {
+      c.set("parsedBody", undefined);
+      c.set("rawBody", Buffer.alloc(0));
+      c.set("attachmentParts", undefined);
       return next();
     }
 
-    const ct = c.req.header('content-type') ?? '';
+    const ct = c.req.header("content-type") ?? "";
 
     // Read raw body once and store it
     const raw = Buffer.from(await c.req.arrayBuffer());
-    c.set('rawBody', raw);
+    c.set("rawBody", raw);
 
-    if (ct.includes('multipart/mixed')) {
+    if (ct.includes("multipart/mixed")) {
       const boundary = extractBoundary(ct);
       if (boundary) {
         try {
           const result = parseMultipartMixed(raw, boundary);
-          c.set('parsedBody', result.json);
-          c.set('attachmentParts', result.attachments);
+          c.set("parsedBody", result.json);
+          c.set("attachmentParts", result.attachments);
         } catch (err) {
           throw err instanceof Error ? new HttpError(400, err.message) : err;
         }
       } else {
-        c.set('parsedBody', undefined);
-        c.set('attachmentParts', undefined);
+        c.set("parsedBody", undefined);
+        c.set("attachmentParts", undefined);
       }
-    } else if (ct.includes('application/json')) {
+    } else if (ct.includes("application/json")) {
       try {
-        c.set('parsedBody', JSON.parse(raw.toString('utf8')));
+        c.set("parsedBody", JSON.parse(raw.toString("utf8")));
       } catch {
-        throw new HttpError(400, 'Invalid JSON in request body');
+        throw new HttpError(400, "Invalid JSON in request body");
       }
-      c.set('attachmentParts', undefined);
+      c.set("attachmentParts", undefined);
     } else {
-      c.set('parsedBody', undefined);
-      c.set('attachmentParts', undefined);
+      c.set("parsedBody", undefined);
+      c.set("attachmentParts", undefined);
     }
 
     return next();
@@ -317,8 +339,8 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // --------------------------------------------------------------------------
 
   const auth = authMiddleware();
-  app.use('/xapi/*', async (c, next) => {
-    if (c.req.path === '/xapi/about') {
+  app.use("/xapi/*", async (c, next) => {
+    if (c.req.path === "/xapi/about") {
       return next();
     }
     return auth(c, next);
@@ -328,20 +350,23 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // Scope authorization — enforce credential scopes on xAPI routes
   // --------------------------------------------------------------------------
 
-  app.use('/xapi/*', scopeMiddleware());
+  app.use("/xapi/*", scopeMiddleware());
 
   // --------------------------------------------------------------------------
   // Mount route sub-apps
   // --------------------------------------------------------------------------
 
-  app.route('/xapi', createAboutApp());
-  app.route('/xapi', createStatementsApp());
-  app.route('/xapi', createActivitiesApp());
-  app.route('/xapi', createAgentsApp());
+  app.route("/xapi", createAboutApp());
+  app.route("/xapi", createStatementsApp());
+  app.route("/xapi", createActivitiesApp());
+  app.route("/xapi", createAgentsApp());
   app.route(
-    '/xapi',
+    "/xapi",
     createSseRoute({
-      pool: deps.pool, metrics: deps.metrics, logger: deps.logger, pgListener: deps.pgListener,
+      pool: deps.pool,
+      metrics: deps.metrics,
+      logger: deps.logger,
+      pgListener: deps.pgListener,
       maxConnectionsGlobal: deps.config.sseMaxConnectionsGlobal,
       maxConnectionsPerIp: deps.config.sseMaxConnectionsPerIp,
     }),
@@ -351,24 +376,25 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // OpenAPI spec endpoint
   // --------------------------------------------------------------------------
 
-  app.openAPIRegistry.registerComponent('securitySchemes', 'basic', {
-    type: 'http',
-    scheme: 'basic',
+  app.openAPIRegistry.registerComponent("securitySchemes", "basic", {
+    type: "http",
+    scheme: "basic",
   });
-  app.openAPIRegistry.registerComponent('securitySchemes', 'jwt', {
-    type: 'http',
-    scheme: 'bearer',
-    bearerFormat: 'JWT',
+  app.openAPIRegistry.registerComponent("securitySchemes", "jwt", {
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
   });
 
-  app.doc('/xapi/openapi.json', {
-    openapi: '3.0.0',
+  app.doc("/xapi/openapi.json", {
+    openapi: "3.0.0",
     info: {
-      title: 'xapi-lrs',
-      version: '1.0.0',
-      description: 'xAPI Learning Record Store — standalone service for xAPI statement storage and document resources',
+      title: "xapi-lrs",
+      version: "1.0.0",
+      description:
+        "xAPI Learning Record Store — standalone service for xAPI statement storage and document resources",
     },
-    servers: [{ url: '/' }],
+    servers: [{ url: "/" }],
   });
 
   // --------------------------------------------------------------------------
@@ -383,7 +409,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     sessionSecret: deps.sessionSecret,
     startedAt: deps.startedAt,
   });
-  app.route('/admin', adminApp);
+  app.route("/admin", adminApp);
 
   return app;
 }
