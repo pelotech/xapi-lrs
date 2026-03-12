@@ -42,12 +42,21 @@ const configSchema = z.object({
     .positive()
     .default(50 * 1024 * 1024),
 
-  /** CORS allowed origin (default '*' for xAPI spec compliance) */
+  /** CORS — disable when handled by reverse proxy */
+  corsEnabled: z.preprocess((v) => String(v ?? "true") === "true", z.boolean()).default(true),
+  /** CORS allowed origin (only used when corsEnabled=true) */
   corsOrigin: z.string().default("*"),
 
   /** SSE connection limits */
   sseMaxConnectionsGlobal: z.coerce.number().int().positive().default(100),
   sseMaxConnectionsPerIp: z.coerce.number().int().positive().default(5),
+
+  /** Number of trusted reverse proxy hops for X-Forwarded-For (0 = trust leftmost) */
+  trustedProxyHops: z.coerce.number().int().nonnegative().default(0),
+
+  /** xAPI rate limiting (requests per window per credential/IP) */
+  xapiRateLimitWindow: z.coerce.number().int().positive().default(60),
+  xapiRateLimitMax: z.coerce.number().int().positive().default(300),
 
   /** Feature flags */
   xapiVerifySignatures: z
@@ -83,10 +92,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminPassword: env.LRS_ADMIN_PASSWORD,
     adminSessionSecret: env.ADMIN_SESSION_SECRET,
     jwksUri: env.JWKS_URI,
+    corsEnabled: env.CORS_ENABLED,
     corsOrigin: env.CORS_ORIGIN,
     maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
     sseMaxConnectionsGlobal: env.SSE_MAX_CONNECTIONS_GLOBAL,
     sseMaxConnectionsPerIp: env.SSE_MAX_CONNECTIONS_PER_IP,
+    trustedProxyHops: env.TRUSTED_PROXY_HOPS,
+    xapiRateLimitWindow: env.XAPI_RATE_LIMIT_WINDOW,
+    xapiRateLimitMax: env.XAPI_RATE_LIMIT_MAX,
     xapiVerifySignatures: env.XAPI_VERIFY_SIGNATURES,
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,

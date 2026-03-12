@@ -75,6 +75,13 @@ async function main(): Promise<void> {
   }
   const sessionSecret = config.adminSessionSecret ?? randomBytes(32).toString("hex");
 
+  // CORS origin: wildcard is dangerous in production (only when app handles CORS)
+  if (config.corsEnabled && config.corsOrigin === "*" && config.nodeEnv === "production") {
+    throw new Error(
+      "CORS_ORIGIN must not be '*' in production — set it to your allowed origin(s), or set CORS_ENABLED=false if CORS is handled by a reverse proxy",
+    );
+  }
+
   // Hono app
   const startedAt = new Date();
   const app = createApp({

@@ -47,6 +47,7 @@ import {
 import { queryStatements, getStatementById, voidStatement } from "../repositories/statements.ts";
 import { withClient } from "../db.ts";
 import { randomBytes } from "node:crypto";
+import { resolveClientIp } from "../helpers/client-ip.ts";
 import { loginPage } from "./views/login.ts";
 import { layout } from "./views/layout.ts";
 import { dashboardPage } from "./views/dashboard.ts";
@@ -121,6 +122,7 @@ export interface AdminDeps {
   pgListener: PgListener;
   sessionSecret: string;
   startedAt: Date;
+  trustedProxyHops: number;
 }
 
 export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
@@ -179,7 +181,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   });
 
   app.post("/login", async (c) => {
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
     if (loginLimiter.isBlocked(ip)) {
       deps.logger.warn({ ip, action: "login.rate_limited" }, "Admin login rate limited");
       return c.html(loginPage("Too many login attempts. Try again later.").value, 429);

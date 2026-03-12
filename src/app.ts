@@ -17,6 +17,7 @@ import type { PgListener } from "./sse/pg-listener.ts";
 import { HttpError } from "./db.ts";
 import { authMiddleware } from "./middleware/authentication.ts";
 import { scopeMiddleware } from "./middleware/authorization.ts";
+import { rateLimitMiddleware } from "./middleware/rate-limit.ts";
 import { createAboutApp } from "./routes/about.ts";
 import { createStatementsApp } from "./routes/statements.ts";
 import { createActivitiesApp } from "./routes/activities.ts";
@@ -136,29 +137,31 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   });
 
   // --------------------------------------------------------------------------
-  // CORS
+  // CORS — skip when handled by reverse proxy (CORS_ENABLED=false)
   // --------------------------------------------------------------------------
 
-  app.use(
-    "/xapi/*",
-    cors({
-      origin: deps.config.corsOrigin,
-      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowHeaders: [
-        "Authorization",
-        "Content-Type",
-        "X-Experience-API-Version",
-        "If-Match",
-        "If-None-Match",
-      ],
-      exposeHeaders: [
-        "ETag",
-        "Last-Modified",
-        "X-Experience-API-Version",
-        "X-Experience-API-Consistent-Through",
-      ],
-    }),
-  );
+  if (deps.config.corsEnabled) {
+    app.use(
+      "/xapi/*",
+      cors({
+        origin: deps.config.corsOrigin,
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowHeaders: [
+          "Authorization",
+          "Content-Type",
+          "X-Experience-API-Version",
+          "If-Match",
+          "If-None-Match",
+        ],
+        exposeHeaders: [
+          "ETag",
+          "Last-Modified",
+          "X-Experience-API-Version",
+          "X-Experience-API-Consistent-Through",
+        ],
+      }),
+    );
+  }
 
   // --------------------------------------------------------------------------
   // Alternate Request Syntax (xAPI §1.3)
@@ -353,6 +356,19 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   app.use("/xapi/*", scopeMiddleware());
 
   // --------------------------------------------------------------------------
+  // Rate limiting — per-credential/IP sliding window
+  // --------------------------------------------------------------------------
+
+  app.use(
+    "/xapi/*",
+    rateLimitMiddleware({
+      windowSeconds: deps.config.xapiRateLimitWindow,
+      maxRequests: deps.config.xapiRateLimitMax,
+      trustedProxyHops: deps.config.trustedProxyHops,
+    }),
+  );
+
+  // --------------------------------------------------------------------------
   // Mount route sub-apps
   // --------------------------------------------------------------------------
 
@@ -369,6 +385,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
       pgListener: deps.pgListener,
       maxConnectionsGlobal: deps.config.sseMaxConnectionsGlobal,
       maxConnectionsPerIp: deps.config.sseMaxConnectionsPerIp,
+      trustedProxyHops: deps.config.trustedProxyHops,
     }),
   );
 
@@ -386,16 +403,19 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     bearerFormat: "JWT",
   });
 
-  app.doc("/xapi/openapi.json", {
-    openapi: "3.0.0",
-    info: {
-      title: "xapi-lrs",
-      version: "1.0.0",
-      description:
-        "xAPI Learning Record Store — standalone service for xAPI statement storage and document resources",
-    },
-    servers: [{ url: "/" }],
-  });
+  // Only expose OpenAPI spec in non-production environments
+  if (deps.config.nodeEnv !== "production") {
+    app.doc("/xapi/openapi.json", {
+      openapi: "3.0.0",
+      info: {
+        title: "xapi-lrs",
+        version: "1.0.0",
+        description:
+          "xAPI Learning Record Store — standalone service for xAPI statement storage and document resources",
+      },
+      servers: [{ url: "/" }],
+    });
+  }
 
   // --------------------------------------------------------------------------
   // Mount Admin UI at /admin
@@ -408,6 +428,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     pgListener: deps.pgListener,
     sessionSecret: deps.sessionSecret,
     startedAt: deps.startedAt,
+    trustedProxyHops: deps.config.trustedProxyHops,
   });
   app.route("/admin", adminApp);
 

@@ -17,6 +17,7 @@ import {
 } from "./statement-event.ts";
 import { hasOnlyMineScope, agentIfiFromAuth } from "../helpers/auth-agent.ts";
 import { canonicalAgentIfi } from "../helpers/agent.ts";
+import { resolveClientIp } from "../helpers/client-ip.ts";
 
 export interface SseProducerDeps {
   pool: Pool;
@@ -25,6 +26,7 @@ export interface SseProducerDeps {
   pgListener: PgListener;
   maxConnectionsGlobal: number;
   maxConnectionsPerIp: number;
+  trustedProxyHops: number;
 }
 
 export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
@@ -36,7 +38,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
   const perIpCount = new Map<string, number>();
 
   app.get("/stream", (c) => {
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
     const auth = (c as unknown as { var: { auth: AuthInfo } }).var.auth;
     const mineOnly = auth ? hasOnlyMineScope(auth.payload.scopes) : false;
     const authIfi = mineOnly ? agentIfiFromAuth(auth) : null;

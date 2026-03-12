@@ -82,10 +82,18 @@ function ensureCsrfToken(
   setCookie(c, CSRF_COOKIE, token, {
     path: "/admin",
     sameSite: "Lax",
-    httpOnly: true,
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
   });
   return token;
+}
+
+/** Constant-time CSRF token comparison to prevent timing attacks. */
+function csrfTokensMatch(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
 
 // ============================================================================
@@ -137,7 +145,7 @@ export function csrfMiddleware(): MiddlewareHandler {
 
     // Validate: header or form field must match cookie
     const headerToken = c.req.header(CSRF_HEADER);
-    if (headerToken === token) {
+    if (headerToken && csrfTokensMatch(headerToken, token)) {
       return next();
     }
 
@@ -146,7 +154,7 @@ export function csrfMiddleware(): MiddlewareHandler {
     if (ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")) {
       try {
         const body = await c.req.parseBody();
-        if (typeof body._csrf === "string" && body._csrf === token) {
+        if (typeof body._csrf === "string" && csrfTokensMatch(body._csrf, token)) {
           return next();
         }
       } catch {
