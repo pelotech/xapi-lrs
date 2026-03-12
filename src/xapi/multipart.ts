@@ -125,7 +125,9 @@ export function parseMultipartMixed(body: Buffer, boundary: string): MultipartPa
     if (encoding !== "binary") {
       throw new Error(`Attachment part ${i + 1} must have Content-Transfer-Encoding: binary`);
     }
-    const contentType = part.headers.get("content-type") ?? "application/octet-stream";
+    const contentType = sanitizeAttachmentContentType(
+      part.headers.get("content-type") ?? "application/octet-stream",
+    );
 
     attachments.set(sha2, { sha2, contentType, data: part.body });
   }
@@ -186,6 +188,31 @@ function findDoubleNewline(buf: Buffer, from: number): number {
     }
   }
   return -1;
+}
+
+// ============================================================================
+// Content-Type Sanitization
+// ============================================================================
+
+/** Content types that could enable XSS if served inline */
+const DANGEROUS_CONTENT_TYPES = new Set([
+  "text/html",
+  "text/xml",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "text/xsl",
+]);
+
+/**
+ * Sanitize attachment content types to prevent stored XSS.
+ * Replaces dangerous types (e.g. text/html) with application/octet-stream.
+ */
+function sanitizeAttachmentContentType(contentType: string): string {
+  const base = contentType.split(";")[0].trim().toLowerCase();
+  if (DANGEROUS_CONTENT_TYPES.has(base)) {
+    return "application/octet-stream";
+  }
+  return contentType;
 }
 
 // ============================================================================

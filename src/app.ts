@@ -169,6 +169,10 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // POST /xapi/…?method=GET|PUT|DELETE with form-encoded body.
   // Header fields and query params are extracted from the form body.
   // We re-dispatch with the correct HTTP method via app.fetch().
+  //
+  // Security note: per xAPI 1.0.3 §1.3 the form body may override
+  // Authorization and other headers. This is spec-required behavior —
+  // the auth middleware will validate the overridden credentials normally.
   // --------------------------------------------------------------------------
 
   app.use("/xapi/*", async (c, next) => {
@@ -306,6 +310,9 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
 
     // Read raw body once and store it
     const raw = Buffer.from(await c.req.arrayBuffer());
+    if (raw.length > maxBody) {
+      return c.json({ error: "Request body too large" }, 413);
+    }
     c.set("rawBody", raw);
 
     if (ct.includes("multipart/mixed")) {

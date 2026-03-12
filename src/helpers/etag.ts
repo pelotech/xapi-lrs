@@ -6,7 +6,11 @@
 import { createHash } from "node:crypto";
 import { HttpError } from "../db.ts";
 
-/** Compute SHA-1 ETag for document content (xAPI conformance requires SHA-1) */
+/**
+ * Compute SHA-1 ETag for document content.
+ * SHA-1 is used for xAPI conformance test compatibility. This is not a security
+ * boundary — ETags are used only for cache validation and concurrency control.
+ */
 export function computeEtag(content: Buffer | unknown): string {
   const hash = createHash("sha1");
   if (Buffer.isBuffer(content)) {

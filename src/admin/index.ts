@@ -82,11 +82,26 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 class LoginRateLimiter {
   private attempts = new Map<string, number[]>();
 
+  /** Interval handle for periodic pruning of stale keys */
+  private pruneTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    // Prune stale keys every 5 minutes to prevent unbounded memory growth
+    this.pruneTimer = setInterval(() => this.pruneStaleKeys(), 5 * 60 * 1000);
+    if (this.pruneTimer && typeof this.pruneTimer === "object" && "unref" in this.pruneTimer) {
+      this.pruneTimer.unref();
+    }
+  }
+
   isBlocked(ip: string): boolean {
     const now = Date.now();
     const timestamps = this.attempts.get(ip);
     if (!timestamps) return false;
     const recent = timestamps.filter((t) => now - t < LOGIN_WINDOW_MS);
+    if (recent.length === 0) {
+      this.attempts.delete(ip);
+      return false;
+    }
     this.attempts.set(ip, recent);
     return recent.length >= LOGIN_MAX_ATTEMPTS;
   }
@@ -100,6 +115,18 @@ class LoginRateLimiter {
 
   reset(ip: string): void {
     this.attempts.delete(ip);
+  }
+
+  private pruneStaleKeys(): void {
+    const now = Date.now();
+    for (const [key, timestamps] of this.attempts) {
+      const recent = timestamps.filter((t) => now - t < LOGIN_WINDOW_MS);
+      if (recent.length === 0) {
+        this.attempts.delete(key);
+      } else {
+        this.attempts.set(key, recent);
+      }
+    }
   }
 }
 
@@ -128,6 +155,23 @@ export interface AdminDeps {
 export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   const app = new Hono<AdminEnv>();
   const loginLimiter = new LoginRateLimiter();
+
+  // --------------------------------------------------------------------------
+  // Security headers
+  // --------------------------------------------------------------------------
+  app.use("*", async (c, next) => {
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("X-Frame-Options", "DENY");
+    c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    c.header(
+      "Content-Security-Policy",
+      "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'",
+    );
+    if (process.env.NODE_ENV === "production") {
+      c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+    }
+    await next();
+  });
 
   // --------------------------------------------------------------------------
   // Deps injection
@@ -502,7 +546,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
     return c.body(new Uint8Array(attachment.contents), 200, {
       "Content-Type": attachment.content_type,
-      "Content-Disposition": `attachment; filename="${sha}"`,
+      "Content-Disposition": `attachment; filename="${sha.replace(/[^a-fA-F0-9]/g, "")}"`,
     });
   });
 
