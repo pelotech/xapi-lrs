@@ -7,6 +7,9 @@
 
 import { execSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
+import { writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { importPKCS8 } from "jose";
 
 export interface TestCertKeyPair {
@@ -33,13 +36,17 @@ export async function generateTestCert(
     privateKeyEncoding: { type: "pkcs8", format: "pem" },
   });
 
-  const certPem = execSync(
-    "openssl req -new -x509 -key /dev/stdin -days 1 -subj /CN=xapi-test -outform PEM",
-    {
-      input: privPem,
-      encoding: "utf8",
-    },
-  ).trim();
+  const keyFile = join(tmpdir(), `xapi-test-key-${process.pid}.pem`);
+  writeFileSync(keyFile, privPem, { mode: 0o600 });
+  let certPem: string;
+  try {
+    certPem = execSync(
+      `openssl req -new -x509 -key ${keyFile} -days 1 -subj /CN=xapi-test -outform PEM`,
+      { encoding: "utf8" },
+    ).trim();
+  } finally {
+    unlinkSync(keyFile);
+  }
 
   const x5cB64 = certPem
     .replace(/-----[^-]+-----/g, "")
