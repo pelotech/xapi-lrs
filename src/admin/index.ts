@@ -139,6 +139,8 @@ type AdminEnv = {
     adminSession: AdminSession;
     csrfToken: string;
     adminDeps: AdminDeps;
+    /** Per-request child logger (set by parent app middleware) */
+    logger: Logger;
   };
 };
 
@@ -159,6 +161,16 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   const app = new Hono<AdminEnv>();
   const loginLimiter = new LoginRateLimiter();
   const ssePerIpCount = new Map<string, number>();
+
+  // --------------------------------------------------------------------------
+  // Per-request logger — inherit child logger from parent app, fall back to deps
+  // --------------------------------------------------------------------------
+  app.use("*", async (c, next) => {
+    if (!c.get("logger")) {
+      c.set("logger", deps.logger);
+    }
+    await next();
+  });
 
   // --------------------------------------------------------------------------
   // Security headers
@@ -231,7 +243,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   app.post("/login", async (c) => {
     const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
     if (loginLimiter.isBlocked(ip)) {
-      deps.logger.warn({ ip, action: "login.rate_limited" }, "Admin login rate limited");
+      c.var.logger.warn({ ip, action: "login.rate_limited" }, "Admin login rate limited");
       return c.html(loginPage("Too many login attempts. Try again later.").value, 429);
     }
 
@@ -249,7 +261,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     const account = await verifyPassword(deps.pool, deps.metrics, username, password);
     if (!account) {
       loginLimiter.recordFailure(ip);
-      deps.logger.info({ admin: username, action: "login.failed" }, "Admin login failed");
+      c.var.logger.info({ admin: username, action: "login.failed" }, "Admin login failed");
       return c.html(loginPage("Invalid username or password").value, 401);
     }
 
@@ -261,14 +273,14 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     };
 
     createSession(c, session, deps.sessionSecret);
-    deps.logger.info({ admin: username, action: "login.success" }, "Admin login");
+    c.var.logger.info({ admin: username, action: "login.success" }, "Admin login");
     return c.redirect("/admin");
   });
 
   app.post("/logout", (c) => {
     const session = c.get("adminSession");
     if (session) {
-      deps.logger.info({ admin: session.username, action: "logout" }, "Admin logout");
+      c.var.logger.info({ admin: session.username, action: "logout" }, "Admin logout");
     }
     clearSession(c);
     return c.redirect("/admin/login");
@@ -330,7 +342,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     }
 
     await createAccount(deps.pool, deps.metrics, username, password);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "account.create", target: username },
       "Admin account created",
     );
@@ -348,7 +360,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     }
 
     await deleteAccount(deps.pool, deps.metrics, accountId);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "account.delete", target: accountId },
       "Admin account deleted",
     );
@@ -374,7 +386,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     }
 
     await changePassword(deps.pool, deps.metrics, accountId, password);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "account.changePassword", target: accountId },
       "Password changed",
     );
@@ -415,7 +427,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
       await setCredentialScopes(deps.pool, deps.metrics, credId, scopes);
     }
 
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "credential.create", target: credId },
       "Credential created",
     );
@@ -434,7 +446,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     const session = c.get("adminSession");
 
     await deleteCredential(deps.pool, deps.metrics, credId);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "credential.delete", target: credId },
       "Credential deleted",
     );
@@ -448,7 +460,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
     const newSecret = randomBytes(32).toString("hex");
     await rotateSecret(deps.pool, deps.metrics, credId, newSecret);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "credential.rotate", target: credId },
       "Secret rotated",
     );
@@ -465,7 +477,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     const session = c.get("adminSession");
 
     await setCredentialScopes(deps.pool, deps.metrics, credId, scopes);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "credential.scopes", target: credId, scopes },
       "Scopes updated",
     );
@@ -537,7 +549,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
     await withClient(deps.pool, deps.metrics, (client) => voidStatement(client, statementId));
 
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "statement.void", target: statementId },
       "Statement voided",
     );
@@ -606,7 +618,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   app.delete("/documents/state/:id", async (c) => {
     const session = c.get("adminSession");
     await deleteStateDocumentById(deps.pool, deps.metrics, c.req.param("id"));
-    deps.logger.info(
+    c.var.logger.info(
       {
         admin: session.username,
         action: "document.delete",
@@ -621,7 +633,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   app.delete("/documents/activity-profile/:id", async (c) => {
     const session = c.get("adminSession");
     await deleteActivityProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    deps.logger.info(
+    c.var.logger.info(
       {
         admin: session.username,
         action: "document.delete",
@@ -636,7 +648,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   app.delete("/documents/agent-profile/:id", async (c) => {
     const session = c.get("adminSession");
     await deleteAgentProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    deps.logger.info(
+    c.var.logger.info(
       {
         admin: session.username,
         action: "document.delete",
@@ -659,7 +671,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     }
 
     const count = await bulkDeleteStateDocuments(deps.pool, deps.metrics, activityIri, agentIfi);
-    deps.logger.info(
+    c.var.logger.info(
       { admin: session.username, action: "document.bulkDelete", activityIri, agentIfi, count },
       "Bulk delete state documents",
     );
@@ -697,7 +709,7 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
               data: JSON.stringify(event),
             });
           } catch (err) {
-            deps.logger.error(err, "Admin SSE: failed to fetch statement");
+            c.var.logger.error(err, "Admin SSE: failed to fetch statement");
           }
         })();
       };

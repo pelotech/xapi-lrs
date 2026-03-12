@@ -14,6 +14,7 @@ import type { LrsConfig } from "./config.ts";
 import type { JwksCache, JwtConfig } from "./auth/jwt.ts";
 import type { LrsDeps } from "./deps.ts";
 import type { PgListener } from "./sse/pg-listener.ts";
+import { randomUUID } from "node:crypto";
 import { HttpError } from "./db.ts";
 import { authMiddleware } from "./middleware/authentication.ts";
 import { scopeMiddleware } from "./middleware/authorization.ts";
@@ -82,8 +83,21 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
         status as ContentfulStatusCode,
       );
     }
-    deps.logger.error(err, "Unhandled error");
+    const log = c.get("logger") ?? deps.logger;
+    log.error(err, "Unhandled error");
     return c.json({ error: "Internal server error" }, 500);
+  });
+
+  // --------------------------------------------------------------------------
+  // Request ID — propagate or generate a unique trace identifier
+  // --------------------------------------------------------------------------
+
+  app.use("*", async (c, next) => {
+    const id = c.req.header("x-request-id") ?? randomUUID();
+    c.set("requestId", id);
+    c.set("logger", deps.logger.child({ requestId: id }));
+    c.header("X-Request-ID", id);
+    await next();
   });
 
   // --------------------------------------------------------------------------
@@ -101,7 +115,8 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
         : auth?.type === "jwt"
           ? auth.payload.sub
           : undefined;
-    deps.logger.info(
+    const log = c.get("logger") ?? deps.logger;
+    log.info(
       {
         method: c.req.method,
         path: c.req.path,
@@ -132,7 +147,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // --------------------------------------------------------------------------
 
   app.use("/xapi/*", async (c, next) => {
-    c.set("deps", lrsDeps);
+    c.set("deps", { ...lrsDeps, logger: c.get("logger") ?? lrsDeps.logger });
     await next();
   });
 

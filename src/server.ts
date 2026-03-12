@@ -117,7 +117,14 @@ async function main(): Promise<void> {
   // via network policy, firewall rules, or bind to a loopback/internal interface.
   const adminApp = new Hono();
   adminApp.get("/healthz", (c) => c.text("ok"));
-  adminApp.get("/ready", (c) => c.text("ok"));
+  adminApp.get("/ready", async (c) => {
+    try {
+      await pool.query("SELECT 1");
+      return c.text("ok");
+    } catch {
+      return c.text("database unavailable", 503);
+    }
+  });
   adminApp.get("/metrics", async (c) => {
     const content = await metrics.getPrometheusText();
     return c.text(content, 200, { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" });

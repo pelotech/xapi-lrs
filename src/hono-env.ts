@@ -18,5 +18,9 @@ export type HonoEnv = {
     rawBody: Buffer;
     /** Multipart attachment parts (set by multipart-parse middleware) */
     attachmentParts: Map<string, MultipartAttachmentPart> | undefined;
+    /** Unique request identifier for tracing */
+    requestId: string;
+    /** Per-request child logger with requestId bound */
+    logger: import("./logger.ts").Logger;
   };
 };

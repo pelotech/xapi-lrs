@@ -38,6 +38,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
   const perIpCount = new Map<string, number>();
 
   app.get("/stream", (c) => {
+    const log = (c as unknown as { var: { logger?: Logger } }).var.logger ?? logger;
     const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
     const auth = (c as unknown as { var: { auth: AuthInfo } }).var.auth;
     const mineOnly = auth ? hasOnlyMineScope(auth.payload.scopes) : false;
@@ -54,7 +55,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
     globalCount++;
     perIpCount.set(ip, ipCount + 1);
     metrics.sseClients.add(1);
-    logger.debug({ ip }, "SSE client connected");
+    log.debug({ ip }, "SSE client connected");
 
     return streamSSE(c, async (stream) => {
       const handler = (payload: string) => {
@@ -62,7 +63,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
           try {
             const event = await buildStatementEvent(pool, metrics, payload);
             if (!event) {
-              logger.warn("Statement not found for SSE event");
+              log.warn("Statement not found for SSE event");
               return;
             }
 
@@ -86,7 +87,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
             });
             metrics.sseEventsEmitted.add(1);
           } catch (err) {
-            logger.error(err, "Failed to fetch statement for SSE");
+            log.error(err, "Failed to fetch statement for SSE");
           }
         })();
       };
@@ -100,7 +101,7 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
         if (remaining <= 0) perIpCount.delete(ip);
         else perIpCount.set(ip, remaining);
         metrics.sseClients.add(-1);
-        logger.debug({ ip }, "SSE client disconnected");
+        log.debug({ ip }, "SSE client disconnected");
       });
 
       // Heartbeat loop — keeps connection alive

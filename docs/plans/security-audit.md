@@ -171,10 +171,10 @@ account name contains `@` or `::`. Fix requires migration to update stored IFI v
 
 ## Summary
 
-| Severity  | Count | Fixed | Mitigated | Documented | Blocked |
-| --------- | ----- | ----- | --------- | ---------- | ------- |
-| Critical  | 3     | 2     |           |            | 1 (C3)  |
-| High      | 6     | 6     |           |            |         |
-| Medium    | 8     | 5     | 1 (M3)   | 1 (M8)     |         |
-| Low       | 6     | 3     |           | 2 (L2,L6) | 1 (L1)  |
-| **Total** | **23**| **16**| **1**     | **3**      | **2**   |
+| Severity  | Count  | Fixed  | Mitigated | Documented | Blocked |
+| --------- | ------ | ------ | --------- | ---------- | ------- |
+| Critical  | 3      | 2      |           |            | 1 (C3)  |
+| High      | 6      | 6      |           |            |         |
+| Medium    | 8      | 5      | 1 (M3)    | 1 (M8)     |         |
+| Low       | 6      | 3      |           | 2 (L2,L6)  | 1 (L1)  |
+| **Total** | **23** | **16** | **1**     | **3**      | **2**   |
