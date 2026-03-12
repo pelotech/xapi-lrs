@@ -152,9 +152,13 @@ export interface AdminDeps {
   trustedProxyHops: number;
 }
 
+/** Max concurrent admin SSE connections per IP */
+const ADMIN_SSE_MAX_PER_IP = 3;
+
 export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   const app = new Hono<AdminEnv>();
   const loginLimiter = new LoginRateLimiter();
+  const ssePerIpCount = new Map<string, number>();
 
   // --------------------------------------------------------------------------
   // Security headers
@@ -671,6 +675,15 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
   // SSE endpoint for admin stream page — session-authed, proxies pg_notify events
   app.get("/stream/events", (c) => {
+    const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
+    const ipCount = ssePerIpCount.get(ip) ?? 0;
+
+    if (ipCount >= ADMIN_SSE_MAX_PER_IP) {
+      return c.json({ error: "Too many SSE connections from this IP" }, 429);
+    }
+
+    ssePerIpCount.set(ip, ipCount + 1);
+
     return streamSSE(c, async (stream) => {
       const handler = (payload: string) => {
         void (async () => {
@@ -693,6 +706,9 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
       stream.onAbort(() => {
         deps.pgListener.off(XAPI_NOTIFY_CHANNEL, handler);
+        const remaining = (ssePerIpCount.get(ip) ?? 1) - 1;
+        if (remaining <= 0) ssePerIpCount.delete(ip);
+        else ssePerIpCount.set(ip, remaining);
       });
 
       // Heartbeat

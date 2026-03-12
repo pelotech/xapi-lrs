@@ -265,12 +265,9 @@ enable stored XSS.
 
 ---
 
-### L5: Admin SSE no per-IP connection limits
+### L5: Admin SSE no per-IP connection limits — FIXED
 
-- `src/admin/index.ts:621-652` — admin SSE endpoint has no per-IP limits
-- Compare: `src/sse/sse-producer.ts:36-43` — xAPI SSE has per-IP limiting
-
-**Issue:** Admin SSE stream allows unlimited connections from a single IP.
+- `src/admin/index.ts` — added per-IP connection tracking (max 3) with 429 rejection
 
 ---
 
