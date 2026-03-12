@@ -112,6 +112,9 @@ async function main(): Promise<void> {
   });
 
   // Admin server (health + metrics)
+  // Security: this port exposes unauthenticated /healthz, /ready, and /metrics
+  // endpoints. It MUST NOT be exposed to the public internet — restrict access
+  // via network policy, firewall rules, or bind to a loopback/internal interface.
   const adminApp = new Hono();
   adminApp.get("/healthz", (c) => c.text("ok"));
   adminApp.get("/ready", (c) => c.text("ok"));

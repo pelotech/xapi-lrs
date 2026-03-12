@@ -213,7 +213,7 @@ without verifying the JWS signature.
 
 ---
 
-### M8: Unauthenticated metrics endpoint
+### M8: Unauthenticated metrics endpoint — DOCUMENTED / WONTFIX
 
 - `src/server.ts:111-114` — `/metrics` on admin port with no auth
 
@@ -221,8 +221,8 @@ without verifying the JWS signature.
 system details (request counts, latencies, error rates) are visible to anyone who can reach the
 admin port.
 
-**Fix:** Add basic auth to the metrics endpoint, or ensure the admin port is only accessible
-from internal networks (document this requirement).
+**Resolution:** The admin port relies on network-level access control (firewall, network policy,
+internal-only binding). A comment has been added to `src/server.ts` documenting this requirement.
 
 ---
 

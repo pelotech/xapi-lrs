@@ -60,8 +60,8 @@ const configSchema = z.object({
 
   /** Feature flags */
   xapiVerifySignatures: z
-    .preprocess((v) => String(v ?? "false") === "true", z.boolean())
-    .default(false),
+    .preprocess((v) => String(v ?? "true") === "true", z.boolean())
+    .default(true),
 
   /** Log level */
   logLevel: z.enum(["silent", "fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
@@ -73,7 +73,7 @@ const configSchema = z.object({
 export type LrsConfig = z.infer<typeof configSchema>;
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): LrsConfig {
-  return configSchema.parse({
+  const config = configSchema.parse({
     port: env.LRS_PORT ?? env.PORT,
     adminPort: env.LRS_ADMIN_PORT ?? env.ADMIN_PORT,
     databaseUrl: env.DATABASE_URL,
@@ -104,4 +104,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
   });
+
+  if (!config.xapiVerifySignatures) {
+    console.warn(
+      "WARNING: XAPI_VERIFY_SIGNATURES is disabled — signed statements will be accepted without " +
+        "cryptographic verification. This means forged or tampered signatures will not be detected. " +
+        "Only disable this if you are certain no consumers rely on signature integrity.",
+    );
+  }
+
+  return config;
 }
