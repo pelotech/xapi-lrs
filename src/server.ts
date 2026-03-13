@@ -6,15 +6,45 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { loadConfig } from "./config.ts";
+import type { LrsConfig } from "./config.ts";
 import { createLogger } from "./logger.ts";
 import { createMetrics } from "./metrics.ts";
 import { createPool } from "./db.ts";
 import { JwksCache, discoverJwksUri } from "./auth/jwt.ts";
 import type { JwtConfig } from "./auth/jwt.ts";
 import { randomBytes } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { PgListener } from "./sse/pg-listener.ts";
 import { createApp } from "./app.ts";
 import { ensureAdminAccount } from "./admin/repositories.ts";
+import type { Logger } from "pino";
+
+async function initJwt(
+  config: LrsConfig,
+  logger: Logger,
+  jwksCache: JwksCache,
+): Promise<JwtConfig | null> {
+  if (!config.jwtIssuer || !config.jwtAudience) return null;
+
+  let jwksUri = config.jwksUri;
+  if (!jwksUri && config.oidcDiscoveryUrl) {
+    jwksUri = await discoverJwksUri(config.oidcDiscoveryUrl);
+  }
+  if (!jwksUri) {
+    logger.warn(
+      "JWT_ISSUER and JWT_AUDIENCE set but no JWKS_URI or OIDC_DISCOVERY_URL — JWT auth disabled",
+    );
+    return null;
+  }
+
+  const resolver = jwksCache.getKeyResolver(jwksUri);
+  await resolver.reload().catch((err) => {
+    logger.warn(err, "Failed to pre-warm JWKS cache");
+  });
+  logger.debug({ issuer: config.jwtIssuer }, "JWT authentication configured");
+
+  return { issuer: config.jwtIssuer, audience: config.jwtAudience, jwksUri };
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -23,48 +53,7 @@ async function main(): Promise<void> {
 
   logger.info({ port: config.port, adminPort: config.adminPort }, "Starting LRS service");
 
-  // Database
-  const pool = await createPool(config, logger);
-
-  // JWKS cache + JWT config from env vars
-  const jwksCache = new JwksCache();
-  let jwtConfig: JwtConfig | null = null;
-
-  if (config.jwtIssuer && config.jwtAudience) {
-    let jwksUri = config.jwksUri;
-    if (!jwksUri && config.oidcDiscoveryUrl) {
-      jwksUri = await discoverJwksUri(config.oidcDiscoveryUrl);
-    }
-    if (jwksUri) {
-      jwtConfig = {
-        issuer: config.jwtIssuer,
-        audience: config.jwtAudience,
-        jwksUri,
-      };
-      // Pre-warm the JWKS cache
-      const resolver = jwksCache.getKeyResolver(jwksUri);
-      await resolver.reload().catch((err) => {
-        logger.warn(err, "Failed to pre-warm JWKS cache");
-      });
-      logger.info({ issuer: config.jwtIssuer }, "JWT authentication configured");
-    } else {
-      logger.warn(
-        "JWT_ISSUER and JWT_AUDIENCE set but no JWKS_URI or OIDC_DISCOVERY_URL — JWT auth disabled",
-      );
-    }
-  }
-
-  // pg_notify listener for SSE
-  const pgListener = new PgListener(config, logger);
-  await pgListener.start();
-
-  // Bootstrap admin account from env vars
-  if (config.adminUser && config.adminPassword) {
-    await ensureAdminAccount(pool, metrics, config.adminUser, config.adminPassword);
-    logger.info({ username: config.adminUser }, "Admin account bootstrapped");
-  }
-
-  // Session secret: required in production, random fallback in dev
+  // Fail-fast config validation (no async deps)
   if (!config.adminSessionSecret && config.nodeEnv === "production") {
     throw new Error("ADMIN_SESSION_SECRET is required in production");
   }
@@ -75,12 +64,32 @@ async function main(): Promise<void> {
   }
   const sessionSecret = config.adminSessionSecret ?? randomBytes(32).toString("hex");
 
-  // CORS origin: wildcard is dangerous in production (only when app handles CORS)
   if (config.corsEnabled && config.corsOrigin === "*" && config.nodeEnv === "production") {
     throw new Error(
       "CORS_ORIGIN must not be '*' in production — set it to your allowed origin(s), or set CORS_ENABLED=false if CORS is handled by a reverse proxy",
     );
   }
+
+  // Phase 1: concurrent initialization
+  const jwksCache = new JwksCache();
+  const pgListener = new PgListener(config, logger);
+
+  const t0 = performance.now();
+
+  const [pool, jwtConfig] = await Promise.all([
+    createPool(config, logger),
+    initJwt(config, logger, jwksCache),
+    pgListener.start(),
+  ]);
+
+  const tParallel = performance.now();
+
+  // Phase 2: depends on pool
+  if (config.adminUser && config.adminPassword) {
+    await ensureAdminAccount(pool, metrics, config.adminUser, config.adminPassword);
+    logger.info({ username: config.adminUser }, "Admin account bootstrapped");
+  }
+  const tAdmin = performance.now();
 
   // Hono app
   const startedAt = new Date();
@@ -132,6 +141,17 @@ async function main(): Promise<void> {
   const adminServer = serve({ fetch: adminApp.fetch, port: config.adminPort }, () => {
     logger.info({ port: config.adminPort }, "LRS admin server listening");
   });
+
+  const tReady = performance.now();
+  logger.debug(
+    {
+      parallelMs: Math.round(tParallel - t0),
+      adminMs: Math.round(tAdmin - tParallel),
+      appMs: Math.round(tReady - tAdmin),
+      totalMs: Math.round(tReady - t0),
+    },
+    "Startup timing",
+  );
 
   // Graceful shutdown
   const shutdown = async () => {
