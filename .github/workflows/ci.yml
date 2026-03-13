@@ -41,28 +41,12 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: xapi_lrs
-          POSTGRES_PASSWORD: xapi_lrs
-          POSTGRES_DB: xapi_lrs
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U xapi_lrs"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      PGHOST: localhost
-      PGPORT: "5432"
-      PGDATABASE: xapi_lrs
-      PGUSER: xapi_lrs
-      PGPASSWORD: xapi_lrs
     steps:
       - uses: actions/checkout@v4
+      - name: Start Postgres
+        run: docker compose up -d --wait
+      - name: Load test env
+        run: cat .env.test >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -70,6 +54,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
+      - name: Postgres logs
+        if: failure()
+        run: docker compose logs postgres
+      - name: Cleanup
+        if: always()
+        run: docker compose down
 
   build:
     name: Docker Build

@@ -18,6 +18,7 @@ services:
       - /var/lib/postgresql
 
   lrs:
+    profiles: [app]
     build: .
     depends_on:
       postgres:
