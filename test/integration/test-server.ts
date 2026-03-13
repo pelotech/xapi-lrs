@@ -6,6 +6,7 @@
 
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
+import { Hono } from "hono";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import pg from "pg";
 import { pino } from "pino";
@@ -28,6 +29,7 @@ export interface LrsTestServerHandle {
   readonly app: OpenAPIHono<HonoEnv>;
   readonly server: Server;
   readonly apiUrl: string;
+  readonly adminUrl: string;
   readonly jwksUrl: string;
   readonly pool: pg.Pool;
   readonly pgListener: PgListener;
@@ -119,11 +121,39 @@ export async function createLrsTestServer(
 
   const apiUrl = `http://localhost:${address.port}`;
 
+  // Admin server (health/ready/metrics) — mirrors src/server.ts
+  const adminApp = new Hono();
+  adminApp.get("/healthz", (c) => c.text("ok"));
+  adminApp.get("/ready", async (c) => {
+    try {
+      await pool.query("SELECT 1");
+      return c.text("ok");
+    } catch {
+      return c.text("database unavailable", 503);
+    }
+  });
+  adminApp.get("/metrics", async (c) => {
+    const content = await metrics.getPrometheusText();
+    return c.text(content, 200, { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" });
+  });
+
+  const adminServer = await new Promise<Server>((resolve, reject) => {
+    const s = serve({ fetch: adminApp.fetch, port: 0 }, () => resolve(s as unknown as Server));
+    s.on("error", (err: NodeJS.ErrnoException) => reject(err));
+  });
+
+  const adminAddress = adminServer.address();
+  if (!adminAddress || typeof adminAddress === "string") {
+    throw new Error("Failed to get LRS admin test server address");
+  }
+  const adminUrl = `http://localhost:${adminAddress.port}`;
+
   const close = async (): Promise<void> => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await new Promise<void>((resolve) => adminServer.close(() => resolve()));
     await metrics.shutdown();
     await pgListener.stop();
-    await pool.end();
+    await pool.end().catch(() => {}); // pool may already be ended by tests
     await jwksServer.close();
   };
 
@@ -135,6 +165,7 @@ export async function createLrsTestServer(
     app,
     server,
     apiUrl,
+    adminUrl,
     jwksUrl: jwksServer.jwksUrl,
     pool,
     pgListener,
