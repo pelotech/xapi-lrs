@@ -46,7 +46,7 @@ jobs:
       - name: Start Postgres
         run: docker compose up -d --wait
       - name: Load test env
-        run: cat .env.test >> "$GITHUB_ENV"
+        run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
