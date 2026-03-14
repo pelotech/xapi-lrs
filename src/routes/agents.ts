@@ -5,7 +5,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { HonoEnv } from "../hono-env.ts";
-import { HttpError, withClient } from "../db.ts";
+import { HttpError, withClient, parseMergeBody } from "../db.ts";
 import { computeEtag, checkConcurrencyHeaders } from "../helpers/etag.ts";
 import { canonicalAgentIfi, validateSince } from "../helpers/agent.ts";
 import {
@@ -85,23 +85,6 @@ const deleteProfileRoute = createRoute({
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Parse merge body (application/json POST) */
-function parseMergeBody(body: Buffer, contentType: string): Record<string, unknown> {
-  if (!contentType.includes("application/json")) {
-    throw new HttpError(400, "POST merge requires application/json content type");
-  }
-  try {
-    const parsed = JSON.parse(body.toString("utf8"));
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new HttpError(400, "Request body must be a JSON object");
-    }
-    return parsed as Record<string, unknown>;
-  } catch (e) {
-    if (e instanceof HttpError) throw e;
-    throw new HttpError(400, "Request body is not valid JSON");
-  }
-}
 
 // ============================================================================
 // Route app

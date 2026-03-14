@@ -3,12 +3,11 @@
  */
 
 import type { Hono } from "hono";
-import type { AdminSession } from "../types.ts";
+import type { AdminSession, AdminEnv, AdminDeps } from "../types.ts";
 import { createSession, clearSession } from "../middleware.ts";
 import { verifyPassword } from "../repositories/index.ts";
 import { resolveClientIp } from "../../helpers/client-ip.ts";
 import { loginPage } from "../views/login.ts";
-import type { AdminEnv, AdminDeps } from "../types.ts";
 
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes

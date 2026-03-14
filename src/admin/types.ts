@@ -17,7 +17,6 @@ export type AdminEnv = {
   Variables: {
     adminSession: AdminSession;
     csrfToken: string;
-    adminDeps: AdminDeps;
     /** Per-request child logger (set by parent app middleware) */
     logger: Logger;
   };

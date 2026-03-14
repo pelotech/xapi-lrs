@@ -16,7 +16,7 @@ import { buildAuthority } from "../helpers/enrichment.ts";
 import type { MultipartAttachmentPart, ResponseAttachmentPart } from "../xapi/multipart.ts";
 import { validateSignedStatements } from "../xapi/signature.ts";
 
-const VOIDED_VERB_ID = "http://adlnet.gov/expapi/verbs/voided";
+export const VOIDED_VERB_ID = "http://adlnet.gov/expapi/verbs/voided";
 
 // ============================================================================
 // OpenAPI route definitions (for doc generation)

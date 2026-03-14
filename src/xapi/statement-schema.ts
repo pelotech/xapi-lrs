@@ -293,6 +293,31 @@ const subStatementObjectSchema = z.union([
   groupObjectSchema,
 ]);
 
+/** Shared refinement: context.revision and context.platform are only allowed when Object is an Activity. */
+function checkContextActivityOnly(
+  data: { object: Record<string, unknown>; context?: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  const objType = (data.object as Record<string, unknown>).objectType ?? "Activity";
+  if (data.context && objType !== "Activity") {
+    const ctxObj = data.context as Record<string, unknown>;
+    if (ctxObj.revision !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["context", "revision"],
+        message: "revision is only allowed when Object is an Activity",
+      });
+    }
+    if (ctxObj.platform !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["context", "platform"],
+        message: "platform is only allowed when Object is an Activity",
+      });
+    }
+  }
+}
+
 const subStatementSchema = z
   .object({
     objectType: z.literal("SubStatement"),
@@ -305,27 +330,7 @@ const subStatementSchema = z
     attachments: z.array(attachmentSchema).optional(),
   })
   .strict()
-  .superRefine((sub, ctx) => {
-    // Check context revision/platform vs object type
-    const objType = (sub.object as Record<string, unknown>).objectType ?? "Activity";
-    if (sub.context && objType !== "Activity") {
-      const ctxObj = sub.context as Record<string, unknown>;
-      if (ctxObj.revision !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["context", "revision"],
-          message: "revision is only allowed when Object is an Activity",
-        });
-      }
-      if (ctxObj.platform !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["context", "platform"],
-          message: "platform is only allowed when Object is an Activity",
-        });
-      }
-    }
-  });
+  .superRefine(checkContextActivityOnly);
 
 // Full object schema (includes SubStatement)
 const objectSchema = z.union([
@@ -375,24 +380,4 @@ export const statementInputSchema = z
     attachments: z.array(attachmentSchema).optional(),
   })
   .strict()
-  .superRefine((data, ctx) => {
-    // Context revision/platform only allowed when object is Activity
-    const objType = (data.object as Record<string, unknown>).objectType ?? "Activity";
-    if (data.context && objType !== "Activity") {
-      const ctxObj = data.context as Record<string, unknown>;
-      if (ctxObj.revision !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["context", "revision"],
-          message: "revision is only allowed when Object is an Activity",
-        });
-      }
-      if (ctxObj.platform !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["context", "platform"],
-          message: "platform is only allowed when Object is an Activity",
-        });
-      }
-    }
-  });
+  .superRefine(checkContextActivityOnly);

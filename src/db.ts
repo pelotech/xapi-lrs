@@ -152,3 +152,20 @@ export class HttpError extends Error {
     this.status = status;
   }
 }
+
+/** Parse a POST merge body — validates content-type and JSON structure. */
+export function parseMergeBody(body: Buffer, contentType: string): Record<string, unknown> {
+  if (!contentType.includes("application/json")) {
+    throw new HttpError(400, "POST merge requires application/json content type");
+  }
+  try {
+    const parsed = JSON.parse(body.toString("utf8"));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new HttpError(400, "Request body must be a JSON object");
+    }
+    return parsed as Record<string, unknown>;
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(400, "Request body is not valid JSON");
+  }
+}

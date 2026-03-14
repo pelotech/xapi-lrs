@@ -3,9 +3,9 @@
  * GET /xapi/activities, /xapi/activities/state CRUD, /xapi/activities/profile CRUD
  */
 
-import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { HonoEnv } from "../hono-env.ts";
-import { HttpError, withClient } from "../db.ts";
+import { HttpError, withClient, parseMergeBody } from "../db.ts";
 import { computeEtag, checkConcurrencyHeaders } from "../helpers/etag.ts";
 import { canonicalAgentIfi, validateSince, validateRegistration } from "../helpers/agent.ts";
 import {
@@ -22,167 +22,19 @@ import {
   deleteActivityProfile,
 } from "../repositories/activity-profile.ts";
 import { getActivityDefinition } from "../repositories/statements.ts";
-
-// ============================================================================
-// Route definitions
-// ============================================================================
-
-const getActivityRoute = createRoute({
-  method: "get",
-  path: "/activities",
-  operationId: "GetActivity",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: { query: z.object({ activityId: z.string() }) },
-  responses: { 200: { description: "Ok", content: { "application/json": { schema: z.any() } } } },
-});
-
-const putStateRoute = createRoute({
-  method: "put",
-  path: "/activities/state",
-  operationId: "PutState",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: {
-    query: z.object({
-      stateId: z.string(),
-      activityId: z.string(),
-      agent: z.string(),
-      registration: z.string().optional(),
-    }),
-  },
-  responses: { 204: { description: "No content" } },
-});
-
-const postStateRoute = createRoute({
-  method: "post",
-  path: "/activities/state",
-  operationId: "PostState",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: {
-    query: z.object({
-      stateId: z.string(),
-      activityId: z.string(),
-      agent: z.string(),
-      registration: z.string().optional(),
-    }),
-  },
-  responses: { 204: { description: "No content" } },
-});
-
-const getStateRoute = createRoute({
-  method: "get",
-  path: "/activities/state",
-  operationId: "GetState",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: {
-    query: z.object({
-      activityId: z.string(),
-      agent: z.string(),
-      stateId: z.string().optional(),
-      registration: z.string().optional(),
-      since: z.string().optional(),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Ok",
-      content: { "application/json": { schema: z.union([z.array(z.string()), z.any()]) } },
-    },
-  },
-});
-
-const deleteStateRoute = createRoute({
-  method: "delete",
-  path: "/activities/state",
-  operationId: "DeleteState",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: {
-    query: z.object({
-      activityId: z.string(),
-      agent: z.string(),
-      stateId: z.string().optional(),
-      registration: z.string().optional(),
-      since: z.string().optional(),
-    }),
-  },
-  responses: { 204: { description: "No content" } },
-});
-
-const putProfileRoute = createRoute({
-  method: "put",
-  path: "/activities/profile",
-  operationId: "PutActivityProfile",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: { query: z.object({ profileId: z.string(), activityId: z.string() }) },
-  responses: { 204: { description: "No content" } },
-});
-
-const postProfileRoute = createRoute({
-  method: "post",
-  path: "/activities/profile",
-  operationId: "PostActivityProfile",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: { query: z.object({ profileId: z.string(), activityId: z.string() }) },
-  responses: { 204: { description: "No content" } },
-});
-
-const getProfileRoute = createRoute({
-  method: "get",
-  path: "/activities/profile",
-  operationId: "GetActivityProfile",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: {
-    query: z.object({
-      activityId: z.string(),
-      profileId: z.string().optional(),
-      since: z.string().optional(),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Ok",
-      content: { "application/json": { schema: z.union([z.array(z.string()), z.any()]) } },
-    },
-  },
-});
-
-const deleteProfileRoute = createRoute({
-  method: "delete",
-  path: "/activities/profile",
-  operationId: "DeleteActivityProfile",
-  tags: ["xAPI Activities"],
-  security: [{ basic: [] }, { jwt: [] }],
-  request: { query: z.object({ profileId: z.string(), activityId: z.string() }) },
-  responses: { 204: { description: "No content" } },
-});
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/** Parse merge body (application/json POST) */
-function parseMergeBody(body: Buffer, contentType: string): Record<string, unknown> {
-  if (!contentType.includes("application/json")) {
-    throw new HttpError(400, "POST merge requires application/json content type");
-  }
-  try {
-    const parsed = JSON.parse(body.toString("utf8"));
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new HttpError(400, "Request body must be a JSON object");
-    }
-    return parsed as Record<string, unknown>;
-  } catch (e) {
-    if (e instanceof HttpError) throw e;
-    throw new HttpError(400, "Request body is not valid JSON");
-  }
-}
+import {
+  getActivityRoute,
+  putStateRoute,
+  postStateRoute,
+  getStateRoute,
+  deleteStateRoute,
+  putProfileRoute,
+  postProfileRoute,
+  getProfileRoute,
+  deleteProfileRoute,
+  concurrencyHeaders,
+  documentResponse,
+} from "./activity-helpers.ts";
 
 // ============================================================================
 // Route app
@@ -225,10 +77,7 @@ export function createActivitiesApp() {
         registration,
       });
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-      checkConcurrencyHeaders(
-        { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-        existingEtag,
-      );
+      checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag);
       await upsertStateDocument(client, {
         stateId,
         activityIri: activityId,
@@ -266,10 +115,7 @@ export function createActivitiesApp() {
         registration,
       });
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-      checkConcurrencyHeaders(
-        { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-        existingEtag,
-      );
+      checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag);
 
       if (existing && !existing.content_type.includes("application/json")) {
         throw new HttpError(400, "Cannot merge into non-JSON document");
@@ -322,17 +168,7 @@ export function createActivitiesApp() {
       throw new HttpError(404, "State document not found");
     }
 
-    const etag = computeEtag(row.contents);
-    const headers: Record<string, string> = {
-      ETag: `"${etag}"`,
-      "Last-Modified": row.last_modified.toUTCString(),
-      "Content-Type": row.content_type,
-    };
-
-    if (row.content_type.includes("application/json")) {
-      return c.json(JSON.parse(row.contents.toString("utf8")), 200, headers);
-    }
-    return new Response(new Uint8Array(row.contents), { status: 200, headers });
+    return documentResponse(c, row);
   });
 
   // DELETE /xapi/activities/state
@@ -356,10 +192,7 @@ export function createActivitiesApp() {
           registration,
         });
         const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-        checkConcurrencyHeaders(
-          { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-          existingEtag,
-        );
+        checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag);
         await deleteStateDocument(client, {
           stateId,
           activityIri: activityId,
@@ -392,11 +225,7 @@ export function createActivitiesApp() {
     await withClient(pool, metrics, async (client) => {
       const existing = await getActivityProfile(client, { profileId, activityIri: activityId });
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-      checkConcurrencyHeaders(
-        { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-        existingEtag,
-        true,
-      );
+      checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag, true);
       await upsertActivityProfile(client, {
         profileId,
         activityIri: activityId,
@@ -423,10 +252,7 @@ export function createActivitiesApp() {
     await withClient(pool, metrics, async (client) => {
       const existing = await getActivityProfile(client, { profileId, activityIri: activityId });
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-      checkConcurrencyHeaders(
-        { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-        existingEtag,
-      );
+      checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag);
 
       if (existing && !existing.content_type.includes("application/json")) {
         throw new HttpError(400, "Cannot merge into non-JSON document");
@@ -471,17 +297,7 @@ export function createActivitiesApp() {
       return doc;
     });
 
-    const etag = computeEtag(row.contents);
-    const headers: Record<string, string> = {
-      ETag: `"${etag}"`,
-      "Last-Modified": row.last_modified.toUTCString(),
-      "Content-Type": row.content_type,
-    };
-
-    if (row.content_type.includes("application/json")) {
-      return c.json(JSON.parse(row.contents.toString("utf8")), 200, headers);
-    }
-    return new Response(new Uint8Array(row.contents), { status: 200, headers });
+    return documentResponse(c, row);
   });
 
   // DELETE /xapi/activities/profile
@@ -493,10 +309,7 @@ export function createActivitiesApp() {
     await withClient(pool, metrics, async (client) => {
       const existing = await getActivityProfile(client, { profileId, activityIri: activityId });
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
-      checkConcurrencyHeaders(
-        { "if-match": c.req.header("if-match"), "if-none-match": c.req.header("if-none-match") },
-        existingEtag,
-      );
+      checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag);
       await deleteActivityProfile(client, { profileId, activityIri: activityId });
     });
 

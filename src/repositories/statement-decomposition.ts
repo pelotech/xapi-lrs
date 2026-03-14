@@ -121,6 +121,30 @@ export function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
 // Activity extraction
 // ============================================================================
 
+function collectContextActivities(
+  ctx: Record<string, unknown> | undefined,
+  activities: ActivityEntry[],
+  prefix: string,
+): void {
+  if (!ctx?.contextActivities || typeof ctx.contextActivities !== "object") return;
+  const ca = ctx.contextActivities as Record<string, unknown>;
+  const usageMap: Record<string, string> = {
+    parent: `${prefix}Parent`,
+    grouping: `${prefix}Grouping`,
+    category: `${prefix}Category`,
+    other: `${prefix}Other`,
+  };
+  for (const [key, usage] of Object.entries(usageMap)) {
+    if (Array.isArray(ca[key])) {
+      for (const a of ca[key] as Record<string, unknown>[]) {
+        if (a.id) {
+          activities.push({ iri: a.id as string, usage, payload: a });
+        }
+      }
+    }
+  }
+}
+
 /** Extract activities from a statement for junction table insertion. */
 export function extractActivities(stmt: Record<string, unknown>): ActivityEntry[] {
   const activities: ActivityEntry[] = [];
@@ -133,25 +157,7 @@ export function extractActivities(stmt: Record<string, unknown>): ActivityEntry[
     }
   }
 
-  const ctx = stmt.context as Record<string, unknown> | undefined;
-  if (ctx?.contextActivities && typeof ctx.contextActivities === "object") {
-    const ca = ctx.contextActivities as Record<string, unknown>;
-    const usageMap: Record<string, string> = {
-      parent: "Parent",
-      grouping: "Grouping",
-      category: "Category",
-      other: "Other",
-    };
-    for (const [key, usage] of Object.entries(usageMap)) {
-      if (Array.isArray(ca[key])) {
-        for (const a of ca[key] as Record<string, unknown>[]) {
-          if (a.id) {
-            activities.push({ iri: a.id as string, usage, payload: a });
-          }
-        }
-      }
-    }
-  }
+  collectContextActivities(stmt.context as Record<string, unknown> | undefined, activities, "");
 
   // SubStatement activities
   if (obj && (obj.objectType as string) === "SubStatement") {
@@ -160,26 +166,7 @@ export function extractActivities(stmt: Record<string, unknown>): ActivityEntry[
     if (subObj && subObjType === "Activity" && subObj.id) {
       activities.push({ iri: subObj.id as string, usage: "SubObject", payload: subObj });
     }
-
-    const subCtx = obj.context as Record<string, unknown> | undefined;
-    if (subCtx?.contextActivities && typeof subCtx.contextActivities === "object") {
-      const sca = subCtx.contextActivities as Record<string, unknown>;
-      const subUsageMap: Record<string, string> = {
-        parent: "SubParent",
-        grouping: "SubGrouping",
-        category: "SubCategory",
-        other: "SubOther",
-      };
-      for (const [key, usage] of Object.entries(subUsageMap)) {
-        if (Array.isArray(sca[key])) {
-          for (const a of sca[key] as Record<string, unknown>[]) {
-            if (a.id) {
-              activities.push({ iri: a.id as string, usage, payload: a });
-            }
-          }
-        }
-      }
-    }
+    collectContextActivities(obj.context as Record<string, unknown> | undefined, activities, "Sub");
   }
 
   return activities;

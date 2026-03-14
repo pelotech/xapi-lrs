@@ -11,7 +11,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   buildStatementEvent,
 } from "../sse/statement-event.ts";
-import type { AdminSession, AdminDeps, AdminEnv } from "./types.ts";
+import type { AdminDeps, AdminEnv } from "./types.ts";
 export type { AdminEnv, AdminDeps };
 import { adminAuthMiddleware, csrfMiddleware } from "./middleware.ts";
 import { HTMX_JS, HTMX_SSE_JS, PICO_CSS } from "./assets.ts";
@@ -73,14 +73,6 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     if (process.env.NODE_ENV === "production") {
       c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
     }
-    await next();
-  });
-
-  // --------------------------------------------------------------------------
-  // Deps injection
-  // --------------------------------------------------------------------------
-  app.use("*", async (c, next) => {
-    c.set("adminDeps", deps);
     await next();
   });
 

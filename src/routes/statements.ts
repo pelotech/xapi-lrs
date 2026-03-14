@@ -31,9 +31,8 @@ import {
   assertStatementBelongsToAgent,
   collectAttachmentParts,
   collectAttachmentPartsFromList,
+  VOIDED_VERB_ID,
 } from "./statement-helpers.ts";
-
-const VOIDED_VERB_ID = "http://adlnet.gov/expapi/verbs/voided";
 
 // ============================================================================
 // Route app
@@ -280,26 +279,15 @@ export function createStatementsApp() {
     const acceptLanguage = c.req.header("accept-language");
 
     return withClient(pool, metrics, async (client) => {
-      if (statementId) {
-        const row = await getStatementById(client, statementId);
-        if (!row || row.is_voided) {
-          throw new HttpError(404, "Statement not found");
-        }
-        if (mineOnly) {
-          assertStatementBelongsToAgent(row.payload, auth);
-        }
-        const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
-        if (attachments) {
-          const parts = await collectAttachmentParts(client, stmt);
-          return buildMultipartResponse(stmt, parts);
-        }
-        return c.json(stmt, 200);
-      }
-
-      if (voidedStatementId) {
-        const row = await getStatementById(client, voidedStatementId);
-        if (!row || !row.is_voided) {
-          throw new HttpError(404, "Voided statement not found");
+      const singleId = statementId ?? voidedStatementId;
+      if (singleId) {
+        const wantVoided = !!voidedStatementId;
+        const row = await getStatementById(client, singleId);
+        if (!row || row.is_voided !== wantVoided) {
+          throw new HttpError(
+            404,
+            wantVoided ? "Voided statement not found" : "Statement not found",
+          );
         }
         if (mineOnly) {
           assertStatementBelongsToAgent(row.payload, auth);

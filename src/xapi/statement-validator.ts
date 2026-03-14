@@ -71,6 +71,3 @@ export function hasCmi5Shape(statement: XAPIValidatedStatement): boolean {
   if (ot !== "Activity" && ot !== "StatementRef") return false;
   return true;
 }
-
-// Re-export statementsMatch from statement-compare for backwards compatibility
-export { statementsMatch } from "./statement-compare.ts";

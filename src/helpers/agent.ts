@@ -32,13 +32,7 @@ export function canonicalAgentIfi(agent: string | Record<string, unknown>): stri
     (agentObj.openid ? 1 : 0) +
     (agentObj.account ? 1 : 0);
 
-  if (ifiCount === 0) {
-    throw new HttpError(
-      400,
-      "Agent must have exactly one IFI (mbox, mbox_sha1sum, openid, or account)",
-    );
-  }
-  if (ifiCount > 1) {
+  if (ifiCount !== 1) {
     throw new HttpError(
       400,
       "Agent must have exactly one IFI (mbox, mbox_sha1sum, openid, or account)",
