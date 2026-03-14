@@ -70,3 +70,48 @@ export function statementsEquivalent(
 ): boolean {
   return deepEqual(stripExceptions(signed), stripExceptions(received));
 }
+
+// ============================================================================
+// Statement comparison (for duplicate detection)
+// ============================================================================
+
+/** Compare two statements for equality, excluding server-set fields (stored, authority, version) */
+export function statementsMatch(existing: Record<string, unknown>, incoming: unknown): boolean {
+  const a = { ...existing };
+  const b = { ...(incoming as Record<string, unknown>) };
+
+  // Remove server-set fields from comparison
+  for (const key of ["stored", "authority", "version"]) {
+    delete a[key];
+    delete b[key];
+  }
+
+  // Normalize timestamps to the same instant for comparison
+  if (typeof a.timestamp === "string" && typeof b.timestamp === "string") {
+    const ta = new Date(a.timestamp).getTime();
+    const tb = new Date(b.timestamp).getTime();
+    if (ta === tb) {
+      // Same instant — treat as matching regardless of timezone representation
+      delete a.timestamp;
+      delete b.timestamp;
+    }
+  }
+
+  // Use sorted-key serialization for order-independent comparison
+  return stableStringify(a) === stableStringify(b);
+}
+
+/** JSON.stringify with sorted keys for deterministic comparison */
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return JSON.stringify(value);
+  if (typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return "[" + value.map(stableStringify).join(",") + "]";
+  }
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  const parts = keys
+    .filter((k) => obj[k] !== undefined)
+    .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]));
+  return "{" + parts.join(",") + "}";
+}

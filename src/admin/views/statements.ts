@@ -5,7 +5,7 @@
 import { html, raw } from "./html.ts";
 import type { RawHtml } from "./html.ts";
 import type { XapiStatementRow } from "../../repositories/statements.ts";
-import type { AttachmentListRow } from "../repositories.ts";
+import type { AttachmentListRow } from "../repositories/index.ts";
 
 function formatActor(payload: Record<string, unknown>): string {
   const actor = payload.actor as Record<string, unknown> | undefined;

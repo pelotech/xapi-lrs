@@ -9,7 +9,7 @@ import type {
   ActivityProfileListRow,
   AgentProfileListRow,
   DocumentDetail,
-} from "../repositories.ts";
+} from "../repositories/index.ts";
 
 type DocType = "state" | "activity-profile" | "agent-profile";
 

@@ -4,7 +4,7 @@
 
 import { html } from "./html.ts";
 import type { RawHtml } from "./html.ts";
-import type { DashboardCounts, RecentStatement } from "../repositories.ts";
+import type { DashboardCounts, RecentStatement } from "../repositories/index.ts";
 
 function formatActor(actor: Record<string, unknown>): string {
   if (actor.name) return String(actor.name);

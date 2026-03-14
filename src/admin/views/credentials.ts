@@ -4,7 +4,7 @@
 
 import { html, raw } from "./html.ts";
 import type { RawHtml } from "./html.ts";
-import type { CredentialRow, AccountRow } from "../repositories.ts";
+import type { CredentialRow, AccountRow } from "../repositories/index.ts";
 
 const ALL_SCOPES = [
   "statements/write",

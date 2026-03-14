@@ -11,15 +11,11 @@ import {
   HEARTBEAT_INTERVAL_MS,
   buildStatementEvent,
 } from "../sse/statement-event.ts";
-import type { Pool } from "pg";
-import type { LrsMetrics } from "../metrics.ts";
-import type { Logger } from "../logger.ts";
-import type { PgListener } from "../sse/pg-listener.ts";
-import type { AdminSession } from "./types.ts";
-import { adminAuthMiddleware, csrfMiddleware, createSession, clearSession } from "./middleware.ts";
+import type { AdminSession, AdminDeps, AdminEnv } from "./types.ts";
+export type { AdminEnv, AdminDeps };
+import { adminAuthMiddleware, csrfMiddleware } from "./middleware.ts";
 import { HTMX_JS, HTMX_SSE_JS, PICO_CSS } from "./assets.ts";
 import {
-  verifyPassword,
   getDashboardCounts,
   getRecentStatements,
   listAccounts,
@@ -31,128 +27,19 @@ import {
   deleteCredential,
   rotateSecret,
   setCredentialScopes,
-  listAttachments,
-  getAttachment,
-  listStateDocuments,
-  listActivityProfiles,
-  listAgentProfiles,
-  getStateDocumentById,
-  getActivityProfileById,
-  getAgentProfileById,
-  deleteStateDocumentById,
-  deleteActivityProfileById,
-  deleteAgentProfileById,
-  bulkDeleteStateDocuments,
-} from "./repositories.ts";
-import { queryStatements, getStatementById, voidStatement } from "../repositories/statements.ts";
-import { withClient } from "../db.ts";
+} from "./repositories/index.ts";
 import { randomBytes } from "node:crypto";
 import { resolveClientIp } from "../helpers/client-ip.ts";
-import { loginPage } from "./views/login.ts";
 import { layout } from "./views/layout.ts";
 import { dashboardPage } from "./views/dashboard.ts";
 import { metricsPage } from "./views/metrics.ts";
 import { accountsPage, accountList } from "./views/accounts.ts";
 import { credentialsPage, rotatedSecret, scopeUpdated, deletedRow } from "./views/credentials.ts";
-import {
-  statementsPage,
-  statementTable,
-  statementDetail,
-  voidedConfirmation,
-} from "./views/statements.ts";
-import {
-  documentsPage,
-  stateDocumentTable,
-  activityProfileTable,
-  agentProfileTable,
-  documentDetailView,
-  bulkDeleteResult,
-  deletedDocRow,
-} from "./views/documents.ts";
 import { streamPage } from "./views/stream.ts";
 import type { RawHtml } from "./views/html.ts";
-
-// ============================================================================
-// Login rate limiter — per-IP sliding window
-// ============================================================================
-
-const LOGIN_MAX_ATTEMPTS = 5;
-const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-class LoginRateLimiter {
-  private attempts = new Map<string, number[]>();
-
-  /** Interval handle for periodic pruning of stale keys */
-  private pruneTimer: ReturnType<typeof setInterval> | null = null;
-
-  constructor() {
-    // Prune stale keys every 5 minutes to prevent unbounded memory growth
-    this.pruneTimer = setInterval(() => this.pruneStaleKeys(), 5 * 60 * 1000);
-    if (this.pruneTimer && typeof this.pruneTimer === "object" && "unref" in this.pruneTimer) {
-      this.pruneTimer.unref();
-    }
-  }
-
-  isBlocked(ip: string): boolean {
-    const now = Date.now();
-    const timestamps = this.attempts.get(ip);
-    if (!timestamps) return false;
-    const recent = timestamps.filter((t) => now - t < LOGIN_WINDOW_MS);
-    if (recent.length === 0) {
-      this.attempts.delete(ip);
-      return false;
-    }
-    this.attempts.set(ip, recent);
-    return recent.length >= LOGIN_MAX_ATTEMPTS;
-  }
-
-  recordFailure(ip: string): void {
-    const now = Date.now();
-    const timestamps = this.attempts.get(ip) ?? [];
-    timestamps.push(now);
-    this.attempts.set(ip, timestamps);
-  }
-
-  reset(ip: string): void {
-    this.attempts.delete(ip);
-  }
-
-  private pruneStaleKeys(): void {
-    const now = Date.now();
-    for (const [key, timestamps] of this.attempts) {
-      const recent = timestamps.filter((t) => now - t < LOGIN_WINDOW_MS);
-      if (recent.length === 0) {
-        this.attempts.delete(key);
-      } else {
-        this.attempts.set(key, recent);
-      }
-    }
-  }
-}
-
-// ============================================================================
-// Hono env for admin routes
-// ============================================================================
-
-type AdminEnv = {
-  Variables: {
-    adminSession: AdminSession;
-    csrfToken: string;
-    adminDeps: AdminDeps;
-    /** Per-request child logger (set by parent app middleware) */
-    logger: Logger;
-  };
-};
-
-export interface AdminDeps {
-  pool: Pool;
-  metrics: LrsMetrics;
-  logger: Logger;
-  pgListener: PgListener;
-  sessionSecret: string;
-  startedAt: Date;
-  trustedProxyHops: number;
-}
+import { LoginRateLimiter, registerAuthRoutes } from "./routes/auth.ts";
+import { registerStatementRoutes } from "./routes/statements.ts";
+import { registerDocumentRoutes } from "./routes/documents.ts";
 
 /** Max concurrent admin SSE connections per IP */
 const ADMIN_SSE_MAX_PER_IP = 3;
@@ -234,57 +121,9 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   }
 
   // --------------------------------------------------------------------------
-  // Login / Logout
+  // Login / Logout (extracted)
   // --------------------------------------------------------------------------
-  app.get("/login", (c) => {
-    return c.html(loginPage().value);
-  });
-
-  app.post("/login", async (c) => {
-    const ip = resolveClientIp(c.req.header("x-forwarded-for"), deps.trustedProxyHops);
-    if (loginLimiter.isBlocked(ip)) {
-      c.var.logger.warn({ ip, action: "login.rate_limited" }, "Admin login rate limited");
-      return c.html(loginPage("Too many login attempts. Try again later.").value, 429);
-    }
-
-    const body = await c.req.parseBody();
-    const username = String(body.username ?? "");
-    const password = String(body.password ?? "");
-
-    if (!username || !password) {
-      return c.html(loginPage("Username and password are required").value, 400);
-    }
-    if (username.length > 64 || password.length > 1024) {
-      return c.html(loginPage("Username or password too long").value, 400);
-    }
-
-    const account = await verifyPassword(deps.pool, deps.metrics, username, password);
-    if (!account) {
-      loginLimiter.recordFailure(ip);
-      c.var.logger.info({ admin: username, action: "login.failed" }, "Admin login failed");
-      return c.html(loginPage("Invalid username or password").value, 401);
-    }
-
-    loginLimiter.reset(ip);
-    const session: AdminSession = {
-      accountId: account.id,
-      username: account.username,
-      exp: Date.now() + 900_000, // 15 min (sliding window renews on each request)
-    };
-
-    createSession(c, session, deps.sessionSecret);
-    c.var.logger.info({ admin: username, action: "login.success" }, "Admin login");
-    return c.redirect("/admin");
-  });
-
-  app.post("/logout", (c) => {
-    const session = c.get("adminSession");
-    if (session) {
-      c.var.logger.info({ admin: session.username, action: "logout" }, "Admin logout");
-    }
-    clearSession(c);
-    return c.redirect("/admin/login");
-  });
+  registerAuthRoutes(app, deps, loginLimiter);
 
   // --------------------------------------------------------------------------
   // Dashboard
@@ -486,197 +325,14 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
   });
 
   // --------------------------------------------------------------------------
-  // Statements
+  // Statements (extracted)
   // --------------------------------------------------------------------------
-  app.get("/statements", (c) => {
-    const { verb, agent, activity, since, until } = c.req.query();
-    return renderPage(c, statementsPage({ verb, agent, activity, since, until }));
-  });
-
-  app.get("/statements/list", async (c) => {
-    const { verb, agent, activity, since, until, cursor } = c.req.query();
-    const params: Record<string, unknown> = { limit: 25 };
-    if (verb) params.verb = verb;
-    if (agent) params.agent = agent;
-    if (activity) params.activity = activity;
-    if (since) params.since = new Date(since).toISOString();
-    if (until) params.until = new Date(until).toISOString();
-    if (cursor) params.since = cursor;
-
-    const result = await withClient(deps.pool, deps.metrics, (client) =>
-      queryStatements(client, params as Parameters<typeof queryStatements>[1]),
-    );
-
-    const lastRow = result.rows[result.rows.length - 1];
-    const nextCursor = result.hasMore && lastRow ? lastRow.stored.toISOString() : undefined;
-
-    // Build filter query string for pagination links
-    const filterParams = new URLSearchParams();
-    if (verb) filterParams.set("verb", verb);
-    if (agent) filterParams.set("agent", agent);
-    if (activity) filterParams.set("activity", activity);
-    if (since) filterParams.set("since", since);
-    if (until) filterParams.set("until", until);
-
-    return c.html(
-      statementTable({
-        rows: result.rows,
-        hasMore: result.hasMore,
-        cursor: nextCursor,
-        filters: filterParams.toString(),
-      }).value,
-    );
-  });
-
-  app.get("/statements/:id", async (c) => {
-    const statementId = c.req.param("id");
-
-    const row = await withClient(deps.pool, deps.metrics, (client) =>
-      getStatementById(client, statementId),
-    );
-
-    if (!row) {
-      return c.text("Statement not found", 404);
-    }
-
-    const attachments = await listAttachments(deps.pool, deps.metrics, statementId);
-    return renderPage(c, statementDetail(row, attachments));
-  });
-
-  app.post("/statements/:id/void", async (c) => {
-    const statementId = c.req.param("id");
-    const session = c.get("adminSession");
-
-    await withClient(deps.pool, deps.metrics, (client) => voidStatement(client, statementId));
-
-    c.var.logger.info(
-      { admin: session.username, action: "statement.void", target: statementId },
-      "Statement voided",
-    );
-
-    return c.html(voidedConfirmation().value);
-  });
-
-  app.get("/statements/:id/attachments/:sha", async (c) => {
-    const statementId = c.req.param("id");
-    const sha = c.req.param("sha");
-
-    const attachment = await getAttachment(deps.pool, deps.metrics, statementId, sha);
-    if (!attachment) {
-      return c.text("Attachment not found", 404);
-    }
-
-    return c.body(new Uint8Array(attachment.contents), 200, {
-      "Content-Type": attachment.content_type,
-      "Content-Disposition": `attachment; filename="${sha.replace(/[^a-fA-F0-9]/g, "")}"`,
-    });
-  });
+  registerStatementRoutes(app, deps, renderPage);
 
   // --------------------------------------------------------------------------
-  // Documents
+  // Documents (extracted)
   // --------------------------------------------------------------------------
-  app.get("/documents", (c) => {
-    return renderPage(c, documentsPage());
-  });
-
-  app.get("/documents/list", async (c) => {
-    const type = c.req.query("type") ?? "state";
-    const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10));
-    const pageSize = 25;
-    const offset = (page - 1) * pageSize;
-
-    if (type === "state") {
-      const { rows, total } = await listStateDocuments(deps.pool, deps.metrics, pageSize, offset);
-      return c.html(stateDocumentTable(rows, total, page, pageSize).value);
-    } else if (type === "activity-profile") {
-      const { rows, total } = await listActivityProfiles(deps.pool, deps.metrics, pageSize, offset);
-      return c.html(activityProfileTable(rows, total, page, pageSize).value);
-    } else {
-      const { rows, total } = await listAgentProfiles(deps.pool, deps.metrics, pageSize, offset);
-      return c.html(agentProfileTable(rows, total, page, pageSize).value);
-    }
-  });
-
-  app.get("/documents/state/:id", async (c) => {
-    const doc = await getStateDocumentById(deps.pool, deps.metrics, c.req.param("id"));
-    if (!doc) return c.text("Not found", 404);
-    return renderPage(c, documentDetailView(doc));
-  });
-
-  app.get("/documents/activity-profile/:id", async (c) => {
-    const doc = await getActivityProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    if (!doc) return c.text("Not found", 404);
-    return renderPage(c, documentDetailView(doc));
-  });
-
-  app.get("/documents/agent-profile/:id", async (c) => {
-    const doc = await getAgentProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    if (!doc) return c.text("Not found", 404);
-    return renderPage(c, documentDetailView(doc));
-  });
-
-  app.delete("/documents/state/:id", async (c) => {
-    const session = c.get("adminSession");
-    await deleteStateDocumentById(deps.pool, deps.metrics, c.req.param("id"));
-    c.var.logger.info(
-      {
-        admin: session.username,
-        action: "document.delete",
-        target: c.req.param("id"),
-        type: "state",
-      },
-      "State document deleted",
-    );
-    return c.html(deletedDocRow().value);
-  });
-
-  app.delete("/documents/activity-profile/:id", async (c) => {
-    const session = c.get("adminSession");
-    await deleteActivityProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    c.var.logger.info(
-      {
-        admin: session.username,
-        action: "document.delete",
-        target: c.req.param("id"),
-        type: "activity-profile",
-      },
-      "Activity profile deleted",
-    );
-    return c.html(deletedDocRow().value);
-  });
-
-  app.delete("/documents/agent-profile/:id", async (c) => {
-    const session = c.get("adminSession");
-    await deleteAgentProfileById(deps.pool, deps.metrics, c.req.param("id"));
-    c.var.logger.info(
-      {
-        admin: session.username,
-        action: "document.delete",
-        target: c.req.param("id"),
-        type: "agent-profile",
-      },
-      "Agent profile deleted",
-    );
-    return c.html(deletedDocRow().value);
-  });
-
-  app.delete("/documents/state/bulk", async (c) => {
-    const body = await c.req.parseBody();
-    const activityIri = String(body.activity_iri ?? "");
-    const agentIfi = String(body.agent_ifi ?? "");
-    const session = c.get("adminSession");
-
-    if (!activityIri || !agentIfi) {
-      return c.text("Activity IRI and Agent IFI are required", 400);
-    }
-
-    const count = await bulkDeleteStateDocuments(deps.pool, deps.metrics, activityIri, agentIfi);
-    c.var.logger.info(
-      { admin: session.username, action: "document.bulkDelete", activityIri, agentIfi, count },
-      "Bulk delete state documents",
-    );
-    return c.html(bulkDeleteResult(count).value);
-  });
+  registerDocumentRoutes(app, deps, renderPage);
 
   // --------------------------------------------------------------------------
   // Live Stream

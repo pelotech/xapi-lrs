@@ -4,7 +4,7 @@
 
 import { html } from "./html.ts";
 import type { RawHtml } from "./html.ts";
-import type { AccountRow } from "../repositories.ts";
+import type { AccountRow } from "../repositories/index.ts";
 
 export function accountsPage(accounts: AccountRow[], csrfToken: string): RawHtml {
   return html`

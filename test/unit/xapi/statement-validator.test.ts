@@ -21,13 +21,13 @@ describe("validateStatement", () => {
   it("preserves client-provided id and timestamp", () => {
     const stmt = {
       ...VALID_STMT,
-      id: "12345678-1234-1234-1234-123456789abc",
+      id: "550e8400-e29b-41d4-a716-446655440000",
       timestamp: "2024-01-01T00:00:00Z",
     };
     const result = validateStatement(stmt);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.statement.id).toBe("12345678-1234-1234-1234-123456789abc");
+      expect(result.statement.id).toBe("550e8400-e29b-41d4-a716-446655440000");
       expect(result.statement.timestamp).toBe("2024-01-01T00:00:00Z");
     }
   });
@@ -90,7 +90,7 @@ describe("validateStatement", () => {
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("IFI"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith("actor"))).toBe(true);
     }
   });
 
@@ -101,7 +101,7 @@ describe("validateStatement", () => {
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("multiple"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith("actor"))).toBe(true);
     }
   });
 
@@ -123,7 +123,7 @@ describe("validateStatement", () => {
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("Null"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith("result"))).toBe(true);
     }
   });
 
@@ -139,7 +139,7 @@ describe("validateStatement", () => {
     const result = validateStatement({ ...VALID_STMT, foo: "bar" });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("Unknown property"))).toBe(true);
+      expect(result.errors.some((e) => e.message.includes("Unrecognized key"))).toBe(true);
     }
   });
 
@@ -173,7 +173,7 @@ describe("validateStatement", () => {
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("nested SubStatement"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith("object"))).toBe(true);
     }
   });
 

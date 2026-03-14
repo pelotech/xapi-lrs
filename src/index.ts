@@ -7,7 +7,7 @@ export { createApp } from "./app.ts";
 export type { AppDeps } from "./app.ts";
 export { createAdminApp } from "./admin/index.ts";
 export type { AdminDeps } from "./admin/index.ts";
-export { ensureAdminAccount } from "./admin/repositories.ts";
+export { ensureAdminAccount } from "./admin/repositories/index.ts";
 export { loadConfig } from "./config.ts";
 export type { LrsConfig } from "./config.ts";
 export { createPool, withClient, poolQuery, HttpError } from "./db.ts";
@@ -95,14 +95,9 @@ export { createSseRoute } from "./sse/sse-producer.ts";
 export type { SseProducerDeps } from "./sse/sse-producer.ts";
 
 // xAPI utilities
-export {
-  validateStatement,
-  hasCmi5Shape,
-  allHaveCmi5Shape,
-  statementsMatch,
-} from "./xapi/statement-validator.ts";
+export { validateStatement, hasCmi5Shape, allHaveCmi5Shape } from "./xapi/statement-validator.ts";
 export type { ValidationError, ValidationResult } from "./xapi/statement-validator.ts";
-export { statementsEquivalent } from "./xapi/statement-compare.ts";
+export { statementsEquivalent, statementsMatch } from "./xapi/statement-compare.ts";
 export { validateSignedStatements, _resetWarnedDisabled } from "./xapi/signature.ts";
 export type { SignatureValidationOptions, SignatureMetricsContext } from "./xapi/signature.ts";
 export { extractBoundary, parseMultipartMixed, buildMultipartResponse } from "./xapi/multipart.ts";

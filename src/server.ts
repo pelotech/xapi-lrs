@@ -16,7 +16,7 @@ import { randomBytes } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { PgListener } from "./sse/pg-listener.ts";
 import { createApp } from "./app.ts";
-import { ensureAdminAccount } from "./admin/repositories.ts";
+import { ensureAdminAccount } from "./admin/repositories/index.ts";
 import type { Logger } from "pino";
 
 async function initJwt(
