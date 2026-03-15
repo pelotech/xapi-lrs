@@ -30,7 +30,7 @@ const PUBLIC_PATHS = new Set(["/xapi/about"]);
  * Resolve which scopes are acceptable for a given path + method.
  * Returns null if the route is public or unknown (let it through).
  */
-function requiredScopes(path: string, method: string): ScopeRule | null {
+export function requiredScopes(path: string, method: string): ScopeRule | null {
   const isRead = method === "GET" || method === "HEAD";
 
   // /xapi/statements
@@ -85,7 +85,10 @@ function requiredScopes(path: string, method: string): ScopeRule | null {
   return null;
 }
 
-function hasScope(granted: ReadonlyArray<XapiScope>, required: ReadonlyArray<XapiScope>): boolean {
+export function hasScope(
+  granted: ReadonlyArray<XapiScope>,
+  required: ReadonlyArray<XapiScope>,
+): boolean {
   return required.some((s) => granted.includes(s));
 }
 

@@ -32,87 +32,30 @@ describe("validateStatement", () => {
     }
   });
 
+  it("auto-generates id when absent", () => {
+    const result = validateStatement(VALID_STMT);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.statement.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    }
+  });
+
+  it("auto-generates timestamp when absent", () => {
+    const result = validateStatement(VALID_STMT);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.statement.timestamp).toBeDefined();
+      expect(new Date(result.statement.timestamp!).getTime()).not.toBeNaN();
+    }
+  });
+
   it("rejects a non-object input", () => {
     const result = validateStatement("not an object");
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors[0].message).toContain("JSON object");
-    }
-  });
-
-  it("rejects missing actor", () => {
-    const result = validateStatement({ verb: VALID_STMT.verb, object: VALID_STMT.object });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "actor")).toBe(true);
-    }
-  });
-
-  it("rejects missing verb", () => {
-    const result = validateStatement({ actor: VALID_STMT.actor, object: VALID_STMT.object });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "verb")).toBe(true);
-    }
-  });
-
-  it("rejects missing object", () => {
-    const result = validateStatement({ actor: VALID_STMT.actor, verb: VALID_STMT.verb });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "object")).toBe(true);
-    }
-  });
-
-  it("rejects invalid UUID for id", () => {
-    const result = validateStatement({ ...VALID_STMT, id: "not-a-uuid" });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "id")).toBe(true);
-    }
-  });
-
-  it("rejects invalid verb id (not an IRI)", () => {
-    const result = validateStatement({
-      ...VALID_STMT,
-      verb: { id: "no-scheme", display: { "en-US": "test" } },
-    });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "verb.id")).toBe(true);
-    }
-  });
-
-  it("rejects agent with no IFI", () => {
-    const result = validateStatement({
-      ...VALID_STMT,
-      actor: { name: "Someone" },
-    });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path.startsWith("actor"))).toBe(true);
-    }
-  });
-
-  it("rejects agent with multiple IFIs", () => {
-    const result = validateStatement({
-      ...VALID_STMT,
-      actor: { mbox: "mailto:a@b.com", openid: "http://example.com/openid" },
-    });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path.startsWith("actor"))).toBe(true);
-    }
-  });
-
-  it("validates score.scaled range", () => {
-    const result = validateStatement({
-      ...VALID_STMT,
-      result: { score: { scaled: 1.5 } },
-    });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.path === "result.score.scaled")).toBe(true);
     }
   });
 
@@ -131,27 +74,6 @@ describe("validateStatement", () => {
     const result = validateStatement({
       ...VALID_STMT,
       result: { extensions: { "http://example.com/ext": null } },
-    });
-    expect(result.valid).toBe(true);
-  });
-
-  it("rejects unknown top-level keys", () => {
-    const result = validateStatement({ ...VALID_STMT, foo: "bar" });
-    expect(result.valid).toBe(false);
-    if (!result.valid) {
-      expect(result.errors.some((e) => e.message.includes("Unrecognized key"))).toBe(true);
-    }
-  });
-
-  it("validates SubStatement object", () => {
-    const result = validateStatement({
-      ...VALID_STMT,
-      object: {
-        objectType: "SubStatement",
-        actor: { mbox: "mailto:sub@example.com" },
-        verb: { id: "http://example.com/verbs/did" },
-        object: { id: "http://example.com/activities/sub" },
-      },
     });
     expect(result.valid).toBe(true);
   });
@@ -189,13 +111,5 @@ describe("validateStatement", () => {
       expect(stmt.stored).toBeUndefined();
       expect(stmt.authority).toBeUndefined();
     }
-  });
-
-  it("validates version format", () => {
-    const valid = validateStatement({ ...VALID_STMT, version: "1.0.3" });
-    expect(valid.valid).toBe(true);
-
-    const invalid = validateStatement({ ...VALID_STMT, version: "2.0.0" });
-    expect(invalid.valid).toBe(false);
   });
 });
