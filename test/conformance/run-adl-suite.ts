@@ -20,6 +20,16 @@ const { testRunner: TestRunner } = require("adl-lrs-conformance-tests/bin/testRu
 // Types
 // ============================================================================
 
+export interface CleanLogNode {
+  title: string;
+  name: string;
+  requirement: string;
+  log: string;
+  status: string;
+  error?: string;
+  tests: CleanLogNode[];
+}
+
 export interface ConformanceSuiteResult {
   passing: number;
   failing: number;
@@ -30,24 +40,22 @@ export interface ConformanceSuiteResult {
   version: string;
   failures: Array<{ title: string; requirement: string; error: string }>;
   pendingTests: Array<{ title: string; suite: string }>;
-}
-
-interface SuiteLog {
-  title: string;
-  name: string;
-  requirement: string;
-  status: string;
-  error?: string;
-  tests: SuiteLog[];
+  log: CleanLogNode | undefined;
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
+/** Recursively collect all leaf tests from a log subtree. */
+export function collectLeafTests(node: CleanLogNode): CleanLogNode[] {
+  if (node.tests.length === 0) return [node];
+  return node.tests.flatMap(collectLeafTests);
+}
+
 /** Recursively collect all failed leaf tests from the log tree. */
 function collectFailures(
-  log: SuiteLog | undefined,
+  log: CleanLogNode | undefined,
   failures: ConformanceSuiteResult["failures"],
 ): void {
   if (!log) return;
@@ -65,7 +73,7 @@ function collectFailures(
 
 /** Recursively collect all pending/cancelled leaf tests from the log tree. */
 function collectPending(
-  log: SuiteLog | undefined,
+  log: CleanLogNode | undefined,
   suitePath: string,
   pending: ConformanceSuiteResult["pendingTests"],
 ): void {
@@ -88,6 +96,8 @@ export interface RunOptions {
   grep?: string;
   /** Timeout in ms to wait for the suite to finish. Default: 180_000 (3 min). */
   timeout?: number;
+  /** Called when a top-level ADL suite section starts running. */
+  onSectionStart?: (title: string) => void;
 }
 
 /**
@@ -99,7 +109,7 @@ export interface RunOptions {
 export async function runConformanceSuite(
   options: RunOptions = {},
 ): Promise<ConformanceSuiteResult> {
-  const { grep, timeout = 180_000 } = options;
+  const { grep, timeout = 180_000, onSectionStart } = options;
 
   let server: LrsTestServerHandle | undefined;
   let pool: pg.Pool | undefined;
@@ -146,7 +156,7 @@ export async function runConformanceSuite(
 
       runner.on("message", (msg: { action: string; payload: unknown }) => {
         if (msg.action === "suite start") {
-          process.stderr.write(`  [suite] ${String(msg.payload)}\n`);
+          onSectionStart?.(String(msg.payload));
         }
         if (msg.action === "end") {
           clearTimeout(timer);
@@ -169,6 +179,7 @@ export async function runConformanceSuite(
             version: runner.summary.version ?? "unknown",
             failures,
             pendingTests,
+            log: record.log as CleanLogNode | undefined,
           });
         }
       });
