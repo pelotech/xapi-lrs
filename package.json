@@ -16,7 +16,7 @@
     "test": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:all": "vitest run",
-    "test:conformance": "CONFORMANCE=1 vitest run --project conformance",
+    "test:conformance": "vitest run --project conformance",
     "lint:deps": "depcruise src --config .dependency-cruiser.mjs",
     "lint:complexity": "fta src --config-path fta.json",
     "lint:arch": "pnpm lint:deps && pnpm lint:complexity",
