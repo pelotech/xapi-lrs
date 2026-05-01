@@ -3,9 +3,9 @@
  * Defines typed context variables available in middleware and route handlers.
  */
 
-import type { LrsDeps } from "./deps.ts";
-import type { AuthInfo } from "./auth/types.ts";
-import type { MultipartAttachmentPart } from "./xapi/multipart.ts";
+import type { LrsDeps } from './deps.ts';
+import type { AuthInfo } from './auth/types.ts';
+import type { MultipartAttachmentPart } from './xapi/multipart.ts';
 
 /** Hono environment type — declares context variables set by middleware */
 export type HonoEnv = {
@@ -21,6 +21,6 @@ export type HonoEnv = {
     /** Unique request identifier for tracing */
     requestId: string;
     /** Per-request child logger with requestId bound */
-    logger: import("./logger.ts").Logger;
+    logger: import('./logger.ts').Logger;
   };
 };

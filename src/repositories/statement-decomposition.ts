@@ -6,7 +6,7 @@
  * with server-set fields (stored, authority).
  */
 
-import { canonicalAgentIfi, agentActorType } from "../helpers/agent.ts";
+import { canonicalAgentIfi, agentActorType } from '../helpers/agent.ts';
 
 // ============================================================================
 // Types
@@ -14,7 +14,7 @@ import { canonicalAgentIfi, agentActorType } from "../helpers/agent.ts";
 
 export type ActorEntry = {
   ifi: string;
-  type: "Agent" | "Group";
+  type: 'Agent' | 'Group';
   usage: string;
   payload: Record<string, unknown>;
 };
@@ -53,7 +53,7 @@ export function actorPayload(agent: Record<string, unknown>): Record<string, unk
 export function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const actors: ActorEntry[] = [];
 
-  function tryPush(agent: Record<string, unknown>, type: "Agent" | "Group", usage: string): void {
+  function tryPush(agent: Record<string, unknown>, type: 'Agent' | 'Group', usage: string): void {
     try {
       actors.push({ ifi: canonicalAgentIfi(agent), type, usage, payload: actorPayload(agent) });
     } catch {
@@ -63,10 +63,10 @@ export function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
 
   const actor = stmt.actor as Record<string, unknown> | undefined;
   if (actor) {
-    tryPush(actor, agentActorType(actor), "Actor");
+    tryPush(actor, agentActorType(actor), 'Actor');
     if (Array.isArray(actor.member)) {
       for (const m of actor.member as Record<string, unknown>[]) {
-        tryPush(m, "Agent", "Member");
+        tryPush(m, 'Agent', 'Member');
       }
     }
   }
@@ -74,17 +74,17 @@ export function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const obj = stmt.object as Record<string, unknown> | undefined;
   if (obj) {
     const objectType = obj.objectType as string | undefined;
-    if (objectType === "Agent" || objectType === "Group") {
-      tryPush(obj, agentActorType(obj), "Object");
+    if (objectType === 'Agent' || objectType === 'Group') {
+      tryPush(obj, agentActorType(obj), 'Object');
     }
   }
 
   const authority = stmt.authority as Record<string, unknown> | undefined;
   if (authority) {
-    tryPush(authority, agentActorType(authority), "Authority");
+    tryPush(authority, agentActorType(authority), 'Authority');
     if (Array.isArray(authority.member)) {
       for (const m of authority.member as Record<string, unknown>[]) {
-        tryPush(m, "Agent", "Authority");
+        tryPush(m, 'Agent', 'Authority');
       }
     }
   }
@@ -92,25 +92,25 @@ export function extractActors(stmt: Record<string, unknown>): ActorEntry[] {
   const ctx = stmt.context as Record<string, unknown> | undefined;
   if (ctx) {
     const instructor = ctx.instructor as Record<string, unknown> | undefined;
-    if (instructor) tryPush(instructor, agentActorType(instructor), "Instructor");
+    if (instructor) tryPush(instructor, agentActorType(instructor), 'Instructor');
     const team = ctx.team as Record<string, unknown> | undefined;
     if (team) {
-      tryPush(team, agentActorType(team), "Team");
+      tryPush(team, agentActorType(team), 'Team');
       if (Array.isArray(team.member)) {
         for (const m of team.member as Record<string, unknown>[]) {
-          tryPush(m, "Agent", "Member");
+          tryPush(m, 'Agent', 'Member');
         }
       }
     }
   }
 
   // SubStatement actors
-  if (obj && (obj.objectType as string) === "SubStatement") {
+  if (obj && (obj.objectType as string) === 'SubStatement') {
     const subActor = obj.actor as Record<string, unknown> | undefined;
-    if (subActor) tryPush(subActor, agentActorType(subActor), "Actor");
+    if (subActor) tryPush(subActor, agentActorType(subActor), 'Actor');
     const subObj = obj.object as Record<string, unknown> | undefined;
-    if (subObj && (subObj.objectType === "Agent" || subObj.objectType === "Group")) {
-      tryPush(subObj, agentActorType(subObj), "Object");
+    if (subObj && (subObj.objectType === 'Agent' || subObj.objectType === 'Group')) {
+      tryPush(subObj, agentActorType(subObj), 'Object');
     }
   }
 
@@ -126,7 +126,7 @@ function collectContextActivities(
   activities: ActivityEntry[],
   prefix: string,
 ): void {
-  if (!ctx?.contextActivities || typeof ctx.contextActivities !== "object") return;
+  if (!ctx?.contextActivities || typeof ctx.contextActivities !== 'object') return;
   const ca = ctx.contextActivities as Record<string, unknown>;
   const usageMap: Record<string, string> = {
     parent: `${prefix}Parent`,
@@ -151,22 +151,22 @@ export function extractActivities(stmt: Record<string, unknown>): ActivityEntry[
 
   const obj = stmt.object as Record<string, unknown> | undefined;
   if (obj) {
-    const objectType = (obj.objectType as string | undefined) ?? "Activity";
-    if (objectType === "Activity" && obj.id) {
-      activities.push({ iri: obj.id as string, usage: "Object", payload: obj });
+    const objectType = (obj.objectType as string | undefined) ?? 'Activity';
+    if (objectType === 'Activity' && obj.id) {
+      activities.push({ iri: obj.id as string, usage: 'Object', payload: obj });
     }
   }
 
-  collectContextActivities(stmt.context as Record<string, unknown> | undefined, activities, "");
+  collectContextActivities(stmt.context as Record<string, unknown> | undefined, activities, '');
 
   // SubStatement activities
-  if (obj && (obj.objectType as string) === "SubStatement") {
+  if (obj && (obj.objectType as string) === 'SubStatement') {
     const subObj = obj.object as Record<string, unknown> | undefined;
-    const subObjType = (subObj?.objectType as string | undefined) ?? "Activity";
-    if (subObj && subObjType === "Activity" && subObj.id) {
-      activities.push({ iri: subObj.id as string, usage: "SubObject", payload: subObj });
+    const subObjType = (subObj?.objectType as string | undefined) ?? 'Activity';
+    if (subObj && subObjType === 'Activity' && subObj.id) {
+      activities.push({ iri: subObj.id as string, usage: 'SubObject', payload: subObj });
     }
-    collectContextActivities(obj.context as Record<string, unknown> | undefined, activities, "Sub");
+    collectContextActivities(obj.context as Record<string, unknown> | undefined, activities, 'Sub');
   }
 
   return activities;

@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "tabWidth": 2,
+  "singleQuote": true,
+  "semi": true,
+  "trailingComma": "all",
+  "htmlWhitespaceSensitivity": "ignore",
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "sortImports": {
+    "newlinesBetween": false,
+  },
+  "ignorePatterns": [
+    "CHANGELOG.md",
+    // ".release-please-manifest.json",
+    // "release-please-config.json",
+  ],
+}

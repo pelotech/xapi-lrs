@@ -2,46 +2,46 @@
  * Admin account management queries.
  */
 
-import type { Pool, QueryConfig } from "pg";
-import type { LrsMetrics } from "../../metrics.ts";
-import { poolQuery } from "../../db.ts";
+import type { Pool, QueryConfig } from 'pg';
+import type { LrsMetrics } from '../../metrics.ts';
+import { poolQuery } from '../../db.ts';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const LIST_ACCOUNTS = {
-  name: "admin_list_accounts",
+  name: 'admin_list_accounts',
   text: `SELECT a.id, a.username,
                 (SELECT COUNT(*)::int FROM lrs_credential c WHERE c.account_id = a.id) AS credential_count
          FROM admin_account a ORDER BY a.username`,
 } as const satisfies Query;
 
 const GET_ACCOUNT_BY_USERNAME = {
-  name: "admin_get_account_by_username",
-  text: "SELECT id, username FROM admin_account WHERE username = $1",
+  name: 'admin_get_account_by_username',
+  text: 'SELECT id, username FROM admin_account WHERE username = $1',
 } as const satisfies Query;
 
 const HAS_ANY_ACCOUNT = {
-  name: "admin_has_any_account",
-  text: "SELECT EXISTS(SELECT 1 FROM admin_account) AS exists",
+  name: 'admin_has_any_account',
+  text: 'SELECT EXISTS(SELECT 1 FROM admin_account) AS exists',
 } as const satisfies Query;
 
 const VERIFY_ACCOUNT_PASSWORD = {
-  name: "admin_verify_password",
-  text: "SELECT id, username FROM admin_account WHERE username = $1 AND passhash = crypt($2, passhash)",
+  name: 'admin_verify_password',
+  text: 'SELECT id, username FROM admin_account WHERE username = $1 AND passhash = crypt($2, passhash)',
 } as const satisfies Query;
 
 const CREATE_ACCOUNT = {
-  name: "admin_create_account",
+  name: 'admin_create_account',
   text: "INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, crypt($2, gen_salt('bf'))) RETURNING id",
 } as const satisfies Query;
 
 const DELETE_ACCOUNT = {
-  name: "admin_delete_account",
-  text: "DELETE FROM admin_account WHERE id = $1",
+  name: 'admin_delete_account',
+  text: 'DELETE FROM admin_account WHERE id = $1',
 } as const satisfies Query;
 
 const CHANGE_PASSWORD = {
-  name: "admin_change_password",
+  name: 'admin_change_password',
   text: "UPDATE admin_account SET passhash = crypt($2, gen_salt('bf')) WHERE id = $1",
 } as const satisfies Query;
 
@@ -94,11 +94,7 @@ export async function createAccount(
   return result.rows[0].id;
 }
 
-export async function deleteAccount(
-  pool: Pool,
-  metrics: LrsMetrics,
-  accountId: string,
-): Promise<void> {
+export async function deleteAccount(pool: Pool, metrics: LrsMetrics, accountId: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_ACCOUNT, values: [accountId] });
 }
 

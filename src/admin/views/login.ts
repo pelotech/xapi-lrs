@@ -2,13 +2,13 @@
  * Admin login form.
  */
 
-import { html } from "./html.ts";
-import type { RawHtml } from "./html.ts";
-import { layout } from "./layout.ts";
+import { html } from './html.ts';
+import type { RawHtml } from './html.ts';
+import { layout } from './layout.ts';
 
 export function loginPage(error?: string): RawHtml {
   return layout(
-    { title: "Login" },
+    { title: 'Login' },
     html`
     <article style="max-width:400px;margin:4em auto">
       <header><h2>LRS Admin Login</h2></header>

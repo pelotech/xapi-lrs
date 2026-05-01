@@ -3,8 +3,8 @@
  * Extracted from packages/api/src/api/controllers/xapi/document-utils.ts.
  */
 
-import { createHash } from "node:crypto";
-import { HttpError } from "../db.ts";
+import { createHash } from 'node:crypto';
+import { HttpError } from '../db.ts';
 
 /**
  * Compute SHA-1 ETag for document content.
@@ -12,19 +12,19 @@ import { HttpError } from "../db.ts";
  * boundary — ETags are used only for cache validation and concurrency control.
  */
 export function computeEtag(content: Buffer | unknown): string {
-  const hash = createHash("sha1");
+  const hash = createHash('sha1');
   if (Buffer.isBuffer(content)) {
     hash.update(content);
   } else {
-    hash.update(typeof content === "string" ? content : JSON.stringify(content));
+    hash.update(typeof content === 'string' ? content : JSON.stringify(content));
   }
-  return hash.digest("hex");
+  return hash.digest('hex');
 }
 
 /** Generic concurrency headers — works with both Express and Hono */
 export interface ConcurrencyHeaders {
-  "if-match"?: string;
-  "if-none-match"?: string;
+  'if-match'?: string;
+  'if-none-match'?: string;
 }
 
 /**
@@ -44,28 +44,25 @@ export function checkConcurrencyHeaders(
   currentEtag: string | undefined,
   requireConcurrency = false,
 ): void {
-  const ifMatch = headers["if-match"];
-  const ifNoneMatch = headers["if-none-match"];
+  const ifMatch = headers['if-match'];
+  const ifNoneMatch = headers['if-none-match'];
 
   // xAPI spec: Profile PUT MUST include If-Match or If-None-Match
   if (requireConcurrency && !ifMatch && !ifNoneMatch) {
     if (currentEtag) {
-      throw new HttpError(
-        409,
-        "If-Match or If-None-Match header required when updating existing documents",
-      );
+      throw new HttpError(409, 'If-Match or If-None-Match header required when updating existing documents');
     }
-    throw new HttpError(400, "If-Match or If-None-Match header required");
+    throw new HttpError(400, 'If-Match or If-None-Match header required');
   }
 
   if (ifMatch) {
-    const expected = ifMatch.replace(/^"/, "").replace(/"$/, "");
+    const expected = ifMatch.replace(/^"/, '').replace(/"$/, '');
     if (!currentEtag || expected !== currentEtag) {
-      throw new HttpError(412, "ETag mismatch");
+      throw new HttpError(412, 'ETag mismatch');
     }
   }
 
-  if (ifNoneMatch === "*" && currentEtag) {
-    throw new HttpError(412, "Document already exists");
+  if (ifNoneMatch === '*' && currentEtag) {
+    throw new HttpError(412, 'Document already exists');
   }
 }

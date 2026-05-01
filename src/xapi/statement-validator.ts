@@ -5,18 +5,18 @@
  * defined in statement-schema.ts.
  */
 
-import { uuidv7 } from "uuidv7";
-import type { ZodIssue } from "zod";
-import type { XAPIValidatedStatement } from "../xapi-types/index.ts";
-import type { ValidationError, ValidationResult } from "./validation-helpers.ts";
-import { statementInputSchema } from "./statement-schema.ts";
+import { uuidv7 } from 'uuidv7';
+import type { ZodIssue } from 'zod';
+import type { XAPIValidatedStatement } from '../xapi-types/index.ts';
+import type { ValidationError, ValidationResult } from './validation-helpers.ts';
+import { statementInputSchema } from './statement-schema.ts';
 
 export type { ValidationError, ValidationResult };
 
 export function validateStatement(input: unknown): ValidationResult {
   // Pre-check for better error message on non-objects
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return { valid: false, errors: [{ path: "", message: "Statement must be a JSON object" }] };
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return { valid: false, errors: [{ path: '', message: 'Statement must be a JSON object' }] };
   }
 
   const result = statementInputSchema.safeParse(input);
@@ -43,7 +43,7 @@ export function validateStatement(input: unknown): ValidationResult {
 
 function zodIssueToValidationError(issue: ZodIssue): ValidationError {
   return {
-    path: issue.path.map(String).join("."),
+    path: issue.path.map(String).join('.'),
     message: issue.message,
   };
 }
@@ -63,11 +63,11 @@ export function hasCmi5Shape(statement: XAPIValidatedStatement): boolean {
   if (!statement.context?.registration) return false;
   // Actor must be Agent with account IFI
   const actor = statement.actor;
-  if (actor.objectType === "Group") return false;
-  if (!("account" in actor) || actor.account === undefined) return false;
+  if (actor.objectType === 'Group') return false;
+  if (!('account' in actor) || actor.account === undefined) return false;
   // Object must be Activity or StatementRef
   const obj = statement.object;
-  const ot = obj.objectType ?? "Activity";
-  if (ot !== "Activity" && ot !== "StatementRef") return false;
+  const ot = obj.objectType ?? 'Activity';
+  if (ot !== 'Activity' && ot !== 'StatementRef') return false;
   return true;
 }

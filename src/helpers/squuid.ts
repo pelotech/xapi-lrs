@@ -22,13 +22,13 @@ export function squuid(now: number = Date.now()): string {
   const base = crypto.randomUUID();
 
   // Encode timestamp into the first 12 hex chars (48 bits)
-  const hex = now.toString(16).padStart(12, "0");
+  const hex = now.toString(16).padStart(12, '0');
 
   // UUID format: xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
   // We overwrite positions 0-7 (8 chars), skip dash, 9-12 (4 chars) = 12 hex chars
   // But we must preserve the version nibble at position 14 (the 'M' = '4')
   return (
-    hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + base.slice(14) // keeps '4xxx-Nxxx-xxxxxxxxxxxx'
+    hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + base.slice(14) // keeps '4xxx-Nxxx-xxxxxxxxxxxx'
   );
 }
 
@@ -38,8 +38,8 @@ export function squuid(now: number = Date.now()): string {
  * sorts before any real SQUUID at the same millisecond.
  */
 export function squuidMin(timestampMs: number): string {
-  const hex = timestampMs.toString(16).padStart(12, "0");
-  return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-0000-0000-000000000000";
+  const hex = timestampMs.toString(16).padStart(12, '0');
+  return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-0000-0000-000000000000';
 }
 
 /**

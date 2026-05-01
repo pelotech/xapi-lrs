@@ -2,43 +2,43 @@
  * Admin statement browser — paginated list, detail view, void action.
  */
 
-import { html, raw } from "./html.ts";
-import type { RawHtml } from "./html.ts";
-import type { XapiStatementRow } from "../../repositories/statements.ts";
-import type { AttachmentListRow } from "../repositories/index.ts";
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
+import type { XapiStatementRow } from '../../repositories/statements.ts';
+import type { AttachmentListRow } from '../repositories/index.ts';
 
 function formatActor(payload: Record<string, unknown>): string {
   const actor = payload.actor as Record<string, unknown> | undefined;
-  if (!actor) return "\u2014";
+  if (!actor) return '\u2014';
   if (actor.name) return String(actor.name);
-  if (actor.mbox) return String(actor.mbox).replace("mailto:", "");
-  if (actor.account && typeof actor.account === "object") {
+  if (actor.mbox) return String(actor.mbox).replace('mailto:', '');
+  if (actor.account && typeof actor.account === 'object') {
     const acct = actor.account as Record<string, unknown>;
-    return `${acct.name ?? ""}@${acct.homePage ?? ""}`;
+    return `${acct.name ?? ''}@${acct.homePage ?? ''}`;
   }
-  return "(anonymous)";
+  return '(anonymous)';
 }
 
 function formatVerb(iri: string): string {
-  const parts = iri.split("/");
+  const parts = iri.split('/');
   return parts[parts.length - 1] || iri;
 }
 
 function formatObject(payload: Record<string, unknown>): string {
   const obj = payload.object as Record<string, unknown> | undefined;
-  if (!obj) return "\u2014";
-  if (obj.definition && typeof obj.definition === "object") {
+  if (!obj) return '\u2014';
+  if (obj.definition && typeof obj.definition === 'object') {
     const def = obj.definition as Record<string, unknown>;
-    if (def.name && typeof def.name === "object") {
+    if (def.name && typeof def.name === 'object') {
       const names = def.name as Record<string, string>;
-      return names["en-US"] || names.en || Object.values(names)[0] || String(obj.id ?? "");
+      return names['en-US'] || names.en || Object.values(names)[0] || String(obj.id ?? '');
     }
   }
-  return String(obj.id ?? obj.objectType ?? "\u2014");
+  return String(obj.id ?? obj.objectType ?? '\u2014');
 }
 
 function fmtTime(d: Date): string {
-  return new Date(d).toISOString().slice(0, 19).replace("T", " ");
+  return new Date(d).toISOString().slice(0, 19).replace('T', ' ');
 }
 
 // ============================================================================
@@ -66,25 +66,25 @@ export function statementsPage(opts: {
         <div class="grid">
           <label>
             Verb IRI
-            <input type="text" name="verb" value="${opts.verb ?? ""}" placeholder="http://adlnet.gov/expapi/verbs/..." />
+            <input type="text" name="verb" value="${opts.verb ?? ''}" placeholder="http://adlnet.gov/expapi/verbs/..." />
           </label>
           <label>
             Agent IFI
-            <input type="text" name="agent" value="${opts.agent ?? ""}" placeholder='{"mbox":"mailto:..."}' />
+            <input type="text" name="agent" value="${opts.agent ?? ''}" placeholder='{"mbox":"mailto:..."}' />
           </label>
         </div>
         <div class="grid">
           <label>
             Activity IRI
-            <input type="text" name="activity" value="${opts.activity ?? ""}" placeholder="http://example.com/activity/..." />
+            <input type="text" name="activity" value="${opts.activity ?? ''}" placeholder="http://example.com/activity/..." />
           </label>
           <label>
             Since
-            <input type="datetime-local" name="since" value="${opts.since ?? ""}" />
+            <input type="datetime-local" name="since" value="${opts.since ?? ''}" />
           </label>
           <label>
             Until
-            <input type="datetime-local" name="until" value="${opts.until ?? ""}" />
+            <input type="datetime-local" name="until" value="${opts.until ?? ''}" />
           </label>
         </div>
         <button type="submit">Search</button>
@@ -136,7 +136,7 @@ export function statementTable(opts: {
           (s) => html`
           <tr${s.is_voided ? raw(' class="voided"') : false}>
             <td class="text-muted">${fmtTime(s.stored)}</td>
-            <td>${formatVerb(((s.payload.verb as Record<string, unknown>)?.id as string) ?? "")}</td>
+            <td>${formatVerb(((s.payload.verb as Record<string, unknown>)?.id as string) ?? '')}</td>
             <td>${formatActor(s.payload)}</td>
             <td>${formatObject(s.payload)}</td>
             <td>
@@ -197,7 +197,7 @@ export function statementDetail(row: XapiStatementRow, attachments: AttachmentLi
         <tbody>
           <tr><td><strong>Statement ID</strong></td><td class="mono">${row.statement_id}</td></tr>
           <tr><td><strong>Stored</strong></td><td>${new Date(row.stored).toISOString()}</td></tr>
-          <tr><td><strong>Voided</strong></td><td>${row.is_voided ? "Yes" : "No"}</td></tr>
+          <tr><td><strong>Voided</strong></td><td>${row.is_voided ? 'Yes' : 'No'}</td></tr>
         </tbody>
       </table>
     </figure>

@@ -2,14 +2,14 @@
  * Admin credential management queries.
  */
 
-import type { Pool, QueryConfig } from "pg";
-import type { LrsMetrics } from "../../metrics.ts";
-import { poolQuery } from "../../db.ts";
+import type { Pool, QueryConfig } from 'pg';
+import type { LrsMetrics } from '../../metrics.ts';
+import { poolQuery } from '../../db.ts';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const LIST_CREDENTIALS = {
-  name: "admin_list_credentials",
+  name: 'admin_list_credentials',
   text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
                 COALESCE(array_agg(s.scope) FILTER (WHERE s.scope IS NOT NULL), '{}') AS scopes
          FROM lrs_credential c
@@ -20,28 +20,28 @@ const LIST_CREDENTIALS = {
 } as const satisfies Query;
 
 const CREATE_CREDENTIAL = {
-  name: "admin_create_credential",
-  text: "INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id",
+  name: 'admin_create_credential',
+  text: 'INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id',
 } as const satisfies Query;
 
 const DELETE_CREDENTIAL = {
-  name: "admin_delete_credential",
-  text: "DELETE FROM lrs_credential WHERE id = $1",
+  name: 'admin_delete_credential',
+  text: 'DELETE FROM lrs_credential WHERE id = $1',
 } as const satisfies Query;
 
 const ROTATE_SECRET = {
-  name: "admin_rotate_secret",
-  text: "UPDATE lrs_credential SET secret_key = $1 WHERE id = $2",
+  name: 'admin_rotate_secret',
+  text: 'UPDATE lrs_credential SET secret_key = $1 WHERE id = $2',
 } as const satisfies Query;
 
 const DELETE_CREDENTIAL_SCOPES = {
-  name: "admin_delete_credential_scopes",
-  text: "DELETE FROM credential_to_scope WHERE credential_id = $1",
+  name: 'admin_delete_credential_scopes',
+  text: 'DELETE FROM credential_to_scope WHERE credential_id = $1',
 } as const satisfies Query;
 
 const INSERT_CREDENTIAL_SCOPE = {
-  name: "admin_insert_credential_scope",
-  text: "INSERT INTO credential_to_scope (id, credential_id, scope) VALUES (gen_random_uuid(), $1, $2::scope_enum) ON CONFLICT DO NOTHING",
+  name: 'admin_insert_credential_scope',
+  text: 'INSERT INTO credential_to_scope (id, credential_id, scope) VALUES (gen_random_uuid(), $1, $2::scope_enum) ON CONFLICT DO NOTHING',
 } as const satisfies Query;
 
 export interface CredentialRow {
@@ -71,11 +71,7 @@ export async function createCredential(
   return result.rows[0].id;
 }
 
-export async function deleteCredential(
-  pool: Pool,
-  metrics: LrsMetrics,
-  credentialId: string,
-): Promise<void> {
+export async function deleteCredential(pool: Pool, metrics: LrsMetrics, credentialId: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL, values: [credentialId] });
 }
 
@@ -96,13 +92,13 @@ export async function ensureDefaultCredential(
   accountId: string,
 ): Promise<void> {
   const existing = await poolQuery<{ id: string }>(pool, metrics, {
-    name: "admin_get_credential_by_key",
-    text: "SELECT id FROM lrs_credential WHERE api_key = $1",
+    name: 'admin_get_credential_by_key',
+    text: 'SELECT id FROM lrs_credential WHERE api_key = $1',
     values: [apiKey],
   });
   if (existing.rows.length === 0) {
     const credId = await createCredential(pool, metrics, apiKey, secretKey, accountId);
-    await setCredentialScopes(pool, metrics, credId, ["all"]);
+    await setCredentialScopes(pool, metrics, credId, ['all']);
   }
 }
 

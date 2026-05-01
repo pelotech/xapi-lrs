@@ -18,26 +18,23 @@
  * @param trustedProxyHops - number of trusted proxy hops to skip from the right
  * @returns the resolved client IP, or "unknown"
  */
-export function resolveClientIp(
-  xForwardedFor: string | undefined,
-  trustedProxyHops: number,
-): string {
-  if (!xForwardedFor) return "unknown";
+export function resolveClientIp(xForwardedFor: string | undefined, trustedProxyHops: number): string {
+  if (!xForwardedFor) return 'unknown';
 
-  const parts = xForwardedFor.split(",").map((s) => s.trim());
-  if (parts.length === 0) return "unknown";
+  const parts = xForwardedFor.split(',').map((s) => s.trim());
+  if (parts.length === 0) return 'unknown';
 
   if (trustedProxyHops <= 0) {
     // Legacy: trust leftmost (least safe, but backwards-compatible)
-    return parts[0] || "unknown";
+    return parts[0] || 'unknown';
   }
 
   // Pick the entry just before the trusted proxy chain
   const clientIndex = parts.length - trustedProxyHops - 1;
   if (clientIndex < 0) {
     // Fewer entries than expected hops — use the leftmost as best-effort
-    return parts[0] || "unknown";
+    return parts[0] || 'unknown';
   }
 
-  return parts[clientIndex] || "unknown";
+  return parts[clientIndex] || 'unknown';
 }

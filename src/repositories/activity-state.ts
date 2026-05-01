@@ -2,12 +2,12 @@
  * xAPI Activity State Repository — lrsql state_document table.
  */
 
-import type { PoolClient, QueryConfig } from "pg";
+import type { PoolClient, QueryConfig } from 'pg';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const UPSERT_STATE_DOCUMENT = {
-  name: "upsert_state_document",
+  name: 'upsert_state_document',
   text: `INSERT INTO state_document (id, state_id, activity_iri, agent_ifi, registration, last_modified, content_type, content_length, contents)
      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (state_id, activity_iri, agent_ifi, COALESCE(registration::text, ''))
@@ -15,14 +15,14 @@ const UPSERT_STATE_DOCUMENT = {
 } as const satisfies Query;
 
 const SELECT_STATE_DOCUMENT = {
-  name: "select_state_document",
+  name: 'select_state_document',
   text: `SELECT contents, content_type, content_length, last_modified FROM state_document
      WHERE state_id = $1 AND activity_iri = $2 AND agent_ifi = $3
        AND (registration = $4 OR ($4 IS NULL AND registration IS NULL))`,
 } as const satisfies Query;
 
 const SELECT_STATE_IDS = {
-  name: "select_state_ids",
+  name: 'select_state_ids',
   text: `SELECT state_id FROM state_document
      WHERE activity_iri = $1 AND agent_ifi = $2
        AND (registration = $3 OR ($3 IS NULL AND registration IS NULL))
@@ -30,14 +30,14 @@ const SELECT_STATE_IDS = {
 } as const satisfies Query;
 
 const DELETE_STATE_DOCUMENT = {
-  name: "delete_state_document",
+  name: 'delete_state_document',
   text: `DELETE FROM state_document
      WHERE state_id = $1 AND activity_iri = $2 AND agent_ifi = $3
        AND (registration = $4 OR ($4 IS NULL AND registration IS NULL))`,
 } as const satisfies Query;
 
 const DELETE_STATE_DOCUMENTS = {
-  name: "delete_state_documents",
+  name: 'delete_state_documents',
   text: `DELETE FROM state_document
      WHERE activity_iri = $1 AND agent_ifi = $2
        AND (registration = $3 OR ($3 IS NULL AND registration IS NULL))
@@ -113,12 +113,7 @@ export async function listStateIds(
 ): Promise<string[]> {
   const result = await client.query({
     ...SELECT_STATE_IDS,
-    values: [
-      params.activityIri,
-      params.agentIfi,
-      params.registration ?? null,
-      params.since ?? null,
-    ],
+    values: [params.activityIri, params.agentIfi, params.registration ?? null, params.since ?? null],
   });
   return result.rows.map((r: { state_id: string }) => r.state_id);
 }
@@ -149,11 +144,6 @@ export async function deleteAllStateDocuments(
 ): Promise<void> {
   await client.query({
     ...DELETE_STATE_DOCUMENTS,
-    values: [
-      params.activityIri,
-      params.agentIfi,
-      params.registration ?? null,
-      params.since ?? null,
-    ],
+    values: [params.activityIri, params.agentIfi, params.registration ?? null, params.since ?? null],
   });
 }

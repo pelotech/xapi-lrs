@@ -10,12 +10,12 @@
  *   test('example', async ({ pool, server, basicAuth, authToken }) => { ... });
  */
 
-import { randomUUID } from "node:crypto";
-import { test as baseTest, describe, expect } from "vitest";
-import { createLrsTestServer } from "./test-server.ts";
-import { createTestPool, truncateLrsqlTables } from "./test-db.ts";
-import type { LrsTestServerHandle } from "./test-server.ts";
-import type pg from "pg";
+import { randomUUID } from 'node:crypto';
+import { test as baseTest, describe, expect } from 'vitest';
+import { createLrsTestServer } from './test-server.ts';
+import { createTestPool, truncateLrsqlTables } from './test-db.ts';
+import type { LrsTestServerHandle } from './test-server.ts';
+import type pg from 'pg';
 
 export interface IntegrationFixtures {
   pool: pg.Pool;
@@ -34,7 +34,7 @@ export const test = baseTest.extend<IntegrationFixtures>({
       await use(pool);
       await pool.end();
     },
-    { scope: "file" },
+    { scope: 'file' },
   ],
 
   server: [
@@ -44,7 +44,7 @@ export const test = baseTest.extend<IntegrationFixtures>({
       await use(server);
       await server.close();
     },
-    { scope: "file" },
+    { scope: 'file' },
   ],
 
   basicAuth: [
@@ -52,11 +52,11 @@ export const test = baseTest.extend<IntegrationFixtures>({
       const auth = await createBasicAuth(pool);
       await use(auth);
     },
-    { scope: "file" },
+    { scope: 'file' },
   ],
 
   authToken: async ({ server }, use) => {
-    const token = await server.createToken({ sub: "test-user", scope: "all" });
+    const token = await server.createToken({ sub: 'test-user', scope: 'all' });
     await use(token);
   },
 });
@@ -74,26 +74,28 @@ export async function createBasicAuth(
   const credentialId = randomUUID();
   const apiKey = randomUUID();
   const secretKey = randomUUID();
-  const scopes = opts.scopes ?? ["all"];
+  const scopes = opts.scopes ?? ['all'];
 
   await pool.query(`INSERT INTO admin_account (id, username, passhash) VALUES ($1, $2, 'test')`, [
     accountId,
     opts.label ?? `test-${apiKey.slice(0, 8)}`,
   ]);
 
-  await pool.query(
-    `INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES ($1, $2, $3, $4)`,
-    [credentialId, apiKey, secretKey, accountId],
-  );
+  await pool.query(`INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES ($1, $2, $3, $4)`, [
+    credentialId,
+    apiKey,
+    secretKey,
+    accountId,
+  ]);
 
   for (const scope of scopes) {
-    await pool.query(
-      `INSERT INTO credential_to_scope (credential_id, scope) VALUES ($1, $2::scope_enum)`,
-      [credentialId, scope],
-    );
+    await pool.query(`INSERT INTO credential_to_scope (credential_id, scope) VALUES ($1, $2::scope_enum)`, [
+      credentialId,
+      scope,
+    ]);
   }
 
-  return Buffer.from(`${apiKey}:${secretKey}`).toString("base64");
+  return Buffer.from(`${apiKey}:${secretKey}`).toString('base64');
 }
 
 export { describe, expect };

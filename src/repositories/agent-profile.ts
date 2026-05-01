@@ -2,12 +2,12 @@
  * xAPI Agent Profile Repository — lrsql agent_profile_document table.
  */
 
-import type { PoolClient, QueryConfig } from "pg";
+import type { PoolClient, QueryConfig } from 'pg';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const UPSERT_AGENT_PROFILE = {
-  name: "upsert_agent_profile",
+  name: 'upsert_agent_profile',
   text: `INSERT INTO agent_profile_document (id, profile_id, agent_ifi, last_modified, content_type, content_length, contents)
      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
      ON CONFLICT (profile_id, agent_ifi)
@@ -15,20 +15,20 @@ const UPSERT_AGENT_PROFILE = {
 } as const satisfies Query;
 
 const SELECT_AGENT_PROFILE = {
-  name: "select_agent_profile",
+  name: 'select_agent_profile',
   text: `SELECT contents, content_type, content_length, last_modified FROM agent_profile_document
      WHERE profile_id = $1 AND agent_ifi = $2`,
 } as const satisfies Query;
 
 const SELECT_AGENT_PROFILE_IDS = {
-  name: "select_agent_profile_ids",
+  name: 'select_agent_profile_ids',
   text: `SELECT profile_id FROM agent_profile_document
      WHERE agent_ifi = $1
        AND ($2::timestamptz IS NULL OR last_modified > $2)`,
 } as const satisfies Query;
 
 const DELETE_AGENT_PROFILE = {
-  name: "delete_agent_profile",
+  name: 'delete_agent_profile',
   text: `DELETE FROM agent_profile_document
      WHERE profile_id = $1 AND agent_ifi = $2`,
 } as const satisfies Query;

@@ -24,7 +24,7 @@ export interface AccountIFI {
 // ============================================================================
 
 interface XAPIAgentBase {
-  objectType?: "Agent";
+  objectType?: 'Agent';
   name?: string;
 }
 
@@ -63,7 +63,7 @@ export type XAPIAgent = XAPIAgentAccount | XAPIAgentMbox | XAPIAgentSha1 | XAPIA
 // ============================================================================
 
 interface XAPIGroupBase {
-  objectType: "Group";
+  objectType: 'Group';
   name?: string;
 }
 
@@ -155,18 +155,18 @@ export interface XAPIActivityDefinition {
 // ============================================================================
 
 export interface XAPIActivity {
-  objectType?: "Activity";
+  objectType?: 'Activity';
   id: string;
   definition?: XAPIActivityDefinition;
 }
 
 export interface XAPIStatementRef {
-  objectType: "StatementRef";
+  objectType: 'StatementRef';
   id: string;
 }
 
 export interface XAPISubStatement {
-  objectType: "SubStatement";
+  objectType: 'SubStatement';
   actor: XAPIActor;
   verb: XAPIVerb;
   object: XAPIActivity | XAPIAgent | XAPIGroup | XAPIStatementRef;
@@ -178,7 +178,7 @@ export interface XAPISubStatement {
 
 /** Agent or Group when used as statement object (objectType required) */
 export interface XAPIAgentObject {
-  objectType: "Agent";
+  objectType: 'Agent';
   name?: string;
   account?: AccountIFI;
   mbox?: string;
@@ -187,7 +187,7 @@ export interface XAPIAgentObject {
 }
 
 export interface XAPIGroupObject {
-  objectType: "Group";
+  objectType: 'Group';
   name?: string;
   account?: AccountIFI;
   mbox?: string;
@@ -196,12 +196,7 @@ export interface XAPIGroupObject {
   member?: XAPIAgent[];
 }
 
-export type XAPIObject =
-  | XAPIActivity
-  | XAPIStatementRef
-  | XAPISubStatement
-  | XAPIAgentObject
-  | XAPIGroupObject;
+export type XAPIObject = XAPIActivity | XAPIStatementRef | XAPISubStatement | XAPIAgentObject | XAPIGroupObject;
 
 // ============================================================================
 // Result

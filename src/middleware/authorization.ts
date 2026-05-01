@@ -16,79 +16,76 @@
  *   - define           — write activity definitions (via profile endpoints)
  */
 
-import type { MiddlewareHandler } from "hono";
-import type { HonoEnv } from "../hono-env.ts";
-import type { XapiScope } from "../auth/types.ts";
-import { HttpError } from "../db.ts";
+import type { MiddlewareHandler } from 'hono';
+import type { HonoEnv } from '../hono-env.ts';
+import type { XapiScope } from '../auth/types.ts';
+import { HttpError } from '../db.ts';
 
 type ScopeRule = { scopes: ReadonlyArray<XapiScope> };
 
 /** Routes that bypass scope checks (no auth required). */
-const PUBLIC_PATHS = new Set(["/xapi/about"]);
+const PUBLIC_PATHS = new Set(['/xapi/about']);
 
 /**
  * Resolve which scopes are acceptable for a given path + method.
  * Returns null if the route is public or unknown (let it through).
  */
 export function requiredScopes(path: string, method: string): ScopeRule | null {
-  const isRead = method === "GET" || method === "HEAD";
+  const isRead = method === 'GET' || method === 'HEAD';
 
   // /xapi/statements
-  if (path === "/xapi/statements") {
+  if (path === '/xapi/statements') {
     if (isRead) {
-      return { scopes: ["statements/read", "statements/read/mine", "all/read", "all"] };
+      return { scopes: ['statements/read', 'statements/read/mine', 'all/read', 'all'] };
     }
     // POST, PUT
-    return { scopes: ["statements/write", "all"] };
+    return { scopes: ['statements/write', 'all'] };
   }
 
   // /xapi/activities/state
-  if (path === "/xapi/activities/state") {
+  if (path === '/xapi/activities/state') {
     if (isRead) {
-      return { scopes: ["state", "state/read", "all/read", "all"] };
+      return { scopes: ['state', 'state/read', 'all/read', 'all'] };
     }
     // PUT, POST, DELETE
-    return { scopes: ["state", "all"] };
+    return { scopes: ['state', 'all'] };
   }
 
   // /xapi/activities/profile
-  if (path === "/xapi/activities/profile") {
+  if (path === '/xapi/activities/profile') {
     if (isRead) {
-      return { scopes: ["profile", "all/read", "all"] };
+      return { scopes: ['profile', 'all/read', 'all'] };
     }
-    return { scopes: ["profile", "define", "all"] };
+    return { scopes: ['profile', 'define', 'all'] };
   }
 
   // /xapi/agents/profile
-  if (path === "/xapi/agents/profile") {
+  if (path === '/xapi/agents/profile') {
     if (isRead) {
-      return { scopes: ["profile", "all/read", "all"] };
+      return { scopes: ['profile', 'all/read', 'all'] };
     }
-    return { scopes: ["profile", "all"] };
+    return { scopes: ['profile', 'all'] };
   }
 
   // /xapi/agents (GET only)
-  if (path === "/xapi/agents") {
-    return { scopes: ["profile", "all/read", "all"] };
+  if (path === '/xapi/agents') {
+    return { scopes: ['profile', 'all/read', 'all'] };
   }
 
   // /xapi/activities (GET only — activity definition lookup)
-  if (path === "/xapi/activities") {
-    return { scopes: ["profile", "all/read", "all"] };
+  if (path === '/xapi/activities') {
+    return { scopes: ['profile', 'all/read', 'all'] };
   }
 
   // /xapi/stream (SSE — real-time statement feed)
-  if (path === "/xapi/stream") {
-    return { scopes: ["statements/read", "statements/read/mine", "all/read", "all"] };
+  if (path === '/xapi/stream') {
+    return { scopes: ['statements/read', 'statements/read/mine', 'all/read', 'all'] };
   }
 
   return null;
 }
 
-export function hasScope(
-  granted: ReadonlyArray<XapiScope>,
-  required: ReadonlyArray<XapiScope>,
-): boolean {
+export function hasScope(granted: ReadonlyArray<XapiScope>, required: ReadonlyArray<XapiScope>): boolean {
   return required.some((s) => granted.includes(s));
 }
 
@@ -112,11 +109,11 @@ export function scopeMiddleware(): MiddlewareHandler<HonoEnv> {
 
     const auth = c.var.auth;
     if (!auth) {
-      throw new HttpError(401, "Unauthorized");
+      throw new HttpError(401, 'Unauthorized');
     }
 
     if (!hasScope(auth.payload.scopes, rule.scopes)) {
-      throw new HttpError(403, "Insufficient scope");
+      throw new HttpError(403, 'Insufficient scope');
     }
 
     return next();

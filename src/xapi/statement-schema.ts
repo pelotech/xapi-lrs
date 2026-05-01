@@ -6,20 +6,18 @@
  * result/context → object → statement.
  */
 
-import { z } from "zod";
-import { isValidIRI } from "./validation-helpers.ts";
+import { z } from 'zod';
+import { isValidIRI } from './validation-helpers.ts';
 
 // ============================================================================
 // Primitive schemas
 // ============================================================================
 
-const iri = z.string().refine(isValidIRI, { message: "Must be a valid IRI" });
+const iri = z.string().refine(isValidIRI, { message: 'Must be a valid IRI' });
 const mboxIri = z.string().regex(/^mailto:[^@]+@.+/, {
-  message: "mbox must be a valid mailto: IRI (e.g. mailto:user@example.com)",
+  message: 'mbox must be a valid mailto: IRI (e.g. mailto:user@example.com)',
 });
-const sha1hex = z
-  .string()
-  .regex(/^[0-9a-f]{40}$/i, { message: "mbox_sha1sum must be a 40-character hex string" });
+const sha1hex = z.string().regex(/^[0-9a-f]{40}$/i, { message: 'mbox_sha1sum must be a 40-character hex string' });
 const languageTag = z.string().regex(/^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$/);
 const languageMap = z.record(languageTag, z.string());
 const extensions = z.record(iri, z.unknown());
@@ -40,7 +38,7 @@ const accountSchema = z
 // ============================================================================
 
 const agentBase = {
-  objectType: z.literal("Agent").optional(),
+  objectType: z.literal('Agent').optional(),
   name: z.string().optional(),
 };
 
@@ -56,7 +54,7 @@ const agentSchema = z.union([
 // ============================================================================
 
 const groupBase = {
-  objectType: z.literal("Group"),
+  objectType: z.literal('Group'),
   name: z.string().optional(),
 };
 
@@ -109,16 +107,16 @@ const interactionComponentSchema = z
   .strict();
 
 const VALID_INTERACTION_TYPES = [
-  "true-false",
-  "choice",
-  "fill-in",
-  "long-fill-in",
-  "matching",
-  "performance",
-  "sequencing",
-  "likert",
-  "numeric",
-  "other",
+  'true-false',
+  'choice',
+  'fill-in',
+  'long-fill-in',
+  'matching',
+  'performance',
+  'sequencing',
+  'likert',
+  'numeric',
+  'other',
 ] as const;
 
 const interactionComponentList = z.array(interactionComponentSchema).optional();
@@ -150,10 +148,10 @@ const activityDefinitionSchema = z
     ].some((v) => v !== undefined);
     if (hasInteractionData && def.interactionType === undefined) {
       ctx.addIssue({
-        code: "custom",
-        path: ["interactionType"],
+        code: 'custom',
+        path: ['interactionType'],
         message:
-          "interactionType is required when correctResponsesPattern, choices, scale, source, target, or steps is present",
+          'interactionType is required when correctResponsesPattern, choices, scale, source, target, or steps is present',
       });
     }
   });
@@ -164,7 +162,7 @@ const activityDefinitionSchema = z
 
 const activitySchema = z
   .object({
-    objectType: z.literal("Activity").optional(),
+    objectType: z.literal('Activity').optional(),
     id: iri,
     definition: activityDefinitionSchema.optional(),
   })
@@ -176,7 +174,7 @@ const activitySchema = z
 
 const statementRefSchema = z
   .object({
-    objectType: z.literal("StatementRef"),
+    objectType: z.literal('StatementRef'),
     id: z.string().uuid(),
   })
   .strict();
@@ -195,13 +193,13 @@ const scoreSchema = z
   .strict()
   .superRefine((s, ctx) => {
     if (s.raw !== undefined && s.min !== undefined && s.raw < s.min) {
-      ctx.addIssue({ code: "custom", path: ["raw"], message: "raw must be >= min" });
+      ctx.addIssue({ code: 'custom', path: ['raw'], message: 'raw must be >= min' });
     }
     if (s.raw !== undefined && s.max !== undefined && s.raw > s.max) {
-      ctx.addIssue({ code: "custom", path: ["raw"], message: "raw must be <= max" });
+      ctx.addIssue({ code: 'custom', path: ['raw'], message: 'raw must be <= max' });
     }
     if (s.min !== undefined && s.max !== undefined && s.min > s.max) {
-      ctx.addIssue({ code: "custom", path: ["min"], message: "min must be <= max" });
+      ctx.addIssue({ code: 'custom', path: ['min'], message: 'min must be <= max' });
     }
   });
 
@@ -268,7 +266,7 @@ const attachmentSchema = z
 // ============================================================================
 
 const agentObjectBase = {
-  objectType: z.literal("Agent"),
+  objectType: z.literal('Agent'),
   name: z.string().optional(),
 };
 
@@ -286,33 +284,28 @@ const groupObjectSchema = groupSchema;
 // ============================================================================
 
 // SubStatement object: same as Object but without SubStatement variant
-const subStatementObjectSchema = z.union([
-  activitySchema,
-  statementRefSchema,
-  agentObjectSchema,
-  groupObjectSchema,
-]);
+const subStatementObjectSchema = z.union([activitySchema, statementRefSchema, agentObjectSchema, groupObjectSchema]);
 
 /** Shared refinement: context.revision and context.platform are only allowed when Object is an Activity. */
 function checkContextActivityOnly(
   data: { object: Record<string, unknown>; context?: unknown },
   ctx: z.RefinementCtx,
 ): void {
-  const objType = (data.object as Record<string, unknown>).objectType ?? "Activity";
-  if (data.context && objType !== "Activity") {
+  const objType = (data.object as Record<string, unknown>).objectType ?? 'Activity';
+  if (data.context && objType !== 'Activity') {
     const ctxObj = data.context as Record<string, unknown>;
     if (ctxObj.revision !== undefined) {
       ctx.addIssue({
-        code: "custom",
-        path: ["context", "revision"],
-        message: "revision is only allowed when Object is an Activity",
+        code: 'custom',
+        path: ['context', 'revision'],
+        message: 'revision is only allowed when Object is an Activity',
       });
     }
     if (ctxObj.platform !== undefined) {
       ctx.addIssue({
-        code: "custom",
-        path: ["context", "platform"],
-        message: "platform is only allowed when Object is an Activity",
+        code: 'custom',
+        path: ['context', 'platform'],
+        message: 'platform is only allowed when Object is an Activity',
       });
     }
   }
@@ -320,7 +313,7 @@ function checkContextActivityOnly(
 
 const subStatementSchema = z
   .object({
-    objectType: z.literal("SubStatement"),
+    objectType: z.literal('SubStatement'),
     actor: actorSchema,
     verb: verbSchema,
     object: subStatementObjectSchema,
@@ -349,7 +342,7 @@ const authoritySchema = z.union([
   agentSchema,
   z
     .object({
-      objectType: z.literal("Group"),
+      objectType: z.literal('Group'),
       member: z.tuple([agentSchema, agentSchema]),
       name: z.string().optional(),
     })

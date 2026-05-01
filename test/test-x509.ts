@@ -5,12 +5,12 @@
  * tests using openssl (available in all dev/CI environments).
  */
 
-import { execSync } from "node:child_process";
-import { generateKeyPairSync } from "node:crypto";
-import { writeFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { importPKCS8 } from "jose";
+import { execSync } from 'node:child_process';
+import { generateKeyPairSync } from 'node:crypto';
+import { writeFileSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { importPKCS8 } from 'jose';
 
 export interface TestCertKeyPair {
   privateKeyPem: string;
@@ -27,30 +27,27 @@ export interface TestCertKeyPair {
  * Uses `openssl req` to create a short-lived (1 day) self-signed cert.
  * Returns the PEM cert, base64 DER (for x5c), and jose-compatible CryptoKey.
  */
-export async function generateTestCert(
-  alg: "RS256" | "RS384" | "RS512" = "RS256",
-): Promise<TestCertKeyPair> {
-  const { privateKey: privPem } = generateKeyPairSync("rsa", {
+export async function generateTestCert(alg: 'RS256' | 'RS384' | 'RS512' = 'RS256'): Promise<TestCertKeyPair> {
+  const { privateKey: privPem } = generateKeyPairSync('rsa', {
     modulusLength: 2048,
-    publicKeyEncoding: { type: "spki", format: "pem" },
-    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
   });
 
   const keyFile = join(tmpdir(), `xapi-test-key-${process.pid}.pem`);
   writeFileSync(keyFile, privPem, { mode: 0o600 });
   let certPem: string;
   try {
-    certPem = execSync(
-      `openssl req -new -x509 -key ${keyFile} -days 1 -subj /CN=xapi-test -outform PEM`,
-      { encoding: "utf8" },
-    ).trim();
+    certPem = execSync(`openssl req -new -x509 -key ${keyFile} -days 1 -subj /CN=xapi-test -outform PEM`, {
+      encoding: 'utf8',
+    }).trim();
   } finally {
     unlinkSync(keyFile);
   }
 
   const x5cB64 = certPem
-    .replace(/-----[^-]+-----/g, "")
-    .replace(/\n/g, "")
+    .replace(/-----[^-]+-----/g, '')
+    .replace(/\n/g, '')
     .trim();
 
   const privateKey = await importPKCS8(privPem, alg);
