@@ -23,6 +23,9 @@ importers:
       '@opentelemetry/sdk-metrics':
         specifier: ^1.30.1
         version: 1.30.1(@opentelemetry/api@1.9.0)
+      graphile-migrate:
+        specifier: 2.0.0-rc.3
+        version: 2.0.0-rc.3
       hono:
         specifier: ^4.7.5
         version: 4.12.7
@@ -60,9 +63,6 @@ importers:
       fta-cli:
         specifier: ^3.0.0
         version: 3.0.0
-      graphile-migrate:
-        specifier: ^2.0.0-rc.2
-        version: 2.0.0-rc.2
       oxfmt:
         specifier: ^0.28.0
         version: 0.28.0
@@ -1264,8 +1264,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  graphile-migrate@2.0.0-rc.2:
-    resolution: {integrity: sha512-1WJhcXM+fZV5CBiJq0RcqeCvBoW9dfffAwfDHrohutshcXt1EVY6FLEFA2r5IvSIEA4nMTRNoqizig0+PO+Irg==}
+  graphile-migrate@2.0.0-rc.3:
+    resolution: {integrity: sha512-pdQZ5QdoNSq0fEEd3qy+ceI9QrJTMsHnIpitaXEvOdQfAIPVQIUaqsaNcy5w8Fbhw4gz6hMS23YgNQCZSQolFg==}
     hasBin: true
 
   growl@1.8.1:
@@ -3263,7 +3263,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graphile-migrate@2.0.0-rc.2:
+  graphile-migrate@2.0.0-rc.3:
     dependencies:
       '@graphile/logger': 0.2.0
       '@types/json5': 2.2.0
