@@ -24,6 +24,7 @@ import {
   ensureDefaultCredential,
 } from "./admin/repositories/index.ts";
 import { bootstrapAccounts } from "./bootstrap.ts";
+import { runMigrations } from "./migrate.ts";
 import type { Logger } from "pino";
 
 async function initJwt(
@@ -75,6 +76,18 @@ async function main(): Promise<void> {
     throw new Error(
       "CORS_ORIGIN must not be '*' in production — set it to your allowed origin(s), or set CORS_ENABLED=false if CORS is handled by a reverse proxy",
     );
+  }
+
+  // Optional: run graphile-migrate before starting
+  if (config.autoMigrate) {
+    const user = encodeURIComponent(config.pgUser);
+    const pass = encodeURIComponent(config.pgPassword);
+    const connectionString =
+      config.databaseUrl ??
+      `postgres://${user}:${pass}@${config.pgHost}:${config.pgPort}/${config.pgDatabase}`;
+    logger.info("AUTO_MIGRATE=true — running migrations");
+    await runMigrations(connectionString);
+    logger.info("Migrations complete");
   }
 
   // Phase 1: concurrent initialization

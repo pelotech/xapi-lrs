@@ -36,6 +36,7 @@ services:
       ADMIN_SESSION_SECRET: dev-session-secret-change-me
       LOG_LEVEL: info
       NODE_ENV: production
+      # AUTO_MIGRATE: "true"  # run graphile-migrate at startup (opt-in)
     ports:
       - "${LRS_PORT:-8081}:8081"
       - "${LRS_ADMIN_PORT:-8091}:8091"

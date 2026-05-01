@@ -39,6 +39,9 @@ const configSchema = z.object({
   apiKeyDefault: z.string().optional(),
   apiSecretDefault: z.string().optional(),
 
+  /** Run graphile-migrate before the server starts */
+  autoMigrate: z.preprocess((v) => String(v ?? "false") === "true", z.boolean()).default(false),
+
   /** Request body size limit (bytes, default 50 MB) */
   maxRequestBodyBytes: z.coerce
     .number()
@@ -127,6 +130,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminSessionSecret: env.ADMIN_SESSION_SECRET,
     apiKeyDefault: env.LRS_API_KEY_DEFAULT ?? env.LRSQL_API_KEY_DEFAULT,
     apiSecretDefault: env.LRS_API_SECRET_DEFAULT ?? env.LRSQL_API_SECRET_DEFAULT,
+    autoMigrate: env.AUTO_MIGRATE,
     jwksUri: env.JWKS_URI,
     corsEnabled: env.CORS_ENABLED ?? (lrsqlAllowAll ? "true" : undefined),
     corsOrigin: env.CORS_ORIGIN ?? (lrsqlAllowAll ? "*" : undefined),

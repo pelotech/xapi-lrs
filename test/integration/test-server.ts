@@ -71,6 +71,7 @@ export async function createLrsTestServer(
     trustedProxyHops: 0,
     xapiRateLimitWindow: 60,
     xapiRateLimitMax: 10000,
+    autoMigrate: false,
     logLevel: "silent",
     nodeEnv: "test",
   };
