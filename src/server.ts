@@ -16,7 +16,14 @@ import { randomBytes } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { PgListener } from "./sse/pg-listener.ts";
 import { createApp } from "./app.ts";
-import { ensureAdminAccount } from "./admin/repositories/index.ts";
+import {
+  hasAnyAdminAccount,
+  ensureAdminAccount,
+  createAccount,
+  getAccountByUsername,
+  ensureDefaultCredential,
+} from "./admin/repositories/index.ts";
+import { bootstrapAccounts } from "./bootstrap.ts";
 import type { Logger } from "pino";
 
 async function initJwt(
@@ -85,10 +92,13 @@ async function main(): Promise<void> {
   const tParallel = performance.now();
 
   // Phase 2: depends on pool
-  if (config.adminUser && config.adminPassword) {
-    await ensureAdminAccount(pool, metrics, config.adminUser, config.adminPassword);
-    logger.info({ username: config.adminUser }, "Admin account bootstrapped");
-  }
+  await bootstrapAccounts(pool, metrics, config, logger, {
+    hasAnyAdminAccount,
+    ensureAdminAccount,
+    createAccount,
+    getAccountByUsername,
+    ensureDefaultCredential,
+  });
   const tAdmin = performance.now();
 
   // Hono app

@@ -88,6 +88,24 @@ export async function rotateSecret(
   await poolQuery(pool, metrics, { ...ROTATE_SECRET, values: [newSecret, credentialId] });
 }
 
+export async function ensureDefaultCredential(
+  pool: Pool,
+  metrics: LrsMetrics,
+  apiKey: string,
+  secretKey: string,
+  accountId: string,
+): Promise<void> {
+  const existing = await poolQuery<{ id: string }>(pool, metrics, {
+    name: "admin_get_credential_by_key",
+    text: "SELECT id FROM lrs_credential WHERE api_key = $1",
+    values: [apiKey],
+  });
+  if (existing.rows.length === 0) {
+    const credId = await createCredential(pool, metrics, apiKey, secretKey, accountId);
+    await setCredentialScopes(pool, metrics, credId, ["all"]);
+  }
+}
+
 export async function setCredentialScopes(
   pool: Pool,
   metrics: LrsMetrics,

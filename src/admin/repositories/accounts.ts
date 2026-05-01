@@ -20,6 +20,11 @@ const GET_ACCOUNT_BY_USERNAME = {
   text: "SELECT id, username FROM admin_account WHERE username = $1",
 } as const satisfies Query;
 
+const HAS_ANY_ACCOUNT = {
+  name: "admin_has_any_account",
+  text: "SELECT EXISTS(SELECT 1 FROM admin_account) AS exists",
+} as const satisfies Query;
+
 const VERIFY_ACCOUNT_PASSWORD = {
   name: "admin_verify_password",
   text: "SELECT id, username FROM admin_account WHERE username = $1 AND passhash = crypt($2, passhash)",
@@ -104,6 +109,11 @@ export async function changePassword(
   newPassword: string,
 ): Promise<void> {
   await poolQuery(pool, metrics, { ...CHANGE_PASSWORD, values: [accountId, newPassword] });
+}
+
+export async function hasAnyAdminAccount(pool: Pool, metrics: LrsMetrics): Promise<boolean> {
+  const result = await poolQuery<{ exists: boolean }>(pool, metrics, HAS_ANY_ACCOUNT);
+  return result.rows[0].exists;
 }
 
 export async function ensureAdminAccount(
