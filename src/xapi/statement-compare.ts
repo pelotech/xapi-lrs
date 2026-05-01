@@ -12,14 +12,7 @@
  * these fields) is logically equivalent to the received statement (which has
  * them filled in by the LRS).
  */
-const EXCEPTION_FIELDS = [
-  "id",
-  "authority",
-  "stored",
-  "timestamp",
-  "version",
-  "attachments",
-] as const;
+const EXCEPTION_FIELDS = ['id', 'authority', 'stored', 'timestamp', 'version', 'attachments'] as const;
 
 function stripExceptions(stmt: Record<string, unknown>): Record<string, unknown> {
   const copy = { ...stmt };
@@ -45,7 +38,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
     return a.every((v, i) => deepEqual(v, b[i]));
   }
 
-  if (typeof a === "object") {
+  if (typeof a === 'object') {
     const aObj = a as Record<string, unknown>;
     const bObj = b as Record<string, unknown>;
     const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
@@ -64,10 +57,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
  *
  * Returns true if the statements are logically equivalent.
  */
-export function statementsEquivalent(
-  signed: Record<string, unknown>,
-  received: Record<string, unknown>,
-): boolean {
+export function statementsEquivalent(signed: Record<string, unknown>, received: Record<string, unknown>): boolean {
   return deepEqual(stripExceptions(signed), stripExceptions(received));
 }
 
@@ -81,13 +71,13 @@ export function statementsMatch(existing: Record<string, unknown>, incoming: unk
   const b = { ...(incoming as Record<string, unknown>) };
 
   // Remove server-set fields from comparison
-  for (const key of ["stored", "authority", "version"]) {
+  for (const key of ['stored', 'authority', 'version']) {
     delete a[key];
     delete b[key];
   }
 
   // Normalize timestamps to the same instant for comparison
-  if (typeof a.timestamp === "string" && typeof b.timestamp === "string") {
+  if (typeof a.timestamp === 'string' && typeof b.timestamp === 'string') {
     const ta = new Date(a.timestamp).getTime();
     const tb = new Date(b.timestamp).getTime();
     if (ta === tb) {
@@ -104,14 +94,12 @@ export function statementsMatch(existing: Record<string, unknown>, incoming: unk
 /** JSON.stringify with sorted keys for deterministic comparison */
 function stableStringify(value: unknown): string {
   if (value === null || value === undefined) return JSON.stringify(value);
-  if (typeof value !== "object") return JSON.stringify(value);
+  if (typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) {
-    return "[" + value.map(stableStringify).join(",") + "]";
+    return '[' + value.map(stableStringify).join(',') + ']';
   }
   const obj = value as Record<string, unknown>;
   const keys = Object.keys(obj).sort();
-  const parts = keys
-    .filter((k) => obj[k] !== undefined)
-    .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]));
-  return "{" + parts.join(",") + "}";
+  const parts = keys.filter((k) => obj[k] !== undefined).map((k) => JSON.stringify(k) + ':' + stableStringify(obj[k]));
+  return '{' + parts.join(',') + '}';
 }

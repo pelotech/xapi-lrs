@@ -5,15 +5,15 @@
  * at insert time. enrichStatement just returns the payload directly.
  */
 
-import type { XapiStatementRow } from "../repositories/statements.ts";
+import type { XapiStatementRow } from '../repositories/statements.ts';
 
 /** LRS authority home page — shared across all credential-derived authorities. */
-export const LRS_AUTHORITY_HOME_PAGE = "https://xapi-lrs.pelotech.dev";
+export const LRS_AUTHORITY_HOME_PAGE = 'https://xapi-lrs.pelotech.dev';
 
 /** Build an xAPI authority agent from the authenticated account name. */
 export function buildAuthority(accountName: string): Record<string, unknown> {
   return {
-    objectType: "Agent",
+    objectType: 'Agent',
     account: {
       homePage: LRS_AUTHORITY_HOME_PAGE,
       name: accountName,
@@ -37,16 +37,16 @@ export function formatStatement(
   format: string,
   acceptLanguage?: string,
 ): Record<string, unknown> {
-  if (format === "exact") return stmt;
-  if (format === "ids") return formatIds(stmt);
-  if (format === "canonical") return formatCanonical(stmt, acceptLanguage);
+  if (format === 'exact') return stmt;
+  if (format === 'ids') return formatIds(stmt);
+  if (format === 'canonical') return formatCanonical(stmt, acceptLanguage);
   return stmt;
 }
 
 function formatIds(stmt: Record<string, unknown>): Record<string, unknown> {
   const result = { ...stmt };
 
-  if (result.verb && typeof result.verb === "object") {
+  if (result.verb && typeof result.verb === 'object') {
     const verb = result.verb as Record<string, unknown>;
     result.verb = { id: verb.id };
   }
@@ -54,24 +54,24 @@ function formatIds(stmt: Record<string, unknown>): Record<string, unknown> {
   result.actor = stripAgentToIfi(result.actor);
 
   const obj = result.object;
-  if (obj && typeof obj === "object") {
+  if (obj && typeof obj === 'object') {
     const o = obj as Record<string, unknown>;
-    if (o.objectType === "Agent" || o.objectType === "Group") {
+    if (o.objectType === 'Agent' || o.objectType === 'Group') {
       result.object = stripAgentToIfi(obj);
-    } else if (o.objectType === "SubStatement") {
+    } else if (o.objectType === 'SubStatement') {
       result.object = formatIdsSubStatement(o);
     } else {
       result.object = stripActivityDefinition(obj);
     }
   }
 
-  if (result.context && typeof result.context === "object") {
+  if (result.context && typeof result.context === 'object') {
     const ctx = { ...(result.context as Record<string, unknown>) };
     if (ctx.instructor) ctx.instructor = stripAgentToIfi(ctx.instructor);
     if (ctx.team) ctx.team = stripAgentToIfi(ctx.team);
-    if (ctx.contextActivities && typeof ctx.contextActivities === "object") {
+    if (ctx.contextActivities && typeof ctx.contextActivities === 'object') {
       const ca = { ...(ctx.contextActivities as Record<string, unknown>) };
-      for (const key of ["parent", "grouping", "category", "other"] as const) {
+      for (const key of ['parent', 'grouping', 'category', 'other'] as const) {
         if (Array.isArray(ca[key])) {
           ca[key] = (ca[key] as Record<string, unknown>[]).map(stripActivityDefinition);
         }
@@ -87,24 +87,24 @@ function formatIds(stmt: Record<string, unknown>): Record<string, unknown> {
 function formatIdsSubStatement(sub: Record<string, unknown>): Record<string, unknown> {
   const result = { ...sub };
   result.actor = stripAgentToIfi(result.actor);
-  if (result.verb && typeof result.verb === "object") {
+  if (result.verb && typeof result.verb === 'object') {
     result.verb = { id: (result.verb as Record<string, unknown>).id };
   }
   if (result.object) {
     const o = result.object as Record<string, unknown>;
-    if (o.objectType === "Agent" || o.objectType === "Group") {
+    if (o.objectType === 'Agent' || o.objectType === 'Group') {
       result.object = stripAgentToIfi(result.object);
     } else {
       result.object = stripActivityDefinition(result.object);
     }
   }
-  if (result.context && typeof result.context === "object") {
+  if (result.context && typeof result.context === 'object') {
     const ctx = { ...(result.context as Record<string, unknown>) };
     if (ctx.instructor) ctx.instructor = stripAgentToIfi(ctx.instructor);
     if (ctx.team) ctx.team = stripAgentToIfi(ctx.team);
-    if (ctx.contextActivities && typeof ctx.contextActivities === "object") {
+    if (ctx.contextActivities && typeof ctx.contextActivities === 'object') {
       const ca = { ...(ctx.contextActivities as Record<string, unknown>) };
-      for (const key of ["parent", "grouping", "category", "other"] as const) {
+      for (const key of ['parent', 'grouping', 'category', 'other'] as const) {
         if (Array.isArray(ca[key])) {
           ca[key] = (ca[key] as Record<string, unknown>[]).map(stripActivityDefinition);
         }
@@ -117,11 +117,11 @@ function formatIdsSubStatement(sub: Record<string, unknown>): Record<string, unk
 }
 
 function stripAgentToIfi(obj: unknown): unknown {
-  if (!obj || typeof obj !== "object") return obj;
+  if (!obj || typeof obj !== 'object') return obj;
   const o = obj as Record<string, unknown>;
   const result: Record<string, unknown> = {};
   if (o.objectType) result.objectType = o.objectType;
-  for (const ifi of ["mbox", "mbox_sha1sum", "openid", "account"] as const) {
+  for (const ifi of ['mbox', 'mbox_sha1sum', 'openid', 'account'] as const) {
     if (o[ifi] != null) {
       result[ifi] = o[ifi];
       break;
@@ -134,25 +134,22 @@ function stripAgentToIfi(obj: unknown): unknown {
 }
 
 function stripActivityDefinition(obj: unknown): unknown {
-  if (!obj || typeof obj !== "object") return obj;
+  if (!obj || typeof obj !== 'object') return obj;
   const o = obj as Record<string, unknown>;
-  if (o.objectType && o.objectType !== "Activity") return obj;
-  if ("id" in o) return { id: o.id };
+  if (o.objectType && o.objectType !== 'Activity') return obj;
+  if ('id' in o) return { id: o.id };
   return obj;
 }
 
-function formatCanonical(
-  stmt: Record<string, unknown>,
-  acceptLanguage?: string,
-): Record<string, unknown> {
+function formatCanonical(stmt: Record<string, unknown>, acceptLanguage?: string): Record<string, unknown> {
   const preferred = parseAcceptLanguage(acceptLanguage);
   const result = { ...stmt };
 
   result.verb = canonicalizeVerb(result.verb, preferred);
 
-  if (result.object && typeof result.object === "object") {
+  if (result.object && typeof result.object === 'object') {
     const o = result.object as Record<string, unknown>;
-    if (o.objectType === "SubStatement") {
+    if (o.objectType === 'SubStatement') {
       result.object = canonicalizeSubStatement(o, preferred);
     } else {
       result.object = canonicalizeActivityLangMaps(result.object, preferred);
@@ -165,20 +162,20 @@ function formatCanonical(
 }
 
 function canonicalizeVerb(verb: unknown, preferred: string[]): unknown {
-  if (!verb || typeof verb !== "object") return verb;
+  if (!verb || typeof verb !== 'object') return verb;
   const v = { ...(verb as Record<string, unknown>) };
-  if (v.display && typeof v.display === "object") {
+  if (v.display && typeof v.display === 'object') {
     v.display = pickLanguage(v.display as Record<string, string>, preferred);
   }
   return v;
 }
 
 function canonicalizeContext(ctx: unknown, preferred: string[]): unknown {
-  if (!ctx || typeof ctx !== "object") return ctx;
+  if (!ctx || typeof ctx !== 'object') return ctx;
   const c = { ...(ctx as Record<string, unknown>) };
-  if (c.contextActivities && typeof c.contextActivities === "object") {
+  if (c.contextActivities && typeof c.contextActivities === 'object') {
     const ca = { ...(c.contextActivities as Record<string, unknown>) };
-    for (const key of ["parent", "grouping", "category", "other"] as const) {
+    for (const key of ['parent', 'grouping', 'category', 'other'] as const) {
       if (Array.isArray(ca[key])) {
         ca[key] = (ca[key] as Record<string, unknown>[]).map((a: unknown) =>
           canonicalizeActivityLangMaps(a, preferred),
@@ -190,10 +187,7 @@ function canonicalizeContext(ctx: unknown, preferred: string[]): unknown {
   return c;
 }
 
-function canonicalizeSubStatement(
-  sub: Record<string, unknown>,
-  preferred: string[],
-): Record<string, unknown> {
+function canonicalizeSubStatement(sub: Record<string, unknown>, preferred: string[]): Record<string, unknown> {
   const result = { ...sub };
   result.verb = canonicalizeVerb(result.verb, preferred);
   if (result.object) {
@@ -204,14 +198,14 @@ function canonicalizeSubStatement(
 }
 
 function canonicalizeActivityLangMaps(obj: unknown, preferred: string[]): unknown {
-  if (!obj || typeof obj !== "object") return obj;
+  if (!obj || typeof obj !== 'object') return obj;
   const o = obj as Record<string, unknown>;
-  if (o.objectType && o.objectType !== "Activity") return obj;
-  if (!o.definition || typeof o.definition !== "object") return obj;
+  if (o.objectType && o.objectType !== 'Activity') return obj;
+  if (!o.definition || typeof o.definition !== 'object') return obj;
 
   const def = { ...(o.definition as Record<string, unknown>) };
-  for (const key of ["name", "description"] as const) {
-    if (def[key] && typeof def[key] === "object") {
+  for (const key of ['name', 'description'] as const) {
+    if (def[key] && typeof def[key] === 'object') {
       def[key] = pickLanguage(def[key] as Record<string, string>, preferred);
     }
   }
@@ -221,10 +215,10 @@ function canonicalizeActivityLangMaps(obj: unknown, preferred: string[]): unknow
 function parseAcceptLanguage(header?: string): string[] {
   if (!header) return [];
   return header
-    .split(",")
+    .split(',')
     .map((part) => {
-      const [tag, ...params] = part.trim().split(";");
-      const qParam = params.find((p) => p.trim().startsWith("q="));
+      const [tag, ...params] = part.trim().split(';');
+      const qParam = params.find((p) => p.trim().startsWith('q='));
       const q = qParam ? parseFloat(qParam.trim().slice(2)) : 1;
       return { tag: tag.trim().toLowerCase(), q };
     })
@@ -232,10 +226,7 @@ function parseAcceptLanguage(header?: string): string[] {
     .map((entry) => entry.tag);
 }
 
-function pickLanguage(
-  langMap: Record<string, string>,
-  preferred: string[],
-): Record<string, string> {
+function pickLanguage(langMap: Record<string, string>, preferred: string[]): Record<string, string> {
   const keys = Object.keys(langMap);
   if (keys.length <= 1) return langMap;
 
@@ -243,10 +234,10 @@ function pickLanguage(
     const exact = keys.find((k) => k.toLowerCase() === pref);
     if (exact) return { [exact]: langMap[exact] };
 
-    const prefix = keys.find((k) => k.toLowerCase().startsWith(pref + "-"));
+    const prefix = keys.find((k) => k.toLowerCase().startsWith(pref + '-'));
     if (prefix) return { [prefix]: langMap[prefix] };
 
-    const parentTag = pref.split("-")[0];
+    const parentTag = pref.split('-')[0];
     if (parentTag !== pref) {
       const parent = keys.find((k) => k.toLowerCase() === parentTag);
       if (parent) return { [parent]: langMap[parent] };

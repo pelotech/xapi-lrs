@@ -2,8 +2,8 @@
  * Admin live stream — real-time statement feed via SSE.
  */
 
-import { html, raw } from "./html.ts";
-import type { RawHtml } from "./html.ts";
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
 
 const STREAM_SCRIPT = /* js */ `
 (function() {

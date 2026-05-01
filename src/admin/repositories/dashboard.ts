@@ -2,39 +2,39 @@
  * Admin dashboard queries.
  */
 
-import type { Pool, QueryConfig } from "pg";
-import type { LrsMetrics } from "../../metrics.ts";
-import { poolQuery } from "../../db.ts";
+import type { Pool, QueryConfig } from 'pg';
+import type { LrsMetrics } from '../../metrics.ts';
+import { poolQuery } from '../../db.ts';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const COUNT_STATEMENTS = {
-  name: "admin_count_statements",
-  text: "SELECT COUNT(*)::int AS count FROM xapi_statement",
+  name: 'admin_count_statements',
+  text: 'SELECT COUNT(*)::int AS count FROM xapi_statement',
 } as const satisfies Query;
 
 const COUNT_STATEMENTS_24H = {
-  name: "admin_count_statements_24h",
+  name: 'admin_count_statements_24h',
   text: "SELECT COUNT(*)::int AS count FROM xapi_statement WHERE stored > NOW() - INTERVAL '24 hours'",
 } as const satisfies Query;
 
 const COUNT_STATEMENTS_7D = {
-  name: "admin_count_statements_7d",
+  name: 'admin_count_statements_7d',
   text: "SELECT COUNT(*)::int AS count FROM xapi_statement WHERE stored > NOW() - INTERVAL '7 days'",
 } as const satisfies Query;
 
 const COUNT_CREDENTIALS = {
-  name: "admin_count_credentials",
-  text: "SELECT COUNT(*)::int AS count FROM lrs_credential",
+  name: 'admin_count_credentials',
+  text: 'SELECT COUNT(*)::int AS count FROM lrs_credential',
 } as const satisfies Query;
 
 const COUNT_ACCOUNTS = {
-  name: "admin_count_accounts",
-  text: "SELECT COUNT(*)::int AS count FROM admin_account",
+  name: 'admin_count_accounts',
+  text: 'SELECT COUNT(*)::int AS count FROM admin_account',
 } as const satisfies Query;
 
 const RECENT_STATEMENTS = {
-  name: "admin_recent_statements",
+  name: 'admin_recent_statements',
   text: `SELECT statement_id, verb_iri, payload->'actor' AS actor,
                 payload->'object' AS object, stored
          FROM xapi_statement ORDER BY stored DESC LIMIT 10`,
@@ -56,10 +56,7 @@ export interface RecentStatement {
   stored: Date;
 }
 
-export async function getDashboardCounts(
-  pool: Pool,
-  metrics: LrsMetrics,
-): Promise<DashboardCounts> {
+export async function getDashboardCounts(pool: Pool, metrics: LrsMetrics): Promise<DashboardCounts> {
   const [total, h24, d7, creds, accts] = await Promise.all([
     poolQuery<{ count: number }>(pool, metrics, COUNT_STATEMENTS),
     poolQuery<{ count: number }>(pool, metrics, COUNT_STATEMENTS_24H),
@@ -77,10 +74,7 @@ export async function getDashboardCounts(
   };
 }
 
-export async function getRecentStatements(
-  pool: Pool,
-  metrics: LrsMetrics,
-): Promise<RecentStatement[]> {
+export async function getRecentStatements(pool: Pool, metrics: LrsMetrics): Promise<RecentStatement[]> {
   const result = await poolQuery<RecentStatement>(pool, metrics, RECENT_STATEMENTS);
   return result.rows;
 }

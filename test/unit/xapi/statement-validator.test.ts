@@ -1,48 +1,46 @@
-import { describe, it, expect } from "vitest";
-import { validateStatement } from "../../../src/xapi/statement-validator.ts";
+import { describe, it, expect } from 'vitest';
+import { validateStatement } from '../../../src/xapi/statement-validator.ts';
 
 const VALID_STMT = {
-  actor: { mbox: "mailto:test@example.com" },
-  verb: { id: "http://example.com/verbs/completed", display: { "en-US": "completed" } },
-  object: { id: "http://example.com/activities/1", objectType: "Activity" },
+  actor: { mbox: 'mailto:test@example.com' },
+  verb: { id: 'http://example.com/verbs/completed', display: { 'en-US': 'completed' } },
+  object: { id: 'http://example.com/activities/1', objectType: 'Activity' },
 };
 
-describe("validateStatement", () => {
-  it("accepts a minimal valid statement", () => {
+describe('validateStatement', () => {
+  it('accepts a minimal valid statement', () => {
     const result = validateStatement(VALID_STMT);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.statement.actor).toMatchObject({ mbox: "mailto:test@example.com" });
+      expect(result.statement.actor).toMatchObject({ mbox: 'mailto:test@example.com' });
       expect(result.statement.id).toBeDefined();
       expect(result.statement.timestamp).toBeDefined();
     }
   });
 
-  it("preserves client-provided id and timestamp", () => {
+  it('preserves client-provided id and timestamp', () => {
     const stmt = {
       ...VALID_STMT,
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      timestamp: "2024-01-01T00:00:00Z",
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      timestamp: '2024-01-01T00:00:00Z',
     };
     const result = validateStatement(stmt);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.statement.id).toBe("550e8400-e29b-41d4-a716-446655440000");
-      expect(result.statement.timestamp).toBe("2024-01-01T00:00:00Z");
+      expect(result.statement.id).toBe('550e8400-e29b-41d4-a716-446655440000');
+      expect(result.statement.timestamp).toBe('2024-01-01T00:00:00Z');
     }
   });
 
-  it("auto-generates id when absent", () => {
+  it('auto-generates id when absent', () => {
     const result = validateStatement(VALID_STMT);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.statement.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
+      expect(result.statement.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     }
   });
 
-  it("auto-generates timestamp when absent", () => {
+  it('auto-generates timestamp when absent', () => {
     const result = validateStatement(VALID_STMT);
     expect(result.valid).toBe(true);
     if (result.valid) {
@@ -51,59 +49,59 @@ describe("validateStatement", () => {
     }
   });
 
-  it("rejects a non-object input", () => {
-    const result = validateStatement("not an object");
+  it('rejects a non-object input', () => {
+    const result = validateStatement('not an object');
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors[0].message).toContain("JSON object");
+      expect(result.errors[0].message).toContain('JSON object');
     }
   });
 
-  it("rejects null values (except in extensions)", () => {
+  it('rejects null values (except in extensions)', () => {
     const result = validateStatement({
       ...VALID_STMT,
       result: { response: null },
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.path.startsWith("result"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith('result'))).toBe(true);
     }
   });
 
-  it("allows null values inside extensions", () => {
+  it('allows null values inside extensions', () => {
     const result = validateStatement({
       ...VALID_STMT,
-      result: { extensions: { "http://example.com/ext": null } },
+      result: { extensions: { 'http://example.com/ext': null } },
     });
     expect(result.valid).toBe(true);
   });
 
-  it("rejects nested SubStatements", () => {
+  it('rejects nested SubStatements', () => {
     const result = validateStatement({
       ...VALID_STMT,
       object: {
-        objectType: "SubStatement",
-        actor: { mbox: "mailto:sub@example.com" },
-        verb: { id: "http://example.com/verbs/did" },
+        objectType: 'SubStatement',
+        actor: { mbox: 'mailto:sub@example.com' },
+        verb: { id: 'http://example.com/verbs/did' },
         object: {
-          objectType: "SubStatement",
-          actor: { mbox: "mailto:deep@example.com" },
-          verb: { id: "http://example.com/verbs/did" },
-          object: { id: "http://example.com/activities/deep" },
+          objectType: 'SubStatement',
+          actor: { mbox: 'mailto:deep@example.com' },
+          verb: { id: 'http://example.com/verbs/did' },
+          object: { id: 'http://example.com/activities/deep' },
         },
       },
     });
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors.some((e) => e.path.startsWith("object"))).toBe(true);
+      expect(result.errors.some((e) => e.path.startsWith('object'))).toBe(true);
     }
   });
 
-  it("strips stored and authority from output", () => {
+  it('strips stored and authority from output', () => {
     const result = validateStatement({
       ...VALID_STMT,
-      stored: "2024-01-01T00:00:00Z",
-      authority: { mbox: "mailto:auth@example.com" },
+      stored: '2024-01-01T00:00:00Z',
+      authority: { mbox: 'mailto:auth@example.com' },
     });
     expect(result.valid).toBe(true);
     if (result.valid) {

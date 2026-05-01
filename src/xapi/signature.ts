@@ -12,15 +12,15 @@
  * - x5c certificate signature verification (if JWS header includes x5c)
  */
 
-import { decodeProtectedHeader, base64url, compactVerify, importX509 } from "jose";
-import { statementsEquivalent } from "./statement-compare.ts";
-import type { MultipartAttachmentPart } from "./multipart.ts";
-import type { Logger } from "../logger.ts";
-import type { LrsMetrics } from "../metrics.ts";
-import { HttpError } from "../db.ts";
+import { decodeProtectedHeader, base64url, compactVerify, importX509 } from 'jose';
+import { statementsEquivalent } from './statement-compare.ts';
+import type { MultipartAttachmentPart } from './multipart.ts';
+import type { Logger } from '../logger.ts';
+import type { LrsMetrics } from '../metrics.ts';
+import { HttpError } from '../db.ts';
 
-const SIGNATURE_USAGE_TYPE = "http://adlnet.gov/expapi/attachments/signature";
-const ALLOWED_ALGORITHMS = new Set(["RS256", "RS384", "RS512"]);
+const SIGNATURE_USAGE_TYPE = 'http://adlnet.gov/expapi/attachments/signature';
+const ALLOWED_ALGORITHMS = new Set(['RS256', 'RS384', 'RS512']);
 
 /** Module-level flag to log the "verification disabled" warning only once. */
 let warnedDisabled = false;
@@ -76,39 +76,36 @@ export async function validateSignedStatements(
       if (att.usageType !== SIGNATURE_USAGE_TYPE) continue;
 
       // 1. Content-type must be application/octet-stream
-      if (att.contentType !== "application/octet-stream") {
-        throw new HttpError(
-          400,
-          'Signed statement attachment must have contentType "application/octet-stream"',
-        );
+      if (att.contentType !== 'application/octet-stream') {
+        throw new HttpError(400, 'Signed statement attachment must have contentType "application/octet-stream"');
       }
 
       // 2. Locate binary part — skip if not provided (fileUrl-only)
       const part = attachmentParts?.get(att.sha2);
       if (!part) continue;
 
-      const jwsString = part.data.toString("utf8");
+      const jwsString = part.data.toString('utf8');
 
       // 3. Decode and validate JWS header
       let header: { alg?: string; x5c?: string[] };
       try {
         header = decodeProtectedHeader(jwsString);
       } catch {
-        throw new HttpError(400, "Signature attachment is not a valid JWS");
+        throw new HttpError(400, 'Signature attachment is not a valid JWS');
       }
 
       // 4. Algorithm must be RS256, RS384, or RS512
       if (!header.alg || !ALLOWED_ALGORITHMS.has(header.alg)) {
         throw new HttpError(
           400,
-          `JWS signature must use algorithm RS256, RS384, or RS512 (got "${header.alg ?? "none"}")`,
+          `JWS signature must use algorithm RS256, RS384, or RS512 (got "${header.alg ?? 'none'}")`,
         );
       }
 
       // 5. Payload must be valid JSON
-      const jwsParts = jwsString.split(".");
+      const jwsParts = jwsString.split('.');
       if (jwsParts.length !== 3) {
-        throw new HttpError(400, "Signature attachment is not a valid JWS compact serialization");
+        throw new HttpError(400, 'Signature attachment is not a valid JWS compact serialization');
       }
 
       let signedPayload: Record<string, unknown>;
@@ -116,7 +113,7 @@ export async function validateSignedStatements(
         const payloadBytes = base64url.decode(jwsParts[1]);
         signedPayload = JSON.parse(new TextDecoder().decode(payloadBytes));
       } catch {
-        throw new HttpError(400, "JWS payload is not valid JSON");
+        throw new HttpError(400, 'JWS payload is not valid JSON');
       }
 
       // --- Cryptographic checks (behind feature flag) ---
@@ -124,7 +121,7 @@ export async function validateSignedStatements(
       if (!verifySignatures) {
         if (!warnedDisabled && options?.logger) {
           options.logger.warn(
-            "Signed statement received but XAPI_VERIFY_SIGNATURES is disabled; skipping payload and cryptographic verification",
+            'Signed statement received but XAPI_VERIFY_SIGNATURES is disabled; skipping payload and cryptographic verification',
           );
           warnedDisabled = true;
         }
@@ -133,10 +130,7 @@ export async function validateSignedStatements(
 
       // 6. Payload must be logically equivalent to received statement (§2.3.1)
       if (!statementsEquivalent(signedPayload, s)) {
-        throw new HttpError(
-          400,
-          "Signed statement payload is not logically equivalent to the received statement",
-        );
+        throw new HttpError(400, 'Signed statement payload is not logically equivalent to the received statement');
       }
 
       // 7. If x5c certificate present, verify JWS signature against it
@@ -147,13 +141,13 @@ export async function validateSignedStatements(
         try {
           publicKey = await importX509(certPem, header.alg);
         } catch {
-          throw new HttpError(400, "x5c certificate in JWS header could not be parsed");
+          throw new HttpError(400, 'x5c certificate in JWS header could not be parsed');
         }
 
         try {
           await compactVerify(jwsString, publicKey);
         } catch {
-          throw new HttpError(400, "JWS signature does not verify against the x5c certificate");
+          throw new HttpError(400, 'JWS signature does not verify against the x5c certificate');
         }
       }
     }

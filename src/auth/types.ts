@@ -6,15 +6,15 @@
 
 /** xAPI scope enum — matches lrsql's scope_enum */
 export type XapiScope =
-  | "statements/write"
-  | "statements/read"
-  | "statements/read/mine"
-  | "all/read"
-  | "all"
-  | "define"
-  | "profile"
-  | "state"
-  | "state/read";
+  | 'statements/write'
+  | 'statements/read'
+  | 'statements/read/mine'
+  | 'all/read'
+  | 'all'
+  | 'define'
+  | 'profile'
+  | 'state'
+  | 'state/read';
 
 /** Basic Auth payload — from lrs_credential + credential_to_scope lookup */
 export interface AuthPayloadBasic {
@@ -37,5 +37,5 @@ export type AuthPayload = AuthPayloadBasic | AuthPayloadJWT;
 
 /** Auth context set by the Hono auth middleware */
 export type AuthInfo =
-  | { type: "basic"; payload: AuthPayloadBasic }
-  | { type: "jwt"; payload: AuthPayloadJWT; token: string };
+  | { type: 'basic'; payload: AuthPayloadBasic }
+  | { type: 'jwt'; payload: AuthPayloadJWT; token: string };

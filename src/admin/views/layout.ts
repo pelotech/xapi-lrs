@@ -2,8 +2,8 @@
  * Admin UI layout — HTML shell with nav, Pico CSS, and htmx.
  */
 
-import { html, raw } from "./html.ts";
-import type { RawHtml } from "./html.ts";
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
 
 const CSS = /* css */ `
 nav ul li a[aria-current="page"] { font-weight: bold; text-decoration: underline; }
@@ -26,17 +26,17 @@ pre.json { background: var(--pico-code-background-color); padding: 1em; border-r
 `;
 
 const NAV_LINKS: Array<{ href: string; label: string }> = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/accounts", label: "Accounts" },
-  { href: "/admin/credentials", label: "Credentials" },
-  { href: "/admin/statements", label: "Statements" },
-  { href: "/admin/documents", label: "Documents" },
-  { href: "/admin/stream", label: "Stream" },
-  { href: "/admin/metrics", label: "Metrics" },
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/accounts', label: 'Accounts' },
+  { href: '/admin/credentials', label: 'Credentials' },
+  { href: '/admin/statements', label: 'Statements' },
+  { href: '/admin/documents', label: 'Documents' },
+  { href: '/admin/stream', label: 'Stream' },
+  { href: '/admin/metrics', label: 'Metrics' },
 ];
 
 function isActive(linkHref: string, currentPath: string): boolean {
-  if (linkHref === "/admin") return currentPath === "/admin" || currentPath === "/admin/";
+  if (linkHref === '/admin') return currentPath === '/admin' || currentPath === '/admin/';
   return currentPath.startsWith(linkHref);
 }
 
@@ -44,7 +44,7 @@ export function layout(
   opts: { title: string; path?: string; username?: string; csrfToken?: string },
   content: RawHtml,
 ): RawHtml {
-  const csrfJson = opts.csrfToken ? JSON.stringify({ "X-CSRF-Token": opts.csrfToken }) : "";
+  const csrfJson = opts.csrfToken ? JSON.stringify({ 'X-CSRF-Token': opts.csrfToken }) : '';
 
   return html`<!doctype html>
 <html lang="en" data-theme="light">
@@ -73,7 +73,7 @@ export function layout(
         <li class="text-muted">${opts.username}</li>
         <li>
           <form method="post" action="/admin/logout" style="margin:0">
-            <input type="hidden" name="_csrf" value="${opts.csrfToken ?? ""}" />
+            <input type="hidden" name="_csrf" value="${opts.csrfToken ?? ''}" />
             <button type="submit" class="outline secondary" style="padding:0.25em 0.75em;margin:0">Logout</button>
           </form>
         </li>

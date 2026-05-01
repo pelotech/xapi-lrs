@@ -2,20 +2,20 @@
  * Admin credentials page — list, create, delete, rotate secret, edit scopes.
  */
 
-import { html, raw } from "./html.ts";
-import type { RawHtml } from "./html.ts";
-import type { CredentialRow, AccountRow } from "../repositories/index.ts";
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
+import type { CredentialRow, AccountRow } from '../repositories/index.ts';
 
 const ALL_SCOPES = [
-  "statements/write",
-  "statements/read",
-  "statements/read/mine",
-  "all/read",
-  "all",
-  "define",
-  "profile",
-  "state",
-  "state/read",
+  'statements/write',
+  'statements/read',
+  'statements/read/mine',
+  'all/read',
+  'all',
+  'define',
+  'profile',
+  'state',
+  'state/read',
 ] as const;
 
 export function credentialsPage(
@@ -141,7 +141,7 @@ function scopeEditor(credentialId: string, scopes: string[]): RawHtml {
             type="checkbox"
             name="scopes"
             value="${scope}"
-            ${scopes.includes(scope) ? raw("checked") : false}
+            ${scopes.includes(scope) ? raw('checked') : false}
             style="margin-right:0.2em"
           />
           ${scope}
@@ -170,5 +170,5 @@ export function scopeUpdated(): RawHtml {
 }
 
 export function deletedRow(): RawHtml {
-  return raw("");
+  return raw('');
 }

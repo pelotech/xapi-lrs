@@ -47,9 +47,12 @@ COPY package.json ./
 COPY --from=prod-deps /app/node_modules node_modules
 COPY --from=build /app/dist dist
 COPY src/admin/vendor/ dist/admin/vendor/
+COPY db/ db/
 
 EXPOSE 8081 8091
 
 USER node
 
+# Override CMD to run migrations standalone:
+#   docker run xapi-lrs node dist/migrate.js
 CMD ["node", "dist/server.js"]

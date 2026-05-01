@@ -2,20 +2,20 @@
  * Admin attachment queries.
  */
 
-import type { Pool, QueryConfig } from "pg";
-import type { LrsMetrics } from "../../metrics.ts";
-import { poolQuery } from "../../db.ts";
+import type { Pool, QueryConfig } from 'pg';
+import type { LrsMetrics } from '../../metrics.ts';
+import { poolQuery } from '../../db.ts';
 
-type Query = Omit<QueryConfig, "values">;
+type Query = Omit<QueryConfig, 'values'>;
 
 const LIST_ATTACHMENTS = {
-  name: "admin_list_attachments",
-  text: "SELECT attachment_sha, content_type, content_length FROM attachment WHERE statement_id = $1",
+  name: 'admin_list_attachments',
+  text: 'SELECT attachment_sha, content_type, content_length FROM attachment WHERE statement_id = $1',
 } as const satisfies Query;
 
 const GET_ATTACHMENT = {
-  name: "admin_get_attachment",
-  text: "SELECT contents, content_type FROM attachment WHERE statement_id = $1 AND attachment_sha = $2",
+  name: 'admin_get_attachment',
+  text: 'SELECT contents, content_type FROM attachment WHERE statement_id = $1 AND attachment_sha = $2',
 } as const satisfies Query;
 
 export interface AttachmentListRow {

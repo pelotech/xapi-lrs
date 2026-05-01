@@ -29,9 +29,9 @@ export type {
   XAPISubStatement,
   XAPIValidatedStatement,
   XAPIVerb,
-} from "./statement.ts";
+} from './statement.ts';
 
-export { CMI5_VERBS, LMS_ONLY_VERB_IDS, SESSION_LIFECYCLE_VERB_IDS } from "./verb.ts";
-export type { CMI5VerbId } from "./verb.ts";
+export { CMI5_VERBS, LMS_ONLY_VERB_IDS, SESSION_LIFECYCLE_VERB_IDS } from './verb.ts';
+export type { CMI5VerbId } from './verb.ts';
 
-export type { StatementStoredEvent } from "./sse.ts";
+export type { StatementStoredEvent } from './sse.ts';

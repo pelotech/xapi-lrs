@@ -6,11 +6,11 @@ services:
       POSTGRES_PASSWORD: xapi_lrs
       POSTGRES_DB: xapi_lrs
     ports:
-      - "${PGPORT:-5434}:5432"
+      - '${PGPORT:-5434}:5432'
     volumes:
       - ./db/migrations/committed/000001-lrsql-schema.sql:/docker-entrypoint-initdb.d/000001-lrsql-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U xapi_lrs"]
+      test: ['CMD-SHELL', 'pg_isready -U xapi_lrs']
       interval: 2s
       timeout: 5s
       retries: 10
@@ -36,6 +36,7 @@ services:
       ADMIN_SESSION_SECRET: dev-session-secret-change-me
       LOG_LEVEL: info
       NODE_ENV: production
+      # AUTO_MIGRATE: "true"  # run graphile-migrate at startup (opt-in)
     ports:
-      - "${LRS_PORT:-8081}:8081"
-      - "${LRS_ADMIN_PORT:-8091}:8091"
+      - '${LRS_PORT:-8081}:8081'
+      - '${LRS_ADMIN_PORT:-8091}:8091'

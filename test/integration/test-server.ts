@@ -4,24 +4,24 @@
  * Creates an LRS Hono app on an ephemeral port with lrsql-compatible schema.
  */
 
-import type { Server } from "node:http";
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import type { OpenAPIHono } from "@hono/zod-openapi";
-import pg from "pg";
-import { pino } from "pino";
-import { createApp } from "../../src/app.ts";
-import type { AppDeps } from "../../src/app.ts";
-import type { HonoEnv } from "../../src/hono-env.ts";
-import type { LrsConfig } from "../../src/config.ts";
-import { createMetrics } from "../../src/metrics.ts";
-import { JwksCache } from "../../src/auth/jwt.ts";
-import type { JwtConfig } from "../../src/auth/jwt.ts";
-import { PgListener } from "../../src/sse/pg-listener.ts";
-import type { Logger } from "../../src/logger.ts";
-import { defaultTestDbConfig } from "./test-db.ts";
-import { startJwksServer, signTestJWT } from "./test-jwks.ts";
-import type { JwksServerHandle } from "./test-jwks.ts";
+import type { Server } from 'node:http';
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
+import pg from 'pg';
+import { pino } from 'pino';
+import { createApp } from '../../src/app.ts';
+import type { AppDeps } from '../../src/app.ts';
+import type { HonoEnv } from '../../src/hono-env.ts';
+import type { LrsConfig } from '../../src/config.ts';
+import { createMetrics } from '../../src/metrics.ts';
+import { JwksCache } from '../../src/auth/jwt.ts';
+import type { JwtConfig } from '../../src/auth/jwt.ts';
+import { PgListener } from '../../src/sse/pg-listener.ts';
+import type { Logger } from '../../src/logger.ts';
+import { defaultTestDbConfig } from './test-db.ts';
+import { startJwksServer, signTestJWT } from './test-jwks.ts';
+import type { JwksServerHandle } from './test-jwks.ts';
 
 const { Pool } = pg;
 
@@ -42,9 +42,7 @@ export interface LrsTestServerOptions {
   xapiVerifySignatures?: boolean;
 }
 
-export async function createLrsTestServer(
-  opts?: LrsTestServerOptions,
-): Promise<LrsTestServerHandle> {
+export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<LrsTestServerHandle> {
   const jwksServer: JwksServerHandle = await startJwksServer();
 
   const config: LrsConfig = {
@@ -58,12 +56,12 @@ export async function createLrsTestServer(
     pgPoolSize: 5,
     dbConnectRetries: 1,
     dbConnectRetryDelayMs: 100,
-    jwtIssuer: "test-issuer",
-    jwtAudience: "test-audience",
+    jwtIssuer: 'test-issuer',
+    jwtAudience: 'test-audience',
     oidcDiscoveryUrl: undefined,
     jwksUri: jwksServer.jwksUrl,
     corsEnabled: true,
-    corsOrigin: "*",
+    corsOrigin: '*',
     maxRequestBodyBytes: 50 * 1024 * 1024,
     sseMaxConnectionsGlobal: 100,
     sseMaxConnectionsPerIp: 5,
@@ -71,8 +69,9 @@ export async function createLrsTestServer(
     trustedProxyHops: 0,
     xapiRateLimitWindow: 60,
     xapiRateLimitMax: 10000,
-    logLevel: "silent",
-    nodeEnv: "test",
+    autoMigrate: false,
+    logLevel: 'silent',
+    nodeEnv: 'test',
   };
 
   const pool = new Pool({
@@ -84,7 +83,7 @@ export async function createLrsTestServer(
     max: config.pgPoolSize,
   });
 
-  const logger: Logger = pino({ level: "silent" });
+  const logger: Logger = pino({ level: 'silent' });
   const metrics = createMetrics();
   const jwksCache = new JwksCache();
 
@@ -104,47 +103,47 @@ export async function createLrsTestServer(
     metrics,
     logger,
     pgListener,
-    sessionSecret: "test-secret",
+    sessionSecret: 'test-secret',
     startedAt: new Date(),
   };
   const app = createApp(deps);
 
   const server = await new Promise<Server>((resolve, reject) => {
     const s = serve({ fetch: app.fetch, port: 0 }, () => resolve(s as unknown as Server));
-    s.on("error", (err: NodeJS.ErrnoException) => reject(err));
+    s.on('error', (err: NodeJS.ErrnoException) => reject(err));
   });
 
   const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("Failed to get LRS test server address");
+  if (!address || typeof address === 'string') {
+    throw new Error('Failed to get LRS test server address');
   }
 
   const apiUrl = `http://localhost:${address.port}`;
 
   // Admin server (health/ready/metrics) — mirrors src/server.ts
   const adminApp = new Hono();
-  adminApp.get("/healthz", (c) => c.text("ok"));
-  adminApp.get("/ready", async (c) => {
+  adminApp.get('/healthz', (c) => c.text('ok'));
+  adminApp.get('/ready', async (c) => {
     try {
-      await pool.query("SELECT 1");
-      return c.text("ok");
+      await pool.query('SELECT 1');
+      return c.text('ok');
     } catch {
-      return c.text("database unavailable", 503);
+      return c.text('database unavailable', 503);
     }
   });
-  adminApp.get("/metrics", async (c) => {
+  adminApp.get('/metrics', async (c) => {
     const content = await metrics.getPrometheusText();
-    return c.text(content, 200, { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" });
+    return c.text(content, 200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' });
   });
 
   const adminServer = await new Promise<Server>((resolve, reject) => {
     const s = serve({ fetch: adminApp.fetch, port: 0 }, () => resolve(s as unknown as Server));
-    s.on("error", (err: NodeJS.ErrnoException) => reject(err));
+    s.on('error', (err: NodeJS.ErrnoException) => reject(err));
   });
 
   const adminAddress = adminServer.address();
-  if (!adminAddress || typeof adminAddress === "string") {
-    throw new Error("Failed to get LRS admin test server address");
+  if (!adminAddress || typeof adminAddress === 'string') {
+    throw new Error('Failed to get LRS admin test server address');
   }
   const adminUrl = `http://localhost:${adminAddress.port}`;
 
@@ -158,7 +157,7 @@ export async function createLrsTestServer(
   };
 
   const createToken = async (payload: Record<string, unknown>): Promise<string> => {
-    return signTestJWT({ aud: "test-audience", ...payload });
+    return signTestJWT({ aud: 'test-audience', ...payload });
   };
 
   return {

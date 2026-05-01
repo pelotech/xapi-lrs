@@ -2,9 +2,9 @@
  * Admin accounts page — list, create, delete, change password.
  */
 
-import { html } from "./html.ts";
-import type { RawHtml } from "./html.ts";
-import type { AccountRow } from "../repositories/index.ts";
+import { html } from './html.ts';
+import type { RawHtml } from './html.ts';
+import type { AccountRow } from '../repositories/index.ts';
 
 export function accountsPage(accounts: AccountRow[], csrfToken: string): RawHtml {
   return html`

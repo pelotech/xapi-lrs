@@ -14,7 +14,7 @@ export interface ValidationError {
 }
 
 export type ValidationResult =
-  | { valid: true; statement: import("../xapi-types/index.ts").XAPIValidatedStatement }
+  | { valid: true; statement: import('../xapi-types/index.ts').XAPIValidatedStatement }
   | { valid: false; errors: ValidationError[] };
 
 // ============================================================================
@@ -25,8 +25,8 @@ export type ValidationResult =
 const IRI_SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+\-.]*:/;
 
 export function isValidIRI(value: string): boolean {
-  if (typeof value !== "string" || value.length === 0) return false;
+  if (typeof value !== 'string' || value.length === 0) return false;
   if (!IRI_SCHEME_RE.test(value)) return false;
-  if (value.includes(" ")) return false;
+  if (value.includes(' ')) return false;
   return true;
 }

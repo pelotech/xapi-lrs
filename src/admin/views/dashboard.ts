@@ -2,45 +2,41 @@
  * Admin dashboard — statement counts, recent statements, server info.
  */
 
-import { html } from "./html.ts";
-import type { RawHtml } from "./html.ts";
-import type { DashboardCounts, RecentStatement } from "../repositories/index.ts";
+import { html } from './html.ts';
+import type { RawHtml } from './html.ts';
+import type { DashboardCounts, RecentStatement } from '../repositories/index.ts';
 
 function formatActor(actor: Record<string, unknown>): string {
   if (actor.name) return String(actor.name);
-  if (actor.mbox) return String(actor.mbox).replace("mailto:", "");
-  if (actor.account && typeof actor.account === "object") {
+  if (actor.mbox) return String(actor.mbox).replace('mailto:', '');
+  if (actor.account && typeof actor.account === 'object') {
     const acct = actor.account as Record<string, unknown>;
-    return `${acct.name ?? ""}@${acct.homePage ?? ""}`;
+    return `${acct.name ?? ''}@${acct.homePage ?? ''}`;
   }
   return JSON.stringify(actor).slice(0, 60);
 }
 
 function formatVerb(iri: string): string {
-  const parts = iri.split("/");
+  const parts = iri.split('/');
   return parts[parts.length - 1] || iri;
 }
 
 function formatObject(obj: Record<string, unknown>): string {
-  if (obj.definition && typeof obj.definition === "object") {
+  if (obj.definition && typeof obj.definition === 'object') {
     const def = obj.definition as Record<string, unknown>;
-    if (def.name && typeof def.name === "object") {
+    if (def.name && typeof def.name === 'object') {
       const names = def.name as Record<string, string>;
-      return names["en-US"] || names.en || Object.values(names)[0] || String(obj.id ?? "");
+      return names['en-US'] || names.en || Object.values(names)[0] || String(obj.id ?? '');
     }
   }
   return String(obj.id ?? JSON.stringify(obj).slice(0, 60));
 }
 
 function fmtTime(d: Date): string {
-  return new Date(d).toISOString().slice(0, 19).replace("T", " ");
+  return new Date(d).toISOString().slice(0, 19).replace('T', ' ');
 }
 
-export function dashboardPage(
-  counts: DashboardCounts,
-  recent: RecentStatement[],
-  uptime: string,
-): RawHtml {
+export function dashboardPage(counts: DashboardCounts, recent: RecentStatement[], uptime: string): RawHtml {
   return html`
     <h2>Dashboard</h2>
     <div class="grid">

@@ -5,16 +5,16 @@
  * (adl-lrs-conformance-tests) against the standalone LRS service.
  */
 
-import { createRequire } from "node:module";
-import { createLrsTestServer } from "../integration/test-server.ts";
-import { createTestPool, truncateLrsqlTables } from "../integration/test-db.ts";
-import { createBasicAuth } from "../integration/fixtures.ts";
-import type { LrsTestServerHandle } from "../integration/test-server.ts";
-import type pg from "pg";
+import { createRequire } from 'node:module';
+import { createLrsTestServer } from '../integration/test-server.ts';
+import { createTestPool, truncateLrsqlTables } from '../integration/test-db.ts';
+import { createBasicAuth } from '../integration/fixtures.ts';
+import type { LrsTestServerHandle } from '../integration/test-server.ts';
+import type pg from 'pg';
 
 // The ADL test runner is a CJS module — use createRequire to load it.
 const require = createRequire(import.meta.url);
-const { testRunner: TestRunner } = require("adl-lrs-conformance-tests/bin/testRunner.js");
+const { testRunner: TestRunner } = require('adl-lrs-conformance-tests/bin/testRunner.js');
 
 // ============================================================================
 // Types
@@ -54,16 +54,13 @@ export function collectLeafTests(node: CleanLogNode): CleanLogNode[] {
 }
 
 /** Recursively collect all failed leaf tests from the log tree. */
-function collectFailures(
-  log: CleanLogNode | undefined,
-  failures: ConformanceSuiteResult["failures"],
-): void {
+function collectFailures(log: CleanLogNode | undefined, failures: ConformanceSuiteResult['failures']): void {
   if (!log) return;
-  if (log.status === "failed" && log.tests.length === 0) {
+  if (log.status === 'failed' && log.tests.length === 0) {
     failures.push({
       title: log.title,
       requirement: log.requirement,
-      error: log.error ?? "unknown",
+      error: log.error ?? 'unknown',
     });
   }
   for (const child of log.tests) {
@@ -75,11 +72,11 @@ function collectFailures(
 function collectPending(
   log: CleanLogNode | undefined,
   suitePath: string,
-  pending: ConformanceSuiteResult["pendingTests"],
+  pending: ConformanceSuiteResult['pendingTests'],
 ): void {
   if (!log) return;
   const currentPath = suitePath ? `${suitePath} > ${log.title}` : log.title;
-  if (log.tests.length === 0 && log.status !== "passed" && log.status !== "failed") {
+  if (log.tests.length === 0 && log.status !== 'passed' && log.status !== 'failed') {
     pending.push({ title: log.title, suite: suitePath });
   }
   for (const child of log.tests) {
@@ -106,9 +103,7 @@ export interface RunOptions {
  * Spins up the server, creates lrs_credential + scopes, runs the suite,
  * then tears everything down.
  */
-export async function runConformanceSuite(
-  options: RunOptions = {},
-): Promise<ConformanceSuiteResult> {
+export async function runConformanceSuite(options: RunOptions = {}): Promise<ConformanceSuiteResult> {
   const { grep, timeout = 180_000, onSectionStart } = options;
 
   let server: LrsTestServerHandle | undefined;
@@ -121,11 +116,11 @@ export async function runConformanceSuite(
 
     // 2. Create Basic Auth credentials (admin_account + lrs_credential + scopes)
     const basicAuth = await createBasicAuth(pool, {
-      label: "ADL Conformance Suite",
+      label: 'ADL Conformance Suite',
     });
 
     // basicAuth is Base64-encoded "apiKey:secretKey"
-    const [authUser, authPass] = Buffer.from(basicAuth, "base64").toString().split(":");
+    const [authUser, authPass] = Buffer.from(basicAuth, 'base64').toString().split(':');
 
     // 3. Build the xAPI endpoint URL
     const endpoint = `${server.apiUrl}/xapi`;
@@ -138,7 +133,7 @@ export async function runConformanceSuite(
       }, timeout);
 
       const runner = new TestRunner(
-        "xAPI LRS Conformance",
+        'xAPI LRS Conformance',
         null,
         {
           endpoint,
@@ -149,23 +144,23 @@ export async function runConformanceSuite(
         null,
         {
           grep,
-          directory: ["v1_0_3"],
+          directory: ['v1_0_3'],
         },
-        "mustPassAll",
+        'mustPassAll',
       );
 
-      runner.on("message", (msg: { action: string; payload: unknown }) => {
-        if (msg.action === "suite start") {
+      runner.on('message', (msg: { action: string; payload: unknown }) => {
+        if (msg.action === 'suite start') {
           onSectionStart?.(String(msg.payload));
         }
-        if (msg.action === "end") {
+        if (msg.action === 'end') {
           clearTimeout(timer);
 
           const record = runner.getCleanRecord();
-          const failures: ConformanceSuiteResult["failures"] = [];
+          const failures: ConformanceSuiteResult['failures'] = [];
           collectFailures(record.log, failures);
-          const pendingTests: ConformanceSuiteResult["pendingTests"] = [];
-          collectPending(record.log, "", pendingTests);
+          const pendingTests: ConformanceSuiteResult['pendingTests'] = [];
+          collectPending(record.log, '', pendingTests);
 
           const passing = runner.summary.passed ?? 0;
           const failing = runner.summary.failed ?? 0;
@@ -176,7 +171,7 @@ export async function runConformanceSuite(
             total: runner.summary.total ?? 0,
             duration: runner.duration ?? 0,
             state: runner.state,
-            version: runner.summary.version ?? "unknown",
+            version: runner.summary.version ?? 'unknown',
             failures,
             pendingTests,
             log: record.log as CleanLogNode | undefined,
@@ -199,18 +194,17 @@ export async function runConformanceSuite(
 // CLI entrypoint — run directly with: npx tsx test/conformance/run-adl-suite.ts
 // ============================================================================
 
-const isMain =
-  process.argv[1]?.endsWith("run-adl-suite.ts") || process.argv[1]?.endsWith("run-adl-suite.js");
+const isMain = process.argv[1]?.endsWith('run-adl-suite.ts') || process.argv[1]?.endsWith('run-adl-suite.js');
 
 if (isMain) {
   const grep = process.argv[2]; // Optional: first positional arg is grep pattern
 
-  console.log("Starting ADL xAPI 1.0.3 Conformance Suite (LRS)...");
+  console.log('Starting ADL xAPI 1.0.3 Conformance Suite (LRS)...');
   if (grep) console.log(`  Grep filter: ${grep}`);
 
   runConformanceSuite({ grep })
     .then((result) => {
-      console.log("\n=== ADL Conformance Suite Results (LRS) ===");
+      console.log('\n=== ADL Conformance Suite Results (LRS) ===');
       console.log(`  Version:  ${result.version}`);
       console.log(`  State:    ${result.state}`);
       console.log(`  Total:    ${result.total}`);
@@ -222,7 +216,7 @@ if (isMain) {
       if (result.failures.length > 0) {
         console.log(`\n--- ${result.failures.length} Failing Tests ---`);
         for (const f of result.failures) {
-          const req = f.requirement ? ` [${f.requirement}]` : "";
+          const req = f.requirement ? ` [${f.requirement}]` : '';
           console.log(`  FAIL${req}: ${f.title}`);
           console.log(`        ${f.error}`);
         }
@@ -232,7 +226,7 @@ if (isMain) {
         // Group pending tests by their parent suite
         const bySuite = new Map<string, string[]>();
         for (const p of result.pendingTests) {
-          const key = p.suite || "(root)";
+          const key = p.suite || '(root)';
           if (!bySuite.has(key)) bySuite.set(key, []);
           bySuite.get(key)!.push(p.title);
         }
@@ -251,7 +245,7 @@ if (isMain) {
       process.exit(result.failing > 0 || result.pending > 0 ? 1 : 0);
     })
     .catch((err) => {
-      console.error("Conformance suite failed:", err);
+      console.error('Conformance suite failed:', err);
       process.exit(2);
     });
 }

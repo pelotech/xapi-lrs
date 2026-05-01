@@ -2,10 +2,10 @@
  * Admin UI types.
  */
 
-import type { Pool } from "pg";
-import type { LrsMetrics } from "../metrics.ts";
-import type { Logger } from "../logger.ts";
-import type { PgListener } from "../sse/pg-listener.ts";
+import type { Pool } from 'pg';
+import type { LrsMetrics } from '../metrics.ts';
+import type { Logger } from '../logger.ts';
+import type { PgListener } from '../sse/pg-listener.ts';
 
 export interface AdminSession {
   accountId: string;

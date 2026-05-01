@@ -10,9 +10,9 @@
  *   XAPI_RATE_LIMIT_MAX    — max requests per window (default 300)
  */
 
-import type { MiddlewareHandler } from "hono";
-import type { HonoEnv } from "../hono-env.ts";
-import { resolveClientIp } from "../helpers/client-ip.ts";
+import type { MiddlewareHandler } from 'hono';
+import type { HonoEnv } from '../hono-env.ts';
+import { resolveClientIp } from '../helpers/client-ip.ts';
 
 export interface RateLimitConfig {
   /** Window size in seconds */
@@ -42,7 +42,7 @@ class SlidingWindowLimiter {
     // Prune stale keys every 5 minutes to prevent unbounded memory growth
     this.pruneTimer = setInterval(() => this.pruneStaleKeys(), 5 * 60 * 1000);
     // Don't prevent process exit
-    if (this.pruneTimer && typeof this.pruneTimer === "object" && "unref" in this.pruneTimer) {
+    if (this.pruneTimer && typeof this.pruneTimer === 'object' && 'unref' in this.pruneTimer) {
       this.pruneTimer.unref();
     }
   }
@@ -91,7 +91,7 @@ class SlidingWindowLimiter {
 }
 
 /** Paths exempt from rate limiting. */
-const EXEMPT_PATHS = new Set(["/xapi/about"]);
+const EXEMPT_PATHS = new Set(['/xapi/about']);
 
 /**
  * Hono middleware that enforces per-identity rate limits on xAPI endpoints.
@@ -105,20 +105,20 @@ export function rateLimitMiddleware(config: RateLimitConfig): MiddlewareHandler<
     }
 
     // Key: credential ID > JWT sub > client IP
-    const auth = c.get("auth") as HonoEnv["Variables"]["auth"] | undefined;
+    const auth = c.get('auth') as HonoEnv['Variables']['auth'] | undefined;
     let key: string;
-    if (auth?.type === "basic") {
+    if (auth?.type === 'basic') {
       key = `cred:${auth.payload.credentialId}`;
-    } else if (auth?.type === "jwt") {
+    } else if (auth?.type === 'jwt') {
       key = `jwt:${auth.payload.sub}`;
     } else {
-      key = `ip:${resolveClientIp(c.req.header("x-forwarded-for"), config.trustedProxyHops)}`;
+      key = `ip:${resolveClientIp(c.req.header('x-forwarded-for'), config.trustedProxyHops)}`;
     }
 
     const result = limiter.check(key);
     if (result.limited) {
-      c.header("Retry-After", String(result.retryAfterSeconds));
-      return c.json({ error: "Rate limit exceeded" }, 429);
+      c.header('Retry-After', String(result.retryAfterSeconds));
+      return c.json({ error: 'Rate limit exceeded' }, 429);
     }
 
     return next();

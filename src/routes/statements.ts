@@ -3,23 +3,23 @@
  * POST/PUT/GET /xapi/statements
  */
 
-import { OpenAPIHono } from "@hono/zod-openapi";
-import type { HonoEnv } from "../hono-env.ts";
-import { HttpError, withClient } from "../db.ts";
+import { OpenAPIHono } from '@hono/zod-openapi';
+import type { HonoEnv } from '../hono-env.ts';
+import { HttpError, withClient } from '../db.ts';
 import {
   insertStatement,
   insertStatements,
   getStatementById,
   queryStatements,
   getConsistentThrough,
-} from "../repositories/statements.ts";
-import { insertAttachment } from "../repositories/attachments.ts";
-import { canonicalAgentIfi, validateSince, validateRegistration } from "../helpers/agent.ts";
-import { agentFromAuth, hasOnlyMineScope } from "../helpers/auth-agent.ts";
-import { enrichStatement, formatStatement } from "../helpers/enrichment.ts";
-import { validateStatement } from "../xapi/statement-validator.ts";
-import { statementsMatch } from "../xapi/statement-compare.ts";
-import { buildMultipartResponse } from "../xapi/multipart.ts";
+} from '../repositories/statements.ts';
+import { insertAttachment } from '../repositories/attachments.ts';
+import { canonicalAgentIfi, validateSince, validateRegistration } from '../helpers/agent.ts';
+import { agentFromAuth, hasOnlyMineScope } from '../helpers/auth-agent.ts';
+import { enrichStatement, formatStatement } from '../helpers/enrichment.ts';
+import { validateStatement } from '../xapi/statement-validator.ts';
+import { statementsMatch } from '../xapi/statement-compare.ts';
+import { buildMultipartResponse } from '../xapi/multipart.ts';
 import {
   postStatementsRoute,
   putStatementRoute,
@@ -32,7 +32,7 @@ import {
   collectAttachmentParts,
   collectAttachmentPartsFromList,
   VOIDED_VERB_ID,
-} from "./statement-helpers.ts";
+} from './statement-helpers.ts';
 
 // ============================================================================
 // Route app
@@ -56,7 +56,7 @@ export function createStatementsApp() {
     for (const raw of rawArray) {
       const result = validateStatement(raw);
       if (!result.valid) {
-        throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join("; "));
+        throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
       }
       validated.push(result.statement as unknown as Record<string, unknown>);
     }
@@ -76,14 +76,14 @@ export function createStatementsApp() {
         }
       }
 
-      metrics.statementsReceived.add(validated.length, { method: "POST" });
+      metrics.statementsReceived.add(validated.length, { method: 'POST' });
       const results = await insertStatements(client, validated, authority);
 
       for (let i = 0; i < results.length; i++) {
         if (!results[i].inserted) {
           const existing = await getStatementById(client, validated[i].id as string);
           if (existing && !statementsMatch(existing.payload, validated[i])) {
-            throw new HttpError(409, "Statement already exists with different content");
+            throw new HttpError(409, 'Statement already exists with different content');
           }
         }
       }
@@ -119,7 +119,7 @@ export function createStatementsApp() {
     const deps = c.var.deps;
     const auth = c.var.auth;
     const { pool, metrics } = deps;
-    const statementId = c.req.query("statementId")!;
+    const statementId = c.req.query('statementId')!;
     const attachmentParts = c.var.attachmentParts;
 
     const raw = (c.var.parsedBody ?? {}) as Record<string, unknown>;
@@ -127,10 +127,7 @@ export function createStatementsApp() {
 
     const validationResult = validateStatement(raw);
     if (!validationResult.valid) {
-      throw new HttpError(
-        400,
-        validationResult.errors.map((e) => `${e.path}: ${e.message}`).join("; "),
-      );
+      throw new HttpError(400, validationResult.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
     }
     const stmt = validationResult.statement as unknown as Record<string, unknown>;
 
@@ -139,19 +136,19 @@ export function createStatementsApp() {
     }
 
     if (stmt.id !== statementId) {
-      throw new HttpError(409, "Statement id does not match statementId parameter");
+      throw new HttpError(409, 'Statement id does not match statementId parameter');
     }
 
     const verbId = (stmt.verb as Record<string, unknown>)?.id as string | undefined;
     const authority = authorityFromAuth(auth);
 
     await withClient(pool, metrics, async (client) => {
-      metrics.statementsReceived.add(1, { method: "PUT" });
+      metrics.statementsReceived.add(1, { method: 'PUT' });
 
       const existing = await getStatementById(client, statementId);
       if (existing) {
         if (!statementsMatch(existing.payload, stmt)) {
-          throw new HttpError(409, "Statement already exists with different content");
+          throw new HttpError(409, 'Statement already exists with different content');
         }
         return;
       }
@@ -186,14 +183,12 @@ export function createStatementsApp() {
 
   // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements responses
   // (including errors). Must run before the route handler so it applies to error responses.
-  app.use("/statements", async (c, next) => {
-    if (c.req.method !== "GET" && c.req.method !== "HEAD") return next();
+  app.use('/statements', async (c, next) => {
+    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') return next();
     const { pool, metrics } = c.var.deps;
-    const consistentThrough = await withClient(pool, metrics, (client) =>
-      getConsistentThrough(client),
-    );
+    const consistentThrough = await withClient(pool, metrics, (client) => getConsistentThrough(client));
     await next();
-    c.res.headers.set("X-Experience-API-Consistent-Through", consistentThrough);
+    c.res.headers.set('X-Experience-API-Consistent-Through', consistentThrough);
   });
 
   // GET /xapi/statements
@@ -201,24 +196,24 @@ export function createStatementsApp() {
     const deps = c.var.deps;
     const { pool, metrics } = deps;
 
-    const statementId = c.req.query("statementId");
-    const voidedStatementId = c.req.query("voidedStatementId");
-    const agent = c.req.query("agent");
-    const verb = c.req.query("verb");
-    const activity = c.req.query("activity");
-    const registration = c.req.query("registration");
-    const related_activities = c.req.query("related_activities") === "true";
-    const related_agents = c.req.query("related_agents") === "true";
-    const format = c.req.query("format");
-    const since = c.req.query("since");
-    const until = c.req.query("until");
-    const limitStr = c.req.query("limit");
+    const statementId = c.req.query('statementId');
+    const voidedStatementId = c.req.query('voidedStatementId');
+    const agent = c.req.query('agent');
+    const verb = c.req.query('verb');
+    const activity = c.req.query('activity');
+    const registration = c.req.query('registration');
+    const related_activities = c.req.query('related_activities') === 'true';
+    const related_agents = c.req.query('related_agents') === 'true';
+    const format = c.req.query('format');
+    const since = c.req.query('since');
+    const until = c.req.query('until');
+    const limitStr = c.req.query('limit');
     const limit = limitStr ? Number(limitStr) : undefined;
     if (limit !== undefined && (!Number.isFinite(limit) || limit < 1)) {
-      throw new HttpError(400, "limit must be a positive integer");
+      throw new HttpError(400, 'limit must be a positive integer');
     }
-    const ascending = c.req.query("ascending") === "true";
-    const attachments = c.req.query("attachments") === "true";
+    const ascending = c.req.query('ascending') === 'true';
+    const attachments = c.req.query('attachments') === 'true';
 
     // Reject unknown query params
     const url = new URL(c.req.url);
@@ -234,7 +229,7 @@ export function createStatementsApp() {
     if (agent) canonicalAgentIfi(agent);
 
     if (statementId && voidedStatementId) {
-      throw new HttpError(400, "Cannot use both statementId and voidedStatementId");
+      throw new HttpError(400, 'Cannot use both statementId and voidedStatementId');
     }
 
     // Enforce statements/read/mine: restrict to authenticated agent's own statements
@@ -247,13 +242,9 @@ export function createStatementsApp() {
       effectiveRelatedAgents = true;
     }
 
-    const effectiveFormat = format ?? "exact";
-    if (
-      effectiveFormat !== "exact" &&
-      effectiveFormat !== "ids" &&
-      effectiveFormat !== "canonical"
-    ) {
-      throw new HttpError(400, "format must be one of: ids, exact, canonical");
+    const effectiveFormat = format ?? 'exact';
+    if (effectiveFormat !== 'exact' && effectiveFormat !== 'ids' && effectiveFormat !== 'canonical') {
+      throw new HttpError(400, 'format must be one of: ids, exact, canonical');
     }
 
     if (statementId || voidedStatementId) {
@@ -262,21 +253,18 @@ export function createStatementsApp() {
         verb !== undefined ||
         activity !== undefined ||
         registration !== undefined ||
-        c.req.query("related_activities") !== undefined ||
-        c.req.query("related_agents") !== undefined ||
+        c.req.query('related_activities') !== undefined ||
+        c.req.query('related_agents') !== undefined ||
         since !== undefined ||
         until !== undefined ||
         limitStr !== undefined ||
-        c.req.query("ascending") !== undefined
+        c.req.query('ascending') !== undefined
       ) {
-        throw new HttpError(
-          400,
-          "Cannot combine statementId or voidedStatementId with other filter parameters",
-        );
+        throw new HttpError(400, 'Cannot combine statementId or voidedStatementId with other filter parameters');
       }
     }
 
-    const acceptLanguage = c.req.header("accept-language");
+    const acceptLanguage = c.req.header('accept-language');
 
     return withClient(pool, metrics, async (client) => {
       const singleId = statementId ?? voidedStatementId;
@@ -284,10 +272,7 @@ export function createStatementsApp() {
         const wantVoided = !!voidedStatementId;
         const row = await getStatementById(client, singleId);
         if (!row || row.is_voided !== wantVoided) {
-          throw new HttpError(
-            404,
-            wantVoided ? "Voided statement not found" : "Statement not found",
-          );
+          throw new HttpError(404, wantVoided ? 'Voided statement not found' : 'Statement not found');
         }
         if (mineOnly) {
           assertStatementBelongsToAgent(row.payload, auth);
@@ -313,31 +298,29 @@ export function createStatementsApp() {
         ascending,
       });
 
-      const statements = rows.map((row) =>
-        formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage),
-      );
-      const result: { statements: unknown[]; more: string } = { statements, more: "" };
+      const statements = rows.map((row) => formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage));
+      const result: { statements: unknown[]; more: string } = { statements, more: '' };
 
       if (hasMore) {
         const lastRow = rows.at(-1)!;
         const moreParams = new URLSearchParams();
-        if (agent) moreParams.set("agent", agent);
-        if (verb) moreParams.set("verb", verb);
-        if (activity) moreParams.set("activity", activity);
-        if (registration) moreParams.set("registration", registration);
-        if (related_activities) moreParams.set("related_activities", "true");
-        if (related_agents) moreParams.set("related_agents", "true");
-        if (limit) moreParams.set("limit", limit.toString());
-        if (effectiveFormat !== "exact") moreParams.set("format", effectiveFormat);
+        if (agent) moreParams.set('agent', agent);
+        if (verb) moreParams.set('verb', verb);
+        if (activity) moreParams.set('activity', activity);
+        if (registration) moreParams.set('registration', registration);
+        if (related_activities) moreParams.set('related_activities', 'true');
+        if (related_agents) moreParams.set('related_agents', 'true');
+        if (limit) moreParams.set('limit', limit.toString());
+        if (effectiveFormat !== 'exact') moreParams.set('format', effectiveFormat);
 
         const lastStored = lastRow.payload.stored as string;
         if (ascending) {
-          moreParams.set("ascending", "true");
-          moreParams.set("since", lastStored);
-          if (until) moreParams.set("until", until);
+          moreParams.set('ascending', 'true');
+          moreParams.set('since', lastStored);
+          if (until) moreParams.set('until', until);
         } else {
-          moreParams.set("until", lastStored);
-          if (since) moreParams.set("since", since);
+          moreParams.set('until', lastStored);
+          if (since) moreParams.set('since', since);
         }
 
         result.more = `/xapi/statements?${moreParams.toString()}`;

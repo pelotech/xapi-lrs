@@ -4,7 +4,7 @@
  * Creates the lrsql-compatible schema in the test database.
  */
 
-import { createTestPool, applyLrsqlSchema, truncateLrsqlTables } from "./test-db.ts";
+import { createTestPool, applyLrsqlSchema, truncateLrsqlTables } from './test-db.ts';
 
 export async function setup(): Promise<void> {
   const pool = createTestPool();

@@ -2,14 +2,14 @@
  * xAPI Agent Repository — queries lrsql's actor table directly.
  */
 
-import type { PoolClient } from "pg";
+import type { PoolClient } from 'pg';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface PersonObject {
-  objectType: "Person";
+  objectType: 'Person';
   name?: string[];
   mbox?: string[];
   mbox_sha1sum?: string[];
@@ -27,37 +27,34 @@ export interface PersonObject {
  * parse IFI fields from it. Names are extracted from all statement payloads
  * where this agent appears, since the actor table only keeps the latest name.
  */
-export async function getPersonObject(
-  client: PoolClient,
-  ifi: string,
-): Promise<PersonObject | null> {
+export async function getPersonObject(client: PoolClient, ifi: string): Promise<PersonObject | null> {
   const result = await client.query<{ actor_ifi: string; actor_type: string }>({
-    name: "get_person_by_ifi",
+    name: 'get_person_by_ifi',
     text: `SELECT actor_ifi, actor_type FROM actor WHERE actor_ifi = $1`,
     values: [ifi],
   });
 
   if (result.rows.length === 0) return null;
 
-  const person: PersonObject = { objectType: "Person" };
+  const person: PersonObject = { objectType: 'Person' };
 
   // Parse IFI back into xAPI fields
   // lrsql format: "mbox::mailto:...", "mbox_sha1sum::...", "openid::...", "account::name@homePage"
   for (const row of result.rows) {
     const actorIfi = row.actor_ifi;
-    if (actorIfi.startsWith("mbox::")) {
+    if (actorIfi.startsWith('mbox::')) {
       if (!person.mbox) person.mbox = [];
       person.mbox.push(actorIfi.slice(6));
-    } else if (actorIfi.startsWith("mbox_sha1sum::")) {
+    } else if (actorIfi.startsWith('mbox_sha1sum::')) {
       if (!person.mbox_sha1sum) person.mbox_sha1sum = [];
       person.mbox_sha1sum.push(actorIfi.slice(14));
-    } else if (actorIfi.startsWith("openid::")) {
+    } else if (actorIfi.startsWith('openid::')) {
       if (!person.openid) person.openid = [];
       person.openid.push(actorIfi.slice(8));
-    } else if (actorIfi.startsWith("account::")) {
+    } else if (actorIfi.startsWith('account::')) {
       if (!person.account) person.account = [];
       const rest = actorIfi.slice(9);
-      const atIdx = rest.indexOf("@");
+      const atIdx = rest.indexOf('@');
       if (atIdx >= 0) {
         person.account.push({
           name: rest.slice(0, atIdx),
@@ -71,7 +68,7 @@ export async function getPersonObject(
   // We query statement payloads rather than the actor table because the actor table
   // deduplicates by IFI and only keeps the last payload (ON CONFLICT DO UPDATE).
   const nameResult = await client.query<{ name: string }>({
-    name: "get_actor_names_from_stmts",
+    name: 'get_actor_names_from_stmts',
     text: `SELECT DISTINCT xs.payload -> 'actor' ->> 'name' AS name
            FROM statement_to_actor sta
            JOIN xapi_statement xs ON xs.statement_id = sta.statement_id

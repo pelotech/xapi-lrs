@@ -9,8 +9,8 @@
  * Reference: xAPI 1.0.3 Communication spec §1.5.2
  */
 
-import { randomUUID } from "node:crypto";
-import type { Readable } from "node:stream";
+import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
 
 // ============================================================================
 // Types
@@ -74,7 +74,7 @@ export function parseMultipartMixed(body: Buffer, boundary: string): MultipartPa
   }
 
   if (positions.length < 2) {
-    throw new Error("Malformed multipart body: insufficient boundary markers");
+    throw new Error('Malformed multipart body: insufficient boundary markers');
   }
 
   // Extract parts between boundaries
@@ -96,38 +96,36 @@ export function parseMultipartMixed(body: Buffer, boundary: string): MultipartPa
   }
 
   if (parts.length === 0) {
-    throw new Error("Malformed multipart body: no parts found");
+    throw new Error('Malformed multipart body: no parts found');
   }
 
   // Parse first part — must be application/json
   const firstPart = parsePartHeadersAndBody(parts[0]);
-  const firstPartCT = firstPart.headers.get("content-type") ?? "";
-  if (!firstPartCT.includes("application/json")) {
-    throw new Error("First part of multipart/mixed must have Content-Type application/json");
+  const firstPartCT = firstPart.headers.get('content-type') ?? '';
+  if (!firstPartCT.includes('application/json')) {
+    throw new Error('First part of multipart/mixed must have Content-Type application/json');
   }
   let json: unknown;
   try {
-    json = JSON.parse(firstPart.body.toString("utf8"));
+    json = JSON.parse(firstPart.body.toString('utf8'));
   } catch {
-    throw new Error("First part of multipart/mixed must be valid JSON");
+    throw new Error('First part of multipart/mixed must be valid JSON');
   }
 
   // Parse subsequent parts — attachment binaries
   const attachments = new Map<string, MultipartAttachmentPart>();
   for (let i = 1; i < parts.length; i++) {
     const part = parsePartHeadersAndBody(parts[i]);
-    const sha2 = part.headers.get("x-experience-api-hash");
+    const sha2 = part.headers.get('x-experience-api-hash');
     if (!sha2) {
       throw new Error(`Attachment part ${i + 1} missing X-Experience-API-Hash header`);
     }
     // xAPI 1.0.3 §1.5.2: attachment parts MUST have Content-Transfer-Encoding: binary
-    const encoding = part.headers.get("content-transfer-encoding");
-    if (encoding !== "binary") {
+    const encoding = part.headers.get('content-transfer-encoding');
+    if (encoding !== 'binary') {
       throw new Error(`Attachment part ${i + 1} must have Content-Transfer-Encoding: binary`);
     }
-    const contentType = sanitizeAttachmentContentType(
-      part.headers.get("content-type") ?? "application/octet-stream",
-    );
+    const contentType = sanitizeAttachmentContentType(part.headers.get('content-type') ?? 'application/octet-stream');
 
     attachments.set(sha2, { sha2, contentType, data: part.body });
   }
@@ -149,7 +147,7 @@ function parsePartHeadersAndBody(part: Buffer): { headers: Map<string, string>; 
     return { headers: new Map(), body: part.subarray(start) };
   }
 
-  const headerSection = part.subarray(start, headerEnd).toString("utf8");
+  const headerSection = part.subarray(start, headerEnd).toString('utf8');
   const bodyStart = part[headerEnd] === 0x0d ? headerEnd + 4 : headerEnd + 2; // skip CRLFCRLF or LFLF
   // Strip trailing CRLF from body (before next boundary)
   let bodyEnd = part.length;
@@ -162,7 +160,7 @@ function parsePartHeadersAndBody(part: Buffer): { headers: Map<string, string>; 
 
   const headers = new Map<string, string>();
   for (const line of headerSection.split(/\r?\n/)) {
-    const colonIdx = line.indexOf(":");
+    const colonIdx = line.indexOf(':');
     if (colonIdx > 0) {
       headers.set(line.slice(0, colonIdx).trim().toLowerCase(), line.slice(colonIdx + 1).trim());
     }
@@ -174,13 +172,7 @@ function parsePartHeadersAndBody(part: Buffer): { headers: Map<string, string>; 
 /** Find the position of \r\n\r\n or \n\n in a buffer starting from offset */
 function findDoubleNewline(buf: Buffer, from: number): number {
   for (let i = from; i < buf.length - 1; i++) {
-    if (
-      buf[i] === 0x0d &&
-      buf[i + 1] === 0x0a &&
-      i + 3 < buf.length &&
-      buf[i + 2] === 0x0d &&
-      buf[i + 3] === 0x0a
-    ) {
+    if (buf[i] === 0x0d && buf[i + 1] === 0x0a && i + 3 < buf.length && buf[i + 2] === 0x0d && buf[i + 3] === 0x0a) {
       return i;
     }
     if (buf[i] === 0x0a && buf[i + 1] === 0x0a) {
@@ -196,11 +188,11 @@ function findDoubleNewline(buf: Buffer, from: number): number {
 
 /** Content types that could enable XSS if served inline */
 const DANGEROUS_CONTENT_TYPES = new Set([
-  "text/html",
-  "text/xml",
-  "application/xhtml+xml",
-  "image/svg+xml",
-  "text/xsl",
+  'text/html',
+  'text/xml',
+  'application/xhtml+xml',
+  'image/svg+xml',
+  'text/xsl',
 ]);
 
 /**
@@ -208,9 +200,9 @@ const DANGEROUS_CONTENT_TYPES = new Set([
  * Replaces dangerous types (e.g. text/html) with application/octet-stream.
  */
 function sanitizeAttachmentContentType(contentType: string): string {
-  const base = contentType.split(";")[0].trim().toLowerCase();
+  const base = contentType.split(';')[0].trim().toLowerCase();
   if (DANGEROUS_CONTENT_TYPES.has(base)) {
-    return "application/octet-stream";
+    return 'application/octet-stream';
   }
   return contentType;
 }
@@ -241,7 +233,7 @@ export async function buildMultipartResponse(
   // Part 1: JSON
   chunks.push(encoder.encode(`--${boundary}\r\nContent-Type: application/json\r\n\r\n`));
   chunks.push(encoder.encode(JSON.stringify(jsonBody)));
-  chunks.push(encoder.encode("\r\n"));
+  chunks.push(encoder.encode('\r\n'));
 
   // Subsequent parts: attachment binaries
   for (const part of attachmentParts) {
@@ -254,13 +246,13 @@ export async function buildMultipartResponse(
     // Consume the Readable stream into a buffer
     const streamChunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
-      part.stream.on("data", (chunk: Buffer) => streamChunks.push(chunk));
-      part.stream.on("end", resolve);
-      part.stream.on("error", reject);
+      part.stream.on('data', (chunk: Buffer) => streamChunks.push(chunk));
+      part.stream.on('end', resolve);
+      part.stream.on('error', reject);
     });
     chunks.push(Buffer.concat(streamChunks));
 
-    chunks.push(encoder.encode("\r\n"));
+    chunks.push(encoder.encode('\r\n'));
   }
 
   // Closing boundary
@@ -278,7 +270,7 @@ export async function buildMultipartResponse(
   return new globalThis.Response(body, {
     status: statusCode,
     headers: {
-      "Content-Type": `multipart/mixed; boundary=${boundary}`,
+      'Content-Type': `multipart/mixed; boundary=${boundary}`,
     },
   });
 }
