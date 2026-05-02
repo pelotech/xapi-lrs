@@ -49,6 +49,7 @@ DATABASE_DRIVER=pglite PGLITE_DATA_DIR=./data/pglite pnpm dev
 The schema is applied automatically on first start. The admin account is bootstrapped as described in [Configuration](#configuration) below.
 
 > **Limitations of PGlite mode:**
+>
 > - Single connection — concurrent transactions are serialized. Suitable for local development and low-concurrency workloads; not recommended for production.
 > - SSE uses in-process delivery (`db.listen`) instead of cross-process `LISTEN/NOTIFY` — works correctly within a single Node.js process.
 > - `AUTO_MIGRATE` and `pnpm db:migrate` are ignored in PGlite mode (migrations are applied directly from committed SQL files).
