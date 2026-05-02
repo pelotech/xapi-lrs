@@ -2,7 +2,8 @@
  * Admin document management queries (state, activity-profile, agent-profile).
  */
 
-import type { Pool, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbPool } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
 
@@ -126,7 +127,7 @@ export interface DocumentDetail {
 // List functions
 // ============================================================================
 
-export async function listStateDocuments(pool: Pool, metrics: LrsMetrics, limit: number, offset: number) {
+export async function listStateDocuments(pool: DbPool, metrics: LrsMetrics, limit: number, offset: number) {
   const [rows, count] = await Promise.all([
     poolQuery<StateDocumentListRow>(pool, metrics, {
       ...LIST_STATE_DOCUMENTS,
@@ -137,7 +138,7 @@ export async function listStateDocuments(pool: Pool, metrics: LrsMetrics, limit:
   return { rows: rows.rows, total: count.rows[0]?.count ?? 0 };
 }
 
-export async function listActivityProfiles(pool: Pool, metrics: LrsMetrics, limit: number, offset: number) {
+export async function listActivityProfiles(pool: DbPool, metrics: LrsMetrics, limit: number, offset: number) {
   const [rows, count] = await Promise.all([
     poolQuery<ActivityProfileListRow>(pool, metrics, {
       ...LIST_ACTIVITY_PROFILES,
@@ -148,7 +149,7 @@ export async function listActivityProfiles(pool: Pool, metrics: LrsMetrics, limi
   return { rows: rows.rows, total: count.rows[0]?.count ?? 0 };
 }
 
-export async function listAgentProfiles(pool: Pool, metrics: LrsMetrics, limit: number, offset: number) {
+export async function listAgentProfiles(pool: DbPool, metrics: LrsMetrics, limit: number, offset: number) {
   const [rows, count] = await Promise.all([
     poolQuery<AgentProfileListRow>(pool, metrics, {
       ...LIST_AGENT_PROFILES,
@@ -164,7 +165,7 @@ export async function listAgentProfiles(pool: Pool, metrics: LrsMetrics, limit: 
 // ============================================================================
 
 export async function getStateDocumentById(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   id: string,
 ): Promise<DocumentDetail | null> {
@@ -176,7 +177,7 @@ export async function getStateDocumentById(
 }
 
 export async function getActivityProfileById(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   id: string,
 ): Promise<DocumentDetail | null> {
@@ -187,7 +188,11 @@ export async function getActivityProfileById(
   return result.rows[0] ?? null;
 }
 
-export async function getAgentProfileById(pool: Pool, metrics: LrsMetrics, id: string): Promise<DocumentDetail | null> {
+export async function getAgentProfileById(
+  pool: DbPool,
+  metrics: LrsMetrics,
+  id: string,
+): Promise<DocumentDetail | null> {
   const result = await poolQuery<DocumentDetail>(pool, metrics, {
     ...GET_AGENT_PROFILE_BY_ID,
     values: [id],
@@ -199,20 +204,20 @@ export async function getAgentProfileById(pool: Pool, metrics: LrsMetrics, id: s
 // Delete
 // ============================================================================
 
-export async function deleteStateDocumentById(pool: Pool, metrics: LrsMetrics, id: string): Promise<void> {
+export async function deleteStateDocumentById(pool: DbPool, metrics: LrsMetrics, id: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_STATE_DOCUMENT_BY_ID, values: [id] });
 }
 
-export async function deleteActivityProfileById(pool: Pool, metrics: LrsMetrics, id: string): Promise<void> {
+export async function deleteActivityProfileById(pool: DbPool, metrics: LrsMetrics, id: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_ACTIVITY_PROFILE_BY_ID, values: [id] });
 }
 
-export async function deleteAgentProfileById(pool: Pool, metrics: LrsMetrics, id: string): Promise<void> {
+export async function deleteAgentProfileById(pool: DbPool, metrics: LrsMetrics, id: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_AGENT_PROFILE_BY_ID, values: [id] });
 }
 
 export async function bulkDeleteStateDocuments(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   activityIri: string,
   agentIfi: string,

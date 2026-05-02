@@ -2,7 +2,8 @@
  * Admin dashboard queries.
  */
 
-import type { Pool, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbPool } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
 
@@ -56,7 +57,7 @@ export interface RecentStatement {
   stored: Date;
 }
 
-export async function getDashboardCounts(pool: Pool, metrics: LrsMetrics): Promise<DashboardCounts> {
+export async function getDashboardCounts(pool: DbPool, metrics: LrsMetrics): Promise<DashboardCounts> {
   const [total, h24, d7, creds, accts] = await Promise.all([
     poolQuery<{ count: number }>(pool, metrics, COUNT_STATEMENTS),
     poolQuery<{ count: number }>(pool, metrics, COUNT_STATEMENTS_24H),
@@ -74,7 +75,7 @@ export async function getDashboardCounts(pool: Pool, metrics: LrsMetrics): Promi
   };
 }
 
-export async function getRecentStatements(pool: Pool, metrics: LrsMetrics): Promise<RecentStatement[]> {
+export async function getRecentStatements(pool: DbPool, metrics: LrsMetrics): Promise<RecentStatement[]> {
   const result = await poolQuery<RecentStatement>(pool, metrics, RECENT_STATEMENTS);
   return result.rows;
 }

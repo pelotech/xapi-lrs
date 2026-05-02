@@ -7,7 +7,8 @@
  * Void:   UPDATE xapi_statement SET is_voided = true WHERE statement_id = $1.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbClient } from '../db.ts';
 import { HttpError } from '../db.ts';
 import { squuid, squuidMin } from '../helpers/squuid.ts';
 import { canonicalAgentIfi } from '../helpers/agent.ts';
@@ -116,7 +117,7 @@ export interface InsertStatementResult {
 }
 
 export async function insertStatement(
-  client: PoolClient,
+  client: DbClient,
   statement: Record<string, unknown>,
   authority: Record<string, unknown>,
 ): Promise<InsertStatementResult> {
@@ -176,7 +177,7 @@ export async function insertStatement(
 }
 
 export async function insertStatements(
-  client: PoolClient,
+  client: DbClient,
   statements: Record<string, unknown>[],
   authority: Record<string, unknown>,
 ): Promise<InsertStatementResult[]> {
@@ -197,7 +198,7 @@ const SELECT_STATEMENT_BY_ID = {
          FROM xapi_statement WHERE statement_id = $1`,
 } as const satisfies Query;
 
-export async function getStatementById(client: PoolClient, statementId: string): Promise<XapiStatementRow | undefined> {
+export async function getStatementById(client: DbClient, statementId: string): Promise<XapiStatementRow | undefined> {
   const result = await client.query({ ...SELECT_STATEMENT_BY_ID, values: [statementId] });
   const row = result.rows[0];
   if (!row) return undefined;
@@ -219,7 +220,7 @@ const VOID_STATEMENT = {
   text: `UPDATE xapi_statement SET is_voided = true WHERE statement_id = $1 AND is_voided = false`,
 } as const satisfies Query;
 
-export async function voidStatement(client: PoolClient, statementId: string): Promise<boolean> {
+export async function voidStatement(client: DbClient, statementId: string): Promise<boolean> {
   const result = await client.query({ ...VOID_STATEMENT, values: [statementId] });
   return (result.rowCount ?? 0) > 0;
 }
@@ -233,7 +234,7 @@ const SELECT_CONSISTENT_THROUGH = {
   text: `SELECT now() AS consistent_through`,
 } as const satisfies Query;
 
-export async function getConsistentThrough(client: PoolClient): Promise<string> {
+export async function getConsistentThrough(client: DbClient): Promise<string> {
   const result = await client.query(SELECT_CONSISTENT_THROUGH);
   const row = result.rows[0] as { consistent_through: Date };
   return row.consistent_through.toISOString();
@@ -243,7 +244,7 @@ export async function getConsistentThrough(client: PoolClient): Promise<string> 
 // Activity Object (merged definition)
 // ============================================================================
 
-export async function getActivityDefinition(client: PoolClient, activityIri: string): Promise<Record<string, unknown>> {
+export async function getActivityDefinition(client: DbClient, activityIri: string): Promise<Record<string, unknown>> {
   // Query all statement payloads that reference this activity as their object,
   // so we can merge definitions from multiple statements.
   const result = await client.query({
@@ -300,7 +301,7 @@ export async function getActivityDefinition(client: PoolClient, activityIri: str
 // ============================================================================
 
 export async function queryStatements(
-  client: PoolClient,
+  client: DbClient,
   params: StatementQueryParams,
 ): Promise<{ rows: XapiStatementRow[]; hasMore: boolean }> {
   // Separate content filters (verb/agent/activity/registration) from time filters

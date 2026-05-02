@@ -10,11 +10,13 @@ import type { LrsConfig } from './config.ts';
 import { createLogger } from './logger.ts';
 import { createMetrics } from './metrics.ts';
 import { createPool } from './db.ts';
+import type { DbPool } from './db.ts';
 import { JwksCache, discoverJwksUri } from './auth/jwt.ts';
 import type { JwtConfig } from './auth/jwt.ts';
 import { randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { PgListener } from './sse/pg-listener.ts';
+import type { Listener } from './sse/pg-listener.ts';
 import { createApp } from './app.ts';
 import {
   hasAnyAdminAccount,
@@ -70,28 +72,43 @@ async function main(): Promise<void> {
     );
   }
 
-  // Optional: run graphile-migrate before starting
-  if (config.autoMigrate) {
-    const user = encodeURIComponent(config.pgUser);
-    const pass = encodeURIComponent(config.pgPassword);
-    const connectionString =
-      config.databaseUrl ?? `postgres://${user}:${pass}@${config.pgHost}:${config.pgPort}/${config.pgDatabase}`;
-    logger.info('AUTO_MIGRATE=true — running migrations');
-    await runMigrations(connectionString);
-    logger.info('Migrations complete');
-  }
-
   // Phase 1: concurrent initialization
   const jwksCache = new JwksCache();
-  const pgListener = new PgListener(config, logger);
-
   const t0 = performance.now();
 
-  const [pool, jwtConfig] = await Promise.all([
-    createPool(config, logger),
-    initJwt(config, logger, jwksCache),
-    pgListener.start(),
-  ]);
+  let pool: DbPool;
+  let listener: Listener;
+  let jwtConfig: JwtConfig | null;
+
+  if (config.databaseDriver === 'pglite') {
+    const { createPgliteBackend } = await import('./db-pglite.ts');
+    const { LocalListener } = await import('./sse/local-listener.ts');
+    logger.info({ dataDir: config.pgliteDataDir ?? 'in-memory' }, 'Using PGlite database driver');
+    const [backend, jwt] = await Promise.all([createPgliteBackend(config), initJwt(config, logger, jwksCache)]);
+    pool = backend.pool;
+    listener = new LocalListener(backend.db);
+    jwtConfig = jwt;
+  } else {
+    // Optional: run graphile-migrate before starting (pg only)
+    if (config.autoMigrate) {
+      const user = encodeURIComponent(config.pgUser);
+      const pass = encodeURIComponent(config.pgPassword);
+      const connectionString =
+        config.databaseUrl ?? `postgres://${user}:${pass}@${config.pgHost}:${config.pgPort}/${config.pgDatabase}`;
+      logger.info('AUTO_MIGRATE=true — running migrations');
+      await runMigrations(connectionString);
+      logger.info('Migrations complete');
+    }
+    const pgListener = new PgListener(config, logger);
+    listener = pgListener;
+    const [pgPool, jwt] = await Promise.all([
+      createPool(config, logger),
+      initJwt(config, logger, jwksCache),
+      pgListener.start(),
+    ]);
+    pool = pgPool;
+    jwtConfig = jwt;
+  }
 
   const tParallel = performance.now();
 
@@ -114,7 +131,7 @@ async function main(): Promise<void> {
     jwtConfig,
     metrics,
     logger,
-    pgListener,
+    pgListener: listener,
     sessionSecret,
     startedAt,
   });
@@ -142,7 +159,7 @@ async function main(): Promise<void> {
   adminApp.get('/healthz', (c) => c.text('ok'));
   adminApp.get('/ready', async (c) => {
     try {
-      await pool.query('SELECT 1');
+      await pool.query({ text: 'SELECT 1' });
       return c.text('ok');
     } catch {
       return c.text('database unavailable', 503);
@@ -173,7 +190,7 @@ async function main(): Promise<void> {
     server.close();
     adminServer.close();
     await metrics.shutdown();
-    await pgListener.stop();
+    await listener.stop();
     await pool.end();
     process.exit(0);
   };

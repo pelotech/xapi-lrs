@@ -1,6 +1,6 @@
 # xapi-lrs
 
-A production-ready, xAPI 1.0.3 conformant Learning Record Store built on [Hono](https://hono.dev) + PostgreSQL.
+A production-ready, xAPI 1.0.3 conformant Learning Record Store built on [Hono](https://hono.dev) + PostgreSQL (or [PGlite](https://pglite.dev) for zero-dependency local use).
 
 ## Features
 
@@ -12,8 +12,11 @@ A production-ready, xAPI 1.0.3 conformant Learning Record Store built on [Hono](
 - Admin UI with dashboard, credential management, and statement browser
 - OpenTelemetry metrics (Prometheus exporter)
 - PostgreSQL with pg_notify for event-driven architecture
+- **PGlite mode**: run with an embedded in-process database — no PostgreSQL required
 
 ## Quick Start
+
+### With PostgreSQL
 
 ```bash
 # Start PostgreSQL
@@ -29,6 +32,27 @@ pnpm db:migrate
 pnpm dev
 ```
 
+### With PGlite (no PostgreSQL required)
+
+PGlite embeds a full PostgreSQL engine in-process via WASM. No external database or Docker needed.
+
+```bash
+pnpm install
+
+# In-memory database (data lost on restart):
+DATABASE_DRIVER=pglite pnpm dev
+
+# Persistent database (data survives restarts):
+DATABASE_DRIVER=pglite PGLITE_DATA_DIR=./data/pglite pnpm dev
+```
+
+The schema is applied automatically on first start. The admin account is bootstrapped as described in [Configuration](#configuration) below.
+
+> **Limitations of PGlite mode:**
+> - Single connection — concurrent transactions are serialized. Suitable for local development and low-concurrency workloads; not recommended for production.
+> - SSE uses in-process delivery (`db.listen`) instead of cross-process `LISTEN/NOTIFY` — works correctly within a single Node.js process.
+> - `AUTO_MIGRATE` and `pnpm db:migrate` are ignored in PGlite mode (migrations are applied directly from committed SQL files).
+
 The LRS will be available at `http://localhost:8081` and the admin server at `http://localhost:8091`.
 
 ## Configuration
@@ -39,6 +63,8 @@ All configuration is via environment variables. See `.env.test` for defaults.
 | ------------------------------- | ----------- | ---------------------------------------------------- |
 | `LRS_PORT` / `PORT`             | `8081`      | xAPI HTTP port                                       |
 | `LRS_ADMIN_PORT` / `ADMIN_PORT` | `8091`      | Admin/health/metrics port                            |
+| `DATABASE_DRIVER`               | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`       |
+| `PGLITE_DATA_DIR`               | (none)      | PGlite data directory; omit for in-memory            |
 | `PGHOST`                        | `localhost` | PostgreSQL host                                      |
 | `PGPORT`                        | `5432`      | PostgreSQL port                                      |
 | `PGDATABASE`                    | `xapi_lrs`  | PostgreSQL database                                  |

@@ -2,7 +2,8 @@
  * xAPI Activity State Repository — lrsql state_document table.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbClient } from '../db.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
@@ -60,7 +61,7 @@ export interface StateDocumentRow {
 // ============================================================================
 
 export async function upsertStateDocument(
-  client: PoolClient,
+  client: DbClient,
   params: {
     stateId: string;
     activityIri: string;
@@ -87,7 +88,7 @@ export async function upsertStateDocument(
 }
 
 export async function getStateDocument(
-  client: PoolClient,
+  client: DbClient,
   params: {
     stateId: string;
     activityIri: string;
@@ -103,7 +104,7 @@ export async function getStateDocument(
 }
 
 export async function listStateIds(
-  client: PoolClient,
+  client: DbClient,
   params: {
     activityIri: string;
     agentIfi: string;
@@ -119,7 +120,7 @@ export async function listStateIds(
 }
 
 export async function deleteStateDocument(
-  client: PoolClient,
+  client: DbClient,
   params: {
     stateId: string;
     activityIri: string;
@@ -134,7 +135,7 @@ export async function deleteStateDocument(
 }
 
 export async function deleteAllStateDocuments(
-  client: PoolClient,
+  client: DbClient,
   params: {
     activityIri: string;
     agentIfi: string;

@@ -98,7 +98,7 @@ export const STATEMENTS_KNOWN_PARAMS = new Set([
 // Helper functions
 // ============================================================================
 
-export async function handleVoiding(client: import('pg').PoolClient, stmt: Record<string, unknown>): Promise<void> {
+export async function handleVoiding(client: import('../db.ts').DbClient, stmt: Record<string, unknown>): Promise<void> {
   const obj = stmt.object as Record<string, unknown> | undefined;
   const targetId = obj?.id as string | undefined;
   const objectType = obj?.objectType as string | undefined;
@@ -194,7 +194,7 @@ export function assertStatementBelongsToAgent(payload: Record<string, unknown>, 
 }
 
 export async function collectAttachmentParts(
-  client: import('pg').PoolClient,
+  client: import('../db.ts').DbClient,
   stmt: unknown,
 ): Promise<ResponseAttachmentPart[]> {
   const parts: ResponseAttachmentPart[] = [];
@@ -214,7 +214,7 @@ export async function collectAttachmentParts(
 }
 
 export async function collectAttachmentPartsFromList(
-  client: import('pg').PoolClient,
+  client: import('../db.ts').DbClient,
   statements: unknown[],
 ): Promise<ResponseAttachmentPart[]> {
   const parts: ResponseAttachmentPart[] = [];

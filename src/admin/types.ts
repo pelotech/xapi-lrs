@@ -2,10 +2,10 @@
  * Admin UI types.
  */
 
-import type { Pool } from 'pg';
+import type { DbPool } from '../db.ts';
 import type { LrsMetrics } from '../metrics.ts';
 import type { Logger } from '../logger.ts';
-import type { PgListener } from '../sse/pg-listener.ts';
+import type { Listener } from '../sse/pg-listener.ts';
 
 export interface AdminSession {
   accountId: string;
@@ -23,10 +23,10 @@ export type AdminEnv = {
 };
 
 export interface AdminDeps {
-  pool: Pool;
+  pool: DbPool;
   metrics: LrsMetrics;
   logger: Logger;
-  pgListener: PgListener;
+  pgListener: Listener;
   sessionSecret: string;
   startedAt: Date;
   trustedProxyHops: number;

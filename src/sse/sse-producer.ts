@@ -5,21 +5,21 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { streamSSE } from 'hono/streaming';
-import type { Pool } from 'pg';
+import type { DbPool } from '../db.ts';
 import type { LrsMetrics } from '../metrics.ts';
 import type { Logger } from '../logger.ts';
 import type { AuthInfo } from '../auth/types.ts';
-import type { PgListener } from './pg-listener.ts';
+import type { Listener } from './pg-listener.ts';
 import { XAPI_NOTIFY_CHANNEL, HEARTBEAT_INTERVAL_MS, buildStatementEvent } from './statement-event.ts';
 import { hasOnlyMineScope, agentIfiFromAuth } from '../helpers/auth-agent.ts';
 import { canonicalAgentIfi } from '../helpers/agent.ts';
 import { resolveClientIp } from '../helpers/client-ip.ts';
 
 export interface SseProducerDeps {
-  pool: Pool;
+  pool: DbPool;
   metrics: LrsMetrics;
   logger: Logger;
-  pgListener: PgListener;
+  pgListener: Listener;
   maxConnectionsGlobal: number;
   maxConnectionsPerIp: number;
   trustedProxyHops: number;

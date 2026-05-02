@@ -2,7 +2,8 @@
  * xAPI Activity Profile Repository — lrsql activity_profile_document table.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbClient } from '../db.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
@@ -49,7 +50,7 @@ export interface ActivityProfileRow {
 // ============================================================================
 
 export async function upsertActivityProfile(
-  client: PoolClient,
+  client: DbClient,
   params: {
     profileId: string;
     activityIri: string;
@@ -72,7 +73,7 @@ export async function upsertActivityProfile(
 }
 
 export async function getActivityProfile(
-  client: PoolClient,
+  client: DbClient,
   params: { profileId: string; activityIri: string },
 ): Promise<ActivityProfileRow | undefined> {
   const result = await client.query({
@@ -83,7 +84,7 @@ export async function getActivityProfile(
 }
 
 export async function listActivityProfileIds(
-  client: PoolClient,
+  client: DbClient,
   params: { activityIri: string; since?: string },
 ): Promise<string[]> {
   const result = await client.query({
@@ -94,7 +95,7 @@ export async function listActivityProfileIds(
 }
 
 export async function deleteActivityProfile(
-  client: PoolClient,
+  client: DbClient,
   params: { profileId: string; activityIri: string },
 ): Promise<void> {
   await client.query({

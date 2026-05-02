@@ -69,6 +69,8 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     trustedProxyHops: 0,
     xapiRateLimitWindow: 60,
     xapiRateLimitMax: 10000,
+    databaseDriver: 'pg',
+    pgliteDataDir: undefined,
     autoMigrate: false,
     logLevel: 'silent',
     nodeEnv: 'test',

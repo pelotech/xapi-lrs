@@ -2,7 +2,8 @@
  * Admin attachment queries.
  */
 
-import type { Pool, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbPool } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
 
@@ -25,7 +26,7 @@ export interface AttachmentListRow {
 }
 
 export async function listAttachments(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   statementId: string,
 ): Promise<AttachmentListRow[]> {
@@ -37,7 +38,7 @@ export async function listAttachments(
 }
 
 export async function getAttachment(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   statementId: string,
   sha: string,

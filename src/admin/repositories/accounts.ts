@@ -2,7 +2,8 @@
  * Admin account management queries.
  */
 
-import type { Pool, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbPool } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
 
@@ -51,13 +52,13 @@ export interface AccountRow {
   credential_count?: number;
 }
 
-export async function listAccounts(pool: Pool, metrics: LrsMetrics): Promise<AccountRow[]> {
+export async function listAccounts(pool: DbPool, metrics: LrsMetrics): Promise<AccountRow[]> {
   const result = await poolQuery<AccountRow>(pool, metrics, LIST_ACCOUNTS);
   return result.rows;
 }
 
 export async function verifyPassword(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   username: string,
   password: string,
@@ -70,7 +71,7 @@ export async function verifyPassword(
 }
 
 export async function getAccountByUsername(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   username: string,
 ): Promise<AccountRow | null> {
@@ -82,7 +83,7 @@ export async function getAccountByUsername(
 }
 
 export async function createAccount(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   username: string,
   password: string,
@@ -94,12 +95,12 @@ export async function createAccount(
   return result.rows[0].id;
 }
 
-export async function deleteAccount(pool: Pool, metrics: LrsMetrics, accountId: string): Promise<void> {
+export async function deleteAccount(pool: DbPool, metrics: LrsMetrics, accountId: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_ACCOUNT, values: [accountId] });
 }
 
 export async function changePassword(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   accountId: string,
   newPassword: string,
@@ -107,13 +108,13 @@ export async function changePassword(
   await poolQuery(pool, metrics, { ...CHANGE_PASSWORD, values: [accountId, newPassword] });
 }
 
-export async function hasAnyAdminAccount(pool: Pool, metrics: LrsMetrics): Promise<boolean> {
+export async function hasAnyAdminAccount(pool: DbPool, metrics: LrsMetrics): Promise<boolean> {
   const result = await poolQuery<{ exists: boolean }>(pool, metrics, HAS_ANY_ACCOUNT);
   return result.rows[0].exists;
 }
 
 export async function ensureAdminAccount(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   username: string,
   password: string,
