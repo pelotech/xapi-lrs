@@ -21,6 +21,16 @@ import type { LrsConfig } from './config.ts';
 // Result mapping
 // ============================================================================
 
+// PGlite returns bytea columns as Uint8Array; coerce to Buffer so downstream
+// code (which calls .toString('utf8'), Buffer.isBuffer(), etc.) works uniformly.
+function coerceRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[k] = v instanceof Uint8Array && !Buffer.isBuffer(v) ? Buffer.from(v) : v;
+  }
+  return out;
+}
+
 function mapResult<R extends QueryResultRow>(raw: Awaited<ReturnType<PGlite['query']>>): QueryResult<R> {
   return {
     command: '',
@@ -35,7 +45,7 @@ function mapResult<R extends QueryResultRow>(raw: Awaited<ReturnType<PGlite['que
       dataTypeModifier: 0,
       format: 'text',
     })),
-    rows: raw.rows as R[],
+    rows: raw.rows.map((r) => coerceRow(r as Record<string, unknown>)) as R[],
   };
 }
 
