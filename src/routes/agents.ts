@@ -4,10 +4,10 @@
  */
 
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
-import type { HonoEnv } from '../hono-env.ts';
 import { HttpError, withClient, parseMergeBody } from '../db.ts';
-import { computeEtag, checkConcurrencyHeaders } from '../helpers/etag.ts';
 import { canonicalAgentIfi, validateSince } from '../helpers/agent.ts';
+import { computeEtag, checkConcurrencyHeaders } from '../helpers/etag.ts';
+import type { HonoEnv } from '../hono-env.ts';
 import {
   upsertAgentProfile,
   getAgentProfile,

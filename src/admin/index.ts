@@ -4,13 +4,15 @@
  */
 
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import type { Context } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { XAPI_NOTIFY_CHANNEL, HEARTBEAT_INTERVAL_MS, buildStatementEvent } from '../sse/statement-event.ts';
 import type { AdminDeps, AdminEnv } from './types.ts';
 export type { AdminEnv, AdminDeps };
-import { adminAuthMiddleware, csrfMiddleware } from './middleware.ts';
+import { randomBytes } from 'node:crypto';
+import { resolveClientIp } from '../helpers/client-ip.ts';
 import { HTMX_JS, HTMX_SSE_JS, PICO_CSS } from './assets.ts';
+import { adminAuthMiddleware, csrfMiddleware } from './middleware.ts';
 import {
   getDashboardCounts,
   getRecentStatements,
@@ -24,18 +26,16 @@ import {
   rotateSecret,
   setCredentialScopes,
 } from './repositories/index.ts';
-import { randomBytes } from 'node:crypto';
-import { resolveClientIp } from '../helpers/client-ip.ts';
-import { layout } from './views/layout.ts';
-import { dashboardPage } from './views/dashboard.ts';
-import { metricsPage } from './views/metrics.ts';
+import { LoginRateLimiter, registerAuthRoutes } from './routes/auth.ts';
+import { registerDocumentRoutes } from './routes/documents.ts';
+import { registerStatementRoutes } from './routes/statements.ts';
 import { accountsPage, accountList } from './views/accounts.ts';
 import { credentialsPage, rotatedSecret, scopeUpdated, deletedRow } from './views/credentials.ts';
-import { streamPage } from './views/stream.ts';
+import { dashboardPage } from './views/dashboard.ts';
 import type { RawHtml } from './views/html.ts';
-import { LoginRateLimiter, registerAuthRoutes } from './routes/auth.ts';
-import { registerStatementRoutes } from './routes/statements.ts';
-import { registerDocumentRoutes } from './routes/documents.ts';
+import { layout } from './views/layout.ts';
+import { metricsPage } from './views/metrics.ts';
+import { streamPage } from './views/stream.ts';
 
 /** Max concurrent admin SSE connections per IP */
 const ADMIN_SSE_MAX_PER_IP = 3;

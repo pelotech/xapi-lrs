@@ -15,6 +15,7 @@ import {
   deleteAgentProfileById,
   bulkDeleteStateDocuments,
 } from '../repositories/index.ts';
+import type { AdminEnv, AdminDeps } from '../types.ts';
 import {
   documentsPage,
   stateDocumentTable,
@@ -25,7 +26,6 @@ import {
   deletedDocRow,
 } from '../views/documents.ts';
 import type { RawHtml } from '../views/html.ts';
-import type { AdminEnv, AdminDeps } from '../types.ts';
 
 export function registerDocumentRoutes(
   app: Hono<AdminEnv>,

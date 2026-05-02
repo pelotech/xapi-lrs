@@ -12,10 +12,10 @@
 
 import { randomUUID } from 'node:crypto';
 import { test as baseTest, describe, expect } from 'vitest';
-import { createLrsTestServer } from './test-server.ts';
-import { createTestPool, truncateLrsqlTables } from './test-db.ts';
-import type { LrsTestServerHandle } from './test-server.ts';
 import type { DbPool } from '../../src/db.ts';
+import { createTestPool, truncateLrsqlTables } from './test-db.ts';
+import { createLrsTestServer } from './test-server.ts';
+import type { LrsTestServerHandle } from './test-server.ts';
 
 export interface IntegrationFixtures {
   pool: DbPool;

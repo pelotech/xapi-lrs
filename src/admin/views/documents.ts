@@ -2,14 +2,14 @@
  * Admin document browser — tabbed view for state, activity profile, agent profile.
  */
 
-import { html, raw } from './html.ts';
-import type { RawHtml } from './html.ts';
 import type {
   StateDocumentListRow,
   ActivityProfileListRow,
   AgentProfileListRow,
   DocumentDetail,
 } from '../repositories/index.ts';
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
 
 type DocType = 'state' | 'activity-profile' | 'agent-profile';
 
@@ -25,7 +25,9 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
   return html`
     <h2>Document Browser</h2>
 
-    <div class="tabs" role="tablist"
+    <div
+      class="tabs"
+      role="tablist"
       hx-on::after-request="this.querySelectorAll('[role=tab]').forEach(function(t){t.setAttribute('aria-selected',t===event.target?'true':'false')})"
     >
       <button
@@ -60,11 +62,7 @@ export function documentsPage(activeTab: DocType = 'state'): RawHtml {
       </button>
     </div>
 
-    <div id="doc-table"
-      hx-get="/admin/documents/list?type=${activeTab}"
-      hx-trigger="load"
-      hx-swap="innerHTML"
-    >
+    <div id="doc-table" hx-get="/admin/documents/list?type=${activeTab}" hx-trigger="load" hx-swap="innerHTML">
       <p class="text-muted">Loading documents...</p>
     </div>
 
@@ -108,53 +106,56 @@ export function stateDocumentTable(
 ): RawHtml {
   return html`
     <p class="text-muted">${String(total)} state document${total !== 1 ? 's' : ''}</p>
-    ${
-      rows.length === 0
-        ? html`
-            <p class="text-muted">No state documents.</p>
-          `
-        : html`<figure>
-          <table>
-            <thead>
-              <tr>
-                <th>State ID</th>
-                <th>Activity</th>
-                <th>Agent</th>
-                <th>Registration</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Modified</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${rows.map(
-              (d) => html`
-              <tr>
-                <td class="mono" style="font-size:0.8em">${d.state_id}</td>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
-                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
-                <td class="mono" style="font-size:0.75em">${d.registration ?? '\u2014'}</td>
-                <td>${d.content_type}</td>
-                <td>${String(d.content_length)}B</td>
-                <td class="text-muted">${fmtTime(d.last_modified)}</td>
-                <td>
-                  <a href="/admin/documents/state/${d.id}">View</a>
-                  <button
-                    class="outline secondary"
-                    style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
-                    hx-delete="/admin/documents/state/${d.id}"
-                    hx-confirm="Delete this state document?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>`,
-            )}</tbody>
-          </table>
-        </figure>`
-    }
+    ${rows.length === 0
+      ? html`
+          <p class="text-muted">No state documents.</p>
+        `
+      : html`
+          <figure>
+            <table>
+              <thead>
+                <tr>
+                  <th>State ID</th>
+                  <th>Activity</th>
+                  <th>Agent</th>
+                  <th>Registration</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Modified</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(
+                  (d) => html`
+                    <tr>
+                      <td class="mono" style="font-size:0.8em">${d.state_id}</td>
+                      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
+                      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
+                      <td class="mono" style="font-size:0.75em">${d.registration ?? '\u2014'}</td>
+                      <td>${d.content_type}</td>
+                      <td>${String(d.content_length)}B</td>
+                      <td class="text-muted">${fmtTime(d.last_modified)}</td>
+                      <td>
+                        <a href="/admin/documents/state/${d.id}">View</a>
+                        <button
+                          class="outline secondary"
+                          style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
+                          hx-delete="/admin/documents/state/${d.id}"
+                          hx-confirm="Delete this state document?"
+                          hx-target="closest tr"
+                          hx-swap="outerHTML"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  `,
+                )}
+              </tbody>
+            </table>
+          </figure>
+        `}
     ${pagination('state', page, pageSize, total)}
   `;
 }
@@ -171,49 +172,52 @@ export function activityProfileTable(
 ): RawHtml {
   return html`
     <p class="text-muted">${String(total)} activity profile${total !== 1 ? 's' : ''}</p>
-    ${
-      rows.length === 0
-        ? html`
-            <p class="text-muted">No activity profiles.</p>
-          `
-        : html`<figure>
-          <table>
-            <thead>
-              <tr>
-                <th>Profile ID</th>
-                <th>Activity</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Modified</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${rows.map(
-              (d) => html`
-              <tr>
-                <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
-                <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
-                <td>${d.content_type}</td>
-                <td>${String(d.content_length)}B</td>
-                <td class="text-muted">${fmtTime(d.last_modified)}</td>
-                <td>
-                  <a href="/admin/documents/activity-profile/${d.id}">View</a>
-                  <button
-                    class="outline secondary"
-                    style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
-                    hx-delete="/admin/documents/activity-profile/${d.id}"
-                    hx-confirm="Delete this activity profile?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>`,
-            )}</tbody>
-          </table>
-        </figure>`
-    }
+    ${rows.length === 0
+      ? html`
+          <p class="text-muted">No activity profiles.</p>
+        `
+      : html`
+          <figure>
+            <table>
+              <thead>
+                <tr>
+                  <th>Profile ID</th>
+                  <th>Activity</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Modified</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(
+                  (d) => html`
+                    <tr>
+                      <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
+                      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.activity_iri}</td>
+                      <td>${d.content_type}</td>
+                      <td>${String(d.content_length)}B</td>
+                      <td class="text-muted">${fmtTime(d.last_modified)}</td>
+                      <td>
+                        <a href="/admin/documents/activity-profile/${d.id}">View</a>
+                        <button
+                          class="outline secondary"
+                          style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
+                          hx-delete="/admin/documents/activity-profile/${d.id}"
+                          hx-confirm="Delete this activity profile?"
+                          hx-target="closest tr"
+                          hx-swap="outerHTML"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  `,
+                )}
+              </tbody>
+            </table>
+          </figure>
+        `}
     ${pagination('activity-profile', page, pageSize, total)}
   `;
 }
@@ -225,49 +229,52 @@ export function activityProfileTable(
 export function agentProfileTable(rows: AgentProfileListRow[], total: number, page: number, pageSize: number): RawHtml {
   return html`
     <p class="text-muted">${String(total)} agent profile${total !== 1 ? 's' : ''}</p>
-    ${
-      rows.length === 0
-        ? html`
-            <p class="text-muted">No agent profiles.</p>
-          `
-        : html`<figure>
-          <table>
-            <thead>
-              <tr>
-                <th>Profile ID</th>
-                <th>Agent</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Modified</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${rows.map(
-              (d) => html`
-              <tr>
-                <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
-                <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
-                <td>${d.content_type}</td>
-                <td>${String(d.content_length)}B</td>
-                <td class="text-muted">${fmtTime(d.last_modified)}</td>
-                <td>
-                  <a href="/admin/documents/agent-profile/${d.id}">View</a>
-                  <button
-                    class="outline secondary"
-                    style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
-                    hx-delete="/admin/documents/agent-profile/${d.id}"
-                    hx-confirm="Delete this agent profile?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>`,
-            )}</tbody>
-          </table>
-        </figure>`
-    }
+    ${rows.length === 0
+      ? html`
+          <p class="text-muted">No agent profiles.</p>
+        `
+      : html`
+          <figure>
+            <table>
+              <thead>
+                <tr>
+                  <th>Profile ID</th>
+                  <th>Agent</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Modified</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(
+                  (d) => html`
+                    <tr>
+                      <td class="mono" style="font-size:0.8em">${d.profile_id}</td>
+                      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis">${d.agent_ifi}</td>
+                      <td>${d.content_type}</td>
+                      <td>${String(d.content_length)}B</td>
+                      <td class="text-muted">${fmtTime(d.last_modified)}</td>
+                      <td>
+                        <a href="/admin/documents/agent-profile/${d.id}">View</a>
+                        <button
+                          class="outline secondary"
+                          style="padding:0.15em 0.4em;margin:0;font-size:0.8em"
+                          hx-delete="/admin/documents/agent-profile/${d.id}"
+                          hx-confirm="Delete this agent profile?"
+                          hx-target="closest tr"
+                          hx-swap="outerHTML"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  `,
+                )}
+              </tbody>
+            </table>
+          </figure>
+        `}
     ${pagination('agent-profile', page, pageSize, total)}
   `;
 }
@@ -282,39 +289,33 @@ function pagination(type: DocType, page: number, pageSize: number, total: number
 
   return html`
     <div style="display:flex;gap:0.5em;align-items:center">
-      ${
-        page > 1
-          ? html`
-        <button
-          class="outline"
-          style="padding:0.25em 0.5em"
-          hx-get="/admin/documents/list?type=${type}&page=${String(page - 1)}"
-          hx-target="#doc-table"
-          hx-swap="innerHTML"
-        >
-          Previous
-        </button>
-      `
-          : false
-      }
-      <span class="text-muted">
-        Page ${String(page)} of ${String(totalPages)}
-      </span>
-      ${
-        page < totalPages
-          ? html`
-        <button
-          class="outline"
-          style="padding:0.25em 0.5em"
-          hx-get="/admin/documents/list?type=${type}&page=${String(page + 1)}"
-          hx-target="#doc-table"
-          hx-swap="innerHTML"
-        >
-          Next
-        </button>
-      `
-          : false
-      }
+      ${page > 1
+        ? html`
+            <button
+              class="outline"
+              style="padding:0.25em 0.5em"
+              hx-get="/admin/documents/list?type=${type}&page=${String(page - 1)}"
+              hx-target="#doc-table"
+              hx-swap="innerHTML"
+            >
+              Previous
+            </button>
+          `
+        : false}
+      <span class="text-muted">Page ${String(page)} of ${String(totalPages)}</span>
+      ${page < totalPages
+        ? html`
+            <button
+              class="outline"
+              style="padding:0.25em 0.5em"
+              hx-get="/admin/documents/list?type=${type}&page=${String(page + 1)}"
+              hx-target="#doc-table"
+              hx-swap="innerHTML"
+            >
+              Next
+            </button>
+          `
+        : false}
     </div>
   `;
 }
@@ -344,13 +345,16 @@ export function documentDetailView(doc: DocumentDetail): RawHtml {
     <h2>Document Detail</h2>
     <figure>
       <table>
-        <tbody>${entries.map(
-          ([k, v]) => html`
-          <tr>
-            <td><strong>${k}</strong></td>
-            <td class="mono">${v instanceof Date ? v.toISOString() : String(v)}</td>
-          </tr>`,
-        )}</tbody>
+        <tbody>
+          ${entries.map(
+            ([k, v]) => html`
+              <tr>
+                <td><strong>${k}</strong></td>
+                <td class="mono">${v instanceof Date ? v.toISOString() : String(v)}</td>
+              </tr>
+            `,
+          )}
+        </tbody>
       </table>
     </figure>
     <h3>Contents</h3>
@@ -360,7 +364,9 @@ export function documentDetailView(doc: DocumentDetail): RawHtml {
 }
 
 export function bulkDeleteResult(count: number): RawHtml {
-  return html`<p>Deleted ${String(count)} state document${count !== 1 ? 's' : ''}.</p>`;
+  return html`
+    <p>Deleted ${String(count)} state document${count !== 1 ? 's' : ''}.</p>
+  `;
 }
 
 export function deletedDocRow(): RawHtml {

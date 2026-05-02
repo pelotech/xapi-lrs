@@ -4,8 +4,12 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import type { HonoEnv } from '../hono-env.ts';
 import { HttpError, withClient } from '../db.ts';
+import { canonicalAgentIfi, validateSince, validateRegistration } from '../helpers/agent.ts';
+import { agentFromAuth, hasOnlyMineScope } from '../helpers/auth-agent.ts';
+import { enrichStatement, formatStatement } from '../helpers/enrichment.ts';
+import type { HonoEnv } from '../hono-env.ts';
+import { insertAttachment } from '../repositories/attachments.ts';
 import {
   insertStatement,
   insertStatements,
@@ -13,13 +17,9 @@ import {
   queryStatements,
   getConsistentThrough,
 } from '../repositories/statements.ts';
-import { insertAttachment } from '../repositories/attachments.ts';
-import { canonicalAgentIfi, validateSince, validateRegistration } from '../helpers/agent.ts';
-import { agentFromAuth, hasOnlyMineScope } from '../helpers/auth-agent.ts';
-import { enrichStatement, formatStatement } from '../helpers/enrichment.ts';
-import { validateStatement } from '../xapi/statement-validator.ts';
-import { statementsMatch } from '../xapi/statement-compare.ts';
 import { buildMultipartResponse } from '../xapi/multipart.ts';
+import { statementsMatch } from '../xapi/statement-compare.ts';
+import { validateStatement } from '../xapi/statement-validator.ts';
 import {
   postStatementsRoute,
   putStatementRoute,

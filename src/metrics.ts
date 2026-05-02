@@ -6,8 +6,8 @@
  */
 
 import type { Counter, Histogram, UpDownCounter, Attributes } from '@opentelemetry/api';
-import { MeterProvider, View, ExplicitBucketHistogramAggregation } from '@opentelemetry/sdk-metrics';
 import { PrometheusExporter, PrometheusSerializer } from '@opentelemetry/exporter-prometheus';
+import { MeterProvider, View, ExplicitBucketHistogramAggregation } from '@opentelemetry/sdk-metrics';
 
 export interface LrsMetrics {
   /** HTTP request duration by method/route/status */

@@ -6,9 +6,9 @@
  */
 
 import { createRequire } from 'node:module';
-import { createLrsTestServer } from '../integration/test-server.ts';
-import { truncateLrsqlTables } from '../integration/test-db.ts';
 import { createBasicAuth } from '../integration/fixtures.ts';
+import { truncateLrsqlTables } from '../integration/test-db.ts';
+import { createLrsTestServer } from '../integration/test-server.ts';
 import type { LrsTestServerHandle } from '../integration/test-server.ts';
 
 // The ADL test runner is a CJS module — use createRequire to load it.

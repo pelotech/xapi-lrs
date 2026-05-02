@@ -9,13 +9,13 @@
  *   of PgListener for SSE.
  */
 
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import type { QueryConfig, QueryResult, QueryResultRow } from 'pg';
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { DbClient, DbPool } from './db.ts';
 import type { LrsConfig } from './config.ts';
+import type { DbClient, DbPool } from './db.ts';
 
 // ============================================================================
 // Result mapping

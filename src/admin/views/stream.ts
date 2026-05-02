@@ -131,6 +131,8 @@ export function streamPage(): RawHtml {
 
     <div id="stream-feed"></div>
 
-    <script>${raw(STREAM_SCRIPT)}</script>
+    <script>
+      ${raw(STREAM_SCRIPT)};
+    </script>
   `;
 }

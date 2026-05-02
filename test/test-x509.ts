@@ -8,8 +8,8 @@
 import { execSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
 import { writeFileSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { importPKCS8 } from 'jose';
 
 export interface TestCertKeyPair {

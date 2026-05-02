@@ -3,12 +3,12 @@
  */
 
 import type { Hono, Context } from 'hono';
+import { withClient } from '../../db.ts';
 import { queryStatements, getStatementById, voidStatement } from '../../repositories/statements.ts';
 import { listAttachments, getAttachment } from '../repositories/index.ts';
-import { withClient } from '../../db.ts';
-import { statementsPage, statementTable, statementDetail, voidedConfirmation } from '../views/statements.ts';
-import type { RawHtml } from '../views/html.ts';
 import type { AdminEnv, AdminDeps } from '../types.ts';
+import type { RawHtml } from '../views/html.ts';
+import { statementsPage, statementTable, statementDetail, voidedConfirmation } from '../views/statements.ts';
 
 export function registerStatementRoutes(
   app: Hono<AdminEnv>,

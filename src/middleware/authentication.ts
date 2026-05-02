@@ -7,13 +7,13 @@
  */
 
 import type { MiddlewareHandler } from 'hono';
-import type { DbPool } from '../db.ts';
-import type { LrsMetrics } from '../metrics.ts';
-import type { AuthPayloadBasic, AuthInfo, XapiScope } from '../auth/types.ts';
 import type { JwksCache, JwtConfig } from '../auth/jwt.ts';
 import { verifyJwt } from '../auth/jwt.ts';
-import type { LrsDeps } from '../deps.ts';
+import type { AuthPayloadBasic, AuthInfo, XapiScope } from '../auth/types.ts';
+import type { DbPool } from '../db.ts';
 import { HttpError } from '../db.ts';
+import type { LrsDeps } from '../deps.ts';
+import type { LrsMetrics } from '../metrics.ts';
 
 // ============================================================================
 // Credential extraction (pure functions)

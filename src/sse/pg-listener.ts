@@ -5,8 +5,8 @@
 
 import { Client } from 'pg';
 import type { Notification } from 'pg';
-import type { Logger } from '../logger.ts';
 import type { LrsConfig } from '../config.ts';
+import type { Logger } from '../logger.ts';
 
 export type NotificationHandler = (payload: string) => void;
 

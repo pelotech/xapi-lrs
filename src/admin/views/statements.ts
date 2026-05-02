@@ -2,10 +2,10 @@
  * Admin statement browser — paginated list, detail view, void action.
  */
 
-import { html, raw } from './html.ts';
-import type { RawHtml } from './html.ts';
 import type { XapiStatementRow } from '../../repositories/statements.ts';
 import type { AttachmentListRow } from '../repositories/index.ts';
+import { html, raw } from './html.ts';
+import type { RawHtml } from './html.ts';
 
 function formatActor(payload: Record<string, unknown>): string {
   const actor = payload.actor as Record<string, unknown> | undefined;
@@ -57,16 +57,16 @@ export function statementsPage(opts: {
 
     <details>
       <summary>Filters</summary>
-      <form
-        hx-get="/admin/statements/list"
-        hx-target="#statement-table"
-        hx-swap="innerHTML"
-        hx-push-url="false"
-      >
+      <form hx-get="/admin/statements/list" hx-target="#statement-table" hx-swap="innerHTML" hx-push-url="false">
         <div class="grid">
           <label>
             Verb IRI
-            <input type="text" name="verb" value="${opts.verb ?? ''}" placeholder="http://adlnet.gov/expapi/verbs/..." />
+            <input
+              type="text"
+              name="verb"
+              value="${opts.verb ?? ''}"
+              placeholder="http://adlnet.gov/expapi/verbs/..."
+            />
           </label>
           <label>
             Agent IFI
@@ -76,7 +76,12 @@ export function statementsPage(opts: {
         <div class="grid">
           <label>
             Activity IRI
-            <input type="text" name="activity" value="${opts.activity ?? ''}" placeholder="http://example.com/activity/..." />
+            <input
+              type="text"
+              name="activity"
+              value="${opts.activity ?? ''}"
+              placeholder="http://example.com/activity/..."
+            />
           </label>
           <label>
             Since
@@ -91,11 +96,7 @@ export function statementsPage(opts: {
       </form>
     </details>
 
-    <div id="statement-table"
-      hx-get="/admin/statements/list"
-      hx-trigger="load"
-      hx-swap="innerHTML"
-    >
+    <div id="statement-table" hx-get="/admin/statements/list" hx-trigger="load" hx-swap="innerHTML">
       <p class="text-muted">Loading statements...</p>
     </div>
   `;
@@ -132,8 +133,9 @@ export function statementTable(opts: {
             <th></th>
           </tr>
         </thead>
-        <tbody>${rows.map(
-          (s) => html`
+        <tbody>
+          ${rows.map(
+            (s) => html`
           <tr${s.is_voided ? raw(' class="voided"') : false}>
             <td class="text-muted">${fmtTime(s.stored)}</td>
             <td>${formatVerb(((s.payload.verb as Record<string, unknown>)?.id as string) ?? '')}</td>
@@ -154,24 +156,23 @@ export function statementTable(opts: {
               }
             </td>
           </tr>`,
-        )}</tbody>
+          )}
+        </tbody>
       </table>
     </figure>
 
-    ${
-      hasMore && cursor
-        ? html`
-      <button
-        class="outline"
-        hx-get="/admin/statements/list?cursor=${cursor}&${filters}"
-        hx-target="#statement-table"
-        hx-swap="innerHTML"
-      >
-        Load More
-      </button>
-    `
-        : false
-    }
+    ${hasMore && cursor
+      ? html`
+          <button
+            class="outline"
+            hx-get="/admin/statements/list?cursor=${cursor}&${filters}"
+            hx-target="#statement-table"
+            hx-swap="innerHTML"
+          >
+            Load More
+          </button>
+        `
+      : false}
   `;
 }
 
@@ -183,78 +184,82 @@ export function statementDetail(row: XapiStatementRow, attachments: AttachmentLi
   return html`
     <h2>
       Statement Detail
-      ${
-        row.is_voided
-          ? html`
-              <span class="badge badge-voided" style="margin-left: 0.5em">voided</span>
-            `
-          : false
-      }
+      ${row.is_voided
+        ? html`
+            <span class="badge badge-voided" style="margin-left: 0.5em">voided</span>
+          `
+        : false}
     </h2>
 
     <figure>
       <table>
         <tbody>
-          <tr><td><strong>Statement ID</strong></td><td class="mono">${row.statement_id}</td></tr>
-          <tr><td><strong>Stored</strong></td><td>${new Date(row.stored).toISOString()}</td></tr>
-          <tr><td><strong>Voided</strong></td><td>${row.is_voided ? 'Yes' : 'No'}</td></tr>
+          <tr>
+            <td><strong>Statement ID</strong></td>
+            <td class="mono">${row.statement_id}</td>
+          </tr>
+          <tr>
+            <td><strong>Stored</strong></td>
+            <td>${new Date(row.stored).toISOString()}</td>
+          </tr>
+          <tr>
+            <td><strong>Voided</strong></td>
+            <td>${row.is_voided ? 'Yes' : 'No'}</td>
+          </tr>
         </tbody>
       </table>
     </figure>
 
-    ${
-      !row.is_voided
-        ? html`
-      <div id="void-action">
-        <button
-          class="outline secondary"
-          hx-post="/admin/statements/${row.statement_id}/void"
-          hx-confirm="Void this statement? This cannot be undone."
-          hx-target="#void-action"
-          hx-swap="innerHTML"
-        >
-          Void Statement
-        </button>
-      </div>
-    `
-        : false
-    }
+    ${!row.is_voided
+      ? html`
+          <div id="void-action">
+            <button
+              class="outline secondary"
+              hx-post="/admin/statements/${row.statement_id}/void"
+              hx-confirm="Void this statement? This cannot be undone."
+              hx-target="#void-action"
+              hx-swap="innerHTML"
+            >
+              Void Statement
+            </button>
+          </div>
+        `
+      : false}
 
     <h3>Payload</h3>
     <pre class="json">${JSON.stringify(row.payload, null, 2)}</pre>
 
-    ${
-      attachments.length > 0
-        ? html`
-      <h3>Attachments</h3>
-      <figure>
-        <table>
-          <thead>
-            <tr>
-              <th>SHA-256</th>
-              <th>Content-Type</th>
-              <th>Size</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>${attachments.map(
-            (a) => html`
-            <tr>
-              <td class="mono" style="font-size:0.75em">${a.attachment_sha.slice(0, 16)}...</td>
-              <td>${a.content_type}</td>
-              <td>${String(a.content_length)} bytes</td>
-              <td>
-                <a href="/admin/statements/${row.statement_id}/attachments/${a.attachment_sha}">
-                  Download
-                </a>
-              </td>
-            </tr>`,
-          )}</tbody>
-        </table>
-      </figure>
-    `
-        : false
-    }
+    ${attachments.length > 0
+      ? html`
+          <h3>Attachments</h3>
+          <figure>
+            <table>
+              <thead>
+                <tr>
+                  <th>SHA-256</th>
+                  <th>Content-Type</th>
+                  <th>Size</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${attachments.map(
+                  (a) => html`
+                    <tr>
+                      <td class="mono" style="font-size:0.75em">${a.attachment_sha.slice(0, 16)}...</td>
+                      <td>${a.content_type}</td>
+                      <td>${String(a.content_length)} bytes</td>
+                      <td>
+                        <a href="/admin/statements/${row.statement_id}/attachments/${a.attachment_sha}">Download</a>
+                      </td>
+                    </tr>
+                  `,
+                )}
+              </tbody>
+            </table>
+          </figure>
+        `
+      : false}
 
     <p><a href="/admin/statements">&larr; Back to browser</a></p>
   `;

@@ -17,9 +17,9 @@
  */
 
 import type { MiddlewareHandler } from 'hono';
-import type { HonoEnv } from '../hono-env.ts';
 import type { XapiScope } from '../auth/types.ts';
 import { HttpError } from '../db.ts';
+import type { HonoEnv } from '../hono-env.ts';
 
 type ScopeRule = { scopes: ReadonlyArray<XapiScope> };
 

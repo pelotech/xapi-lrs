@@ -4,8 +4,8 @@
 
 import type { QueryConfig } from 'pg';
 import type { DbPool } from '../../db.ts';
-import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
+import type { LrsMetrics } from '../../metrics.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 

@@ -1,10 +1,10 @@
+import type { Pool } from 'pg';
+import type { Logger } from 'pino';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { bootstrapAccounts } from '../../src/bootstrap.ts';
 import type { BootstrapDeps } from '../../src/bootstrap.ts';
 import { loadConfig } from '../../src/config.ts';
-import type { Pool } from 'pg';
 import type { LrsMetrics } from '../../src/metrics.ts';
-import type { Logger } from 'pino';
 
 // ---------------------------------------------------------------------------
 // Shared stubs
