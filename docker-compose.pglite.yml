@@ -1,0 +1,17 @@
+services:
+  postgres:
+    scale: 0
+
+  xapi-lrs:
+    depends_on:
+      postgres:
+        condition: service_started
+        required: false
+    environment:
+      DATABASE_DRIVER: pglite
+      PGLITE_DATA_DIR: '.pglite-data'
+      LOG_LEVEL: debug
+      PGHOST: ~
+      PGPORT: ~
+    tmpfs:
+      - /app/.pglite-data

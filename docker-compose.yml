@@ -17,8 +17,7 @@ services:
     tmpfs:
       - /var/lib/postgresql
 
-  lrs:
-    profiles: [app]
+  xapi-lrs:
     build: .
     depends_on:
       postgres:
@@ -35,6 +34,8 @@ services:
       LRS_ADMIN_PASSWORD: admin
       ADMIN_SESSION_SECRET: dev-session-secret-change-me
       LOG_LEVEL: info
+      CORS_ENABLED: 'false'
+      CORS_ORIGIN: http://xapi-lrs
       NODE_ENV: production
       # AUTO_MIGRATE: "true"  # run graphile-migrate at startup (opt-in)
     ports:
