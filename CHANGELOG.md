@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.0...xapi-lrs-v0.2.1) (2026-05-02)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @hono/node-server to v2 ([#30](https://github.com/pelotech/xapi-lrs/issues/30)) ([36cf2e6](https://github.com/pelotech/xapi-lrs/commit/36cf2e6d72450c9e80930b296ac17b507ca4a51c))
+
+
+### Chores
+
+* **deps:** update all npm patch dependencies ([#28](https://github.com/pelotech/xapi-lrs/issues/28)) ([cd4b280](https://github.com/pelotech/xapi-lrs/commit/cd4b2801eb3920236b414fcb62da66b08973ff3e))
+* **deps:** update node.js to v24.15.0 ([#29](https://github.com/pelotech/xapi-lrs/issues/29)) ([32891fd](https://github.com/pelotech/xapi-lrs/commit/32891fd55b95d8338677fe80eb48b66830389ff1))
+
 ## [0.2.0](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.1.0...xapi-lrs-v0.2.0) (2026-05-02)
 
 
