@@ -3,21 +3,11 @@
  * Starts the Hono HTTP server and admin server.
  */
 
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { loadConfig } from './config.ts';
-import type { LrsConfig } from './config.ts';
-import { createLogger } from './logger.ts';
-import { createMetrics } from './metrics.ts';
-import { createPool } from './db.ts';
-import type { DbPool } from './db.ts';
-import { JwksCache, discoverJwksUri } from './auth/jwt.ts';
-import type { JwtConfig } from './auth/jwt.ts';
 import { randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import { PgListener } from './sse/pg-listener.ts';
-import type { Listener } from './sse/pg-listener.ts';
-import { createApp } from './app.ts';
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import type { Logger } from 'pino';
 import {
   hasAnyAdminAccount,
   ensureAdminAccount,
@@ -25,9 +15,19 @@ import {
   getAccountByUsername,
   ensureDefaultCredential,
 } from './admin/repositories/index.ts';
+import { createApp } from './app.ts';
+import { JwksCache, discoverJwksUri } from './auth/jwt.ts';
+import type { JwtConfig } from './auth/jwt.ts';
 import { bootstrapAccounts } from './bootstrap.ts';
+import { loadConfig } from './config.ts';
+import type { LrsConfig } from './config.ts';
+import { createPool } from './db.ts';
+import type { DbPool } from './db.ts';
+import { createLogger } from './logger.ts';
+import { createMetrics } from './metrics.ts';
 import { runMigrations } from './migrate.ts';
-import type { Logger } from 'pino';
+import { PgListener } from './sse/pg-listener.ts';
+import type { Listener } from './sse/pg-listener.ts';
 
 async function initJwt(config: LrsConfig, logger: Logger, jwksCache: JwksCache): Promise<JwtConfig | null> {
   if (!config.jwtIssuer || !config.jwtAudience) return null;

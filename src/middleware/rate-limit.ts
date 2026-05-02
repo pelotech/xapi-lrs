@@ -11,8 +11,8 @@
  */
 
 import type { MiddlewareHandler } from 'hono';
-import type { HonoEnv } from '../hono-env.ts';
 import { resolveClientIp } from '../helpers/client-ip.ts';
+import type { HonoEnv } from '../hono-env.ts';
 
 export interface RateLimitConfig {
   /** Window size in seconds */

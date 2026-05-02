@@ -60,26 +60,40 @@ export function layout(
 <body${opts.csrfToken ? raw(` hx-headers='${csrfJson}'`) : false}>
   ${
     opts.username
-      ? html`<header>
-    <nav>
-      <ul><li><strong>LRS Admin</strong></li></ul>
-      <ul>
-        ${NAV_LINKS.map(
-          (link) => html`
-          <li><a href="${link.href}"${opts.path && isActive(link.href, opts.path) ? raw(' aria-current="page"') : false}>${link.label}</a></li>`,
-        )}
-      </ul>
-      <ul>
-        <li class="text-muted">${opts.username}</li>
-        <li>
-          <form method="post" action="/admin/logout" style="margin:0">
-            <input type="hidden" name="_csrf" value="${opts.csrfToken ?? ''}" />
-            <button type="submit" class="outline secondary" style="padding:0.25em 0.75em;margin:0">Logout</button>
-          </form>
-        </li>
-      </ul>
-    </nav>
-  </header>`
+      ? html`
+          <header>
+            <nav>
+              <ul>
+                <li><strong>LRS Admin</strong></li>
+              </ul>
+              <ul>
+                ${NAV_LINKS.map(
+                  (link) => html`
+                    <li>
+                      <a
+                        href="${link.href}"
+                        ${opts.path && isActive(link.href, opts.path) ? raw(' aria-current="page"') : false}
+                      >
+                        ${link.label}
+                      </a>
+                    </li>
+                  `,
+                )}
+              </ul>
+              <ul>
+                <li class="text-muted">${opts.username}</li>
+                <li>
+                  <form method="post" action="/admin/logout" style="margin:0">
+                    <input type="hidden" name="_csrf" value="${opts.csrfToken ?? ''}" />
+                    <button type="submit" class="outline secondary" style="padding:0.25em 0.75em;margin:0">
+                      Logout
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </nav>
+          </header>
+        `
       : false
   }
   <main>${content}</main>

@@ -3,8 +3,8 @@
  */
 
 import type { DbPool } from '../db.ts';
-import type { LrsMetrics } from '../metrics.ts';
 import type { Logger } from '../logger.ts';
+import type { LrsMetrics } from '../metrics.ts';
 import type { Listener } from '../sse/pg-listener.ts';
 
 export interface AdminSession {

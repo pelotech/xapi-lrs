@@ -4,10 +4,16 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import type { HonoEnv } from '../hono-env.ts';
 import { HttpError, withClient, parseMergeBody } from '../db.ts';
-import { computeEtag, checkConcurrencyHeaders } from '../helpers/etag.ts';
 import { canonicalAgentIfi, validateSince, validateRegistration } from '../helpers/agent.ts';
+import { computeEtag, checkConcurrencyHeaders } from '../helpers/etag.ts';
+import type { HonoEnv } from '../hono-env.ts';
+import {
+  upsertActivityProfile,
+  getActivityProfile,
+  listActivityProfileIds,
+  deleteActivityProfile,
+} from '../repositories/activity-profile.ts';
 import {
   upsertStateDocument,
   getStateDocument,
@@ -15,12 +21,6 @@ import {
   deleteStateDocument,
   deleteAllStateDocuments,
 } from '../repositories/activity-state.ts';
-import {
-  upsertActivityProfile,
-  getActivityProfile,
-  listActivityProfileIds,
-  deleteActivityProfile,
-} from '../repositories/activity-profile.ts';
 import { getActivityDefinition } from '../repositories/statements.ts';
 import {
   getActivityRoute,

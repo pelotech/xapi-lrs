@@ -1,9 +1,9 @@
-import type { DbPool } from './db.ts';
-import type { LrsMetrics } from './metrics.ts';
-import type { LrsConfig } from './config.ts';
+import { randomBytes } from 'node:crypto';
 import type { Logger } from 'pino';
 import type { AccountRow } from './admin/repositories/accounts.ts';
-import { randomBytes } from 'node:crypto';
+import type { LrsConfig } from './config.ts';
+import type { DbPool } from './db.ts';
+import type { LrsMetrics } from './metrics.ts';
 
 export interface BootstrapDeps {
   hasAnyAdminAccount(pool: DbPool, metrics: LrsMetrics): Promise<boolean>;

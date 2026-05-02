@@ -13,11 +13,11 @@
  */
 
 import { decodeProtectedHeader, base64url, compactVerify, importX509 } from 'jose';
-import { statementsEquivalent } from './statement-compare.ts';
-import type { MultipartAttachmentPart } from './multipart.ts';
+import { HttpError } from '../db.ts';
 import type { Logger } from '../logger.ts';
 import type { LrsMetrics } from '../metrics.ts';
-import { HttpError } from '../db.ts';
+import type { MultipartAttachmentPart } from './multipart.ts';
+import { statementsEquivalent } from './statement-compare.ts';
 
 const SIGNATURE_USAGE_TYPE = 'http://adlnet.gov/expapi/attachments/signature';
 const ALLOWED_ALGORITHMS = new Set(['RS256', 'RS384', 'RS512']);

@@ -10,8 +10,8 @@
 import type { QueryConfig } from 'pg';
 import type { DbClient } from '../db.ts';
 import { HttpError } from '../db.ts';
-import { squuid, squuidMin } from '../helpers/squuid.ts';
 import { canonicalAgentIfi } from '../helpers/agent.ts';
+import { squuid, squuidMin } from '../helpers/squuid.ts';
 import { buildPayload, extractActors, extractActivities } from './statement-decomposition.ts';
 
 type Query = Omit<QueryConfig, 'values'>;

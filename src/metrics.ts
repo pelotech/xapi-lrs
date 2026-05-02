@@ -6,8 +6,8 @@
  */
 
 import type { Counter, Histogram, UpDownCounter, Attributes } from '@opentelemetry/api';
-import { MeterProvider, View, ExplicitBucketHistogramAggregation } from '@opentelemetry/sdk-metrics';
 import { PrometheusExporter, PrometheusSerializer } from '@opentelemetry/exporter-prometheus';
+import { MeterProvider, AggregationType } from '@opentelemetry/sdk-metrics';
 
 export interface LrsMetrics {
   /** HTTP request duration by method/route/status */
@@ -43,14 +43,20 @@ export function createMetrics(): LrsMetrics {
   const meterProvider = new MeterProvider({
     readers: [exporter],
     views: [
-      new View({
-        aggregation: new ExplicitBucketHistogramAggregation([0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5]),
+      {
+        aggregation: {
+          type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
+          options: { boundaries: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5] },
+        },
         instrumentName: 'lrs_http_request_duration_seconds',
-      }),
-      new View({
-        aggregation: new ExplicitBucketHistogramAggregation([0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]),
+      },
+      {
+        aggregation: {
+          type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
+          options: { boundaries: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1] },
+        },
         instrumentName: 'lrs_db_query_duration_seconds',
-      }),
+      },
     ],
   });
 

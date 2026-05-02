@@ -8,8 +8,8 @@
 import { uuidv7 } from 'uuidv7';
 import type { ZodIssue } from 'zod';
 import type { XAPIValidatedStatement } from '../xapi-types/index.ts';
-import type { ValidationError, ValidationResult } from './validation-helpers.ts';
 import { statementInputSchema } from './statement-schema.ts';
+import type { ValidationError, ValidationResult } from './validation-helpers.ts';
 
 export type { ValidationError, ValidationResult };
 

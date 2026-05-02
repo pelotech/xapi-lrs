@@ -4,10 +4,10 @@
  */
 
 import type { DbPool } from '../db.ts';
-import type { LrsMetrics } from '../metrics.ts';
-import type { StatementStoredEvent } from '../xapi-types/index.ts';
 import { withClient } from '../db.ts';
+import type { LrsMetrics } from '../metrics.ts';
 import { getStatementById } from '../repositories/statements.ts';
+import type { StatementStoredEvent } from '../xapi-types/index.ts';
 
 export const XAPI_NOTIFY_CHANNEL = 'xapi_statement_stored';
 export const HEARTBEAT_INTERVAL_MS = 30_000;

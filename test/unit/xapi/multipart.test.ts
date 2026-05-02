@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { Readable } from 'node:stream';
+import { describe, it, expect } from 'vitest';
 import { extractBoundary, parseMultipartMixed, buildMultipartResponse } from '../../../src/xapi/multipart.ts';
 
 // ---------------------------------------------------------------------------

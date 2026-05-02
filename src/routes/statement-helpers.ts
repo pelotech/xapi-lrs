@@ -2,17 +2,17 @@
  * xAPI Statements Resource — helper functions and constants.
  */
 
-import { createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import type { LrsDeps } from '../deps.ts';
+import { createRoute, z } from '@hono/zod-openapi';
 import type { AuthInfo } from '../auth/types.ts';
 import { HttpError } from '../db.ts';
-import { getStatementById, voidStatement } from '../repositories/statements.ts';
-import { getAttachmentsByStatement } from '../repositories/attachments.ts';
+import type { LrsDeps } from '../deps.ts';
 import { canonicalAgentIfi } from '../helpers/agent.ts';
 import { agentIfiFromAuth } from '../helpers/auth-agent.ts';
 import { buildAuthority } from '../helpers/enrichment.ts';
+import { getAttachmentsByStatement } from '../repositories/attachments.ts';
+import { getStatementById, voidStatement } from '../repositories/statements.ts';
 import type { MultipartAttachmentPart, ResponseAttachmentPart } from '../xapi/multipart.ts';
 import { validateSignedStatements } from '../xapi/signature.ts';
 

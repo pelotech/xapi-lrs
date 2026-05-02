@@ -3,29 +3,29 @@
  * Creates and configures the Hono app with xAPI middleware and OpenAPI routes.
  */
 
+import { randomUUID } from 'node:crypto';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
-import type { DbPool } from './db.ts';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { createAdminApp } from './admin/index.ts';
+import type { JwksCache, JwtConfig } from './auth/jwt.ts';
+import type { LrsConfig } from './config.ts';
+import type { DbPool } from './db.ts';
+import { HttpError } from './db.ts';
+import type { LrsDeps } from './deps.ts';
 import type { HonoEnv } from './hono-env.ts';
 import type { Logger } from './logger.ts';
 import type { LrsMetrics } from './metrics.ts';
-import type { LrsConfig } from './config.ts';
-import type { JwksCache, JwtConfig } from './auth/jwt.ts';
-import type { LrsDeps } from './deps.ts';
-import type { Listener } from './sse/pg-listener.ts';
-import { randomUUID } from 'node:crypto';
-import { HttpError } from './db.ts';
 import { authMiddleware } from './middleware/authentication.ts';
 import { scopeMiddleware } from './middleware/authorization.ts';
 import { rateLimitMiddleware } from './middleware/rate-limit.ts';
 import { createAboutApp } from './routes/about.ts';
-import { createStatementsApp } from './routes/statements.ts';
 import { createActivitiesApp } from './routes/activities.ts';
 import { createAgentsApp } from './routes/agents.ts';
+import { createStatementsApp } from './routes/statements.ts';
+import type { Listener } from './sse/pg-listener.ts';
 import { createSseRoute } from './sse/sse-producer.ts';
 import { parseMultipartMixed, extractBoundary } from './xapi/multipart.ts';
-import { createAdminApp } from './admin/index.ts';
 
 // ============================================================================
 // xAPI Alternate Request Syntax (§1.3) — header fields allowed in form body

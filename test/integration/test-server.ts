@@ -6,21 +6,21 @@
 
 import type { Server } from 'node:http';
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import { Hono } from 'hono';
 import pg from 'pg';
 import { pino } from 'pino';
 import { createApp } from '../../src/app.ts';
 import type { AppDeps } from '../../src/app.ts';
-import type { HonoEnv } from '../../src/hono-env.ts';
-import type { LrsConfig } from '../../src/config.ts';
-import { createMetrics } from '../../src/metrics.ts';
 import { JwksCache } from '../../src/auth/jwt.ts';
 import type { JwtConfig } from '../../src/auth/jwt.ts';
+import type { LrsConfig } from '../../src/config.ts';
+import type { DbPool } from '../../src/db.ts';
+import type { HonoEnv } from '../../src/hono-env.ts';
+import type { Logger } from '../../src/logger.ts';
+import { createMetrics } from '../../src/metrics.ts';
 import { PgListener } from '../../src/sse/pg-listener.ts';
 import type { Listener } from '../../src/sse/pg-listener.ts';
-import type { DbPool } from '../../src/db.ts';
-import type { Logger } from '../../src/logger.ts';
 import { defaultTestDbConfig } from './test-db.ts';
 import { startJwksServer, signTestJWT } from './test-jwks.ts';
 import type { JwksServerHandle } from './test-jwks.ts';

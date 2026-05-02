@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { createTestPool, truncateLrsqlTables } from './test-db.ts';
-import { createMetrics } from '../../src/metrics.ts';
 import { hasAnyAdminAccount, createAccount } from '../../src/admin/repositories/accounts.ts';
 import { ensureDefaultCredential, listCredentials } from '../../src/admin/repositories/credentials.ts';
+import { createMetrics } from '../../src/metrics.ts';
+import { createTestPool, truncateLrsqlTables } from './test-db.ts';
 
 // These tests require a real PostgreSQL connection — skip in PGlite mode.
 const isPglite = process.env['DATABASE_DRIVER'] === 'pglite';
