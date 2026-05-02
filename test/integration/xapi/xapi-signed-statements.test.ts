@@ -9,9 +9,8 @@
 import { createHash, randomUUID, generateKeyPairSync } from 'node:crypto';
 import { CompactSign, importPKCS8, base64url } from 'jose';
 import { beforeAll, afterAll } from 'vitest';
-import { test, describe, expect, createLrsTestServer, createTestPool, createBasicAuth } from '../fixtures.ts';
+import { test, describe, expect, createLrsTestServer, createBasicAuth } from '../fixtures.ts';
 import type { LrsTestServerHandle } from '../test-server.ts';
-import type pg from 'pg';
 import { generateTestCert } from '../../test-x509.ts';
 
 const V = { 'X-Experience-API-Version': '1.0.3' } as const;
@@ -215,20 +214,15 @@ describe('xAPI Signed Statements — structural validation', () => {
 
 describe('xAPI Signed Statements — cryptographic verification', () => {
   let verifyServer: LrsTestServerHandle;
-  let verifyPool: pg.Pool;
   let verifyAuth: string;
 
   beforeAll(async () => {
-    verifyPool = createTestPool();
     verifyServer = await createLrsTestServer({ xapiVerifySignatures: true });
-
-    // Create Basic Auth credentials for the verify server
-    verifyAuth = await createBasicAuth(verifyPool, { label: 'Verify Test Partner' });
+    verifyAuth = await createBasicAuth(verifyServer.pool, { label: 'Verify Test Partner' });
   });
 
   afterAll(async () => {
     if (verifyServer) await verifyServer.close();
-    if (verifyPool) await verifyPool.end();
   });
 
   test('should accept when signed payload matches received statement', async () => {

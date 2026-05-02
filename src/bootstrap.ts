@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { DbPool } from './db.ts';
 import type { LrsMetrics } from './metrics.ts';
 import type { LrsConfig } from './config.ts';
 import type { Logger } from 'pino';
@@ -6,12 +6,12 @@ import type { AccountRow } from './admin/repositories/accounts.ts';
 import { randomBytes } from 'node:crypto';
 
 export interface BootstrapDeps {
-  hasAnyAdminAccount(pool: Pool, metrics: LrsMetrics): Promise<boolean>;
-  ensureAdminAccount(pool: Pool, metrics: LrsMetrics, username: string, password: string): Promise<void>;
-  createAccount(pool: Pool, metrics: LrsMetrics, username: string, password: string): Promise<string>;
-  getAccountByUsername(pool: Pool, metrics: LrsMetrics, username: string): Promise<AccountRow | null>;
+  hasAnyAdminAccount(pool: DbPool, metrics: LrsMetrics): Promise<boolean>;
+  ensureAdminAccount(pool: DbPool, metrics: LrsMetrics, username: string, password: string): Promise<void>;
+  createAccount(pool: DbPool, metrics: LrsMetrics, username: string, password: string): Promise<string>;
+  getAccountByUsername(pool: DbPool, metrics: LrsMetrics, username: string): Promise<AccountRow | null>;
   ensureDefaultCredential(
-    pool: Pool,
+    pool: DbPool,
     metrics: LrsMetrics,
     apiKey: string,
     secretKey: string,
@@ -20,7 +20,7 @@ export interface BootstrapDeps {
 }
 
 export async function bootstrapAccounts(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   config: LrsConfig,
   logger: Logger,

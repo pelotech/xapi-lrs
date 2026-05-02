@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { migrate } from 'graphile-migrate';
 import { loadConfig } from './config.ts';
 import { createLogger } from './logger.ts';
@@ -27,7 +28,9 @@ async function main(): Promise<void> {
   logger.info('Migrations complete');
 }
 
-main().catch((err) => {
-  console.error('Migration failed:', err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error('Migration failed:', err);
+    process.exit(1);
+  });
+}

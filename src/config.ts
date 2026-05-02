@@ -11,6 +11,11 @@ const configSchema = z.object({
   /** Admin port for health/ready/metrics */
   adminPort: z.coerce.number().int().positive().default(8091),
 
+  /** Database driver selection */
+  databaseDriver: z.enum(['pg', 'pglite']).default('pg'),
+  /** PGlite data directory (undefined = in-memory). Only used when databaseDriver=pglite. */
+  pgliteDataDir: z.string().optional(),
+
   /** PostgreSQL connection */
   databaseUrl: z.string().optional(),
   pgHost: z.string().default('localhost'),
@@ -107,6 +112,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const lrsqlLogLevel = env.LRSQL_LOG_LEVEL ? normalizeLrsqlLogLevel(env.LRSQL_LOG_LEVEL) : undefined;
 
   const config = configSchema.parse({
+    databaseDriver: env.DATABASE_DRIVER,
+    pgliteDataDir: env.PGLITE_DATA_DIR,
     port: env.LRS_PORT ?? env.PORT,
     adminPort: env.LRS_ADMIN_PORT ?? env.ADMIN_PORT,
     databaseUrl: env.DATABASE_URL,

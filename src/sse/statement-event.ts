@@ -3,7 +3,7 @@
  * Used by both the xAPI /stream endpoint and the admin /stream/events endpoint.
  */
 
-import type { Pool } from 'pg';
+import type { DbPool } from '../db.ts';
 import type { LrsMetrics } from '../metrics.ts';
 import type { StatementStoredEvent } from '../xapi-types/index.ts';
 import { withClient } from '../db.ts';
@@ -18,7 +18,7 @@ export const HEARTBEAT_INTERVAL_MS = 30_000;
  * the statement can't be found.
  */
 export async function buildStatementEvent(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   payload: string,
 ): Promise<StatementStoredEvent | null> {

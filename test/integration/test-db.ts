@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
+import type { DbPool } from '../../src/db.ts';
 
 const { Pool } = pg;
 
@@ -50,23 +51,25 @@ export async function applyLrsqlSchema(pool: pg.Pool): Promise<void> {
   await pool.query(ddl);
 }
 
-/** Truncate all lrsql tables (for test isolation). */
-export async function truncateLrsqlTables(pool: pg.Pool): Promise<void> {
-  await pool.query(`
-    TRUNCATE
-      attachment,
-      statement_to_statement,
-      statement_to_activity,
-      statement_to_actor,
-      xapi_statement,
-      activity,
-      actor,
-      state_document,
-      activity_profile_document,
-      agent_profile_document,
-      credential_to_scope,
-      lrs_credential,
-      admin_account
-    CASCADE
-  `);
+const TRUNCATE_SQL = `
+  TRUNCATE
+    attachment,
+    statement_to_statement,
+    statement_to_activity,
+    statement_to_actor,
+    xapi_statement,
+    activity,
+    actor,
+    state_document,
+    activity_profile_document,
+    agent_profile_document,
+    credential_to_scope,
+    lrs_credential,
+    admin_account
+  CASCADE
+`;
+
+/** Truncate all lrsql tables (for test isolation). Works with pg or PGlite pools. */
+export async function truncateLrsqlTables(pool: DbPool | pg.Pool): Promise<void> {
+  await (pool as DbPool).query({ text: TRUNCATE_SQL });
 }

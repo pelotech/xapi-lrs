@@ -2,7 +2,8 @@
  * Admin credential management queries.
  */
 
-import type { Pool, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbPool } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 import { poolQuery } from '../../db.ts';
 
@@ -52,13 +53,13 @@ export interface CredentialRow {
   scopes: string[];
 }
 
-export async function listCredentials(pool: Pool, metrics: LrsMetrics): Promise<CredentialRow[]> {
+export async function listCredentials(pool: DbPool, metrics: LrsMetrics): Promise<CredentialRow[]> {
   const result = await poolQuery<CredentialRow>(pool, metrics, LIST_CREDENTIALS);
   return result.rows;
 }
 
 export async function createCredential(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   apiKey: string,
   secretKey: string,
@@ -71,12 +72,12 @@ export async function createCredential(
   return result.rows[0].id;
 }
 
-export async function deleteCredential(pool: Pool, metrics: LrsMetrics, credentialId: string): Promise<void> {
+export async function deleteCredential(pool: DbPool, metrics: LrsMetrics, credentialId: string): Promise<void> {
   await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL, values: [credentialId] });
 }
 
 export async function rotateSecret(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   credentialId: string,
   newSecret: string,
@@ -85,7 +86,7 @@ export async function rotateSecret(
 }
 
 export async function ensureDefaultCredential(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   apiKey: string,
   secretKey: string,
@@ -103,7 +104,7 @@ export async function ensureDefaultCredential(
 }
 
 export async function setCredentialScopes(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   credentialId: string,
   scopes: string[],

@@ -5,7 +5,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
-import type { Pool } from 'pg';
+import type { DbPool } from './db.ts';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { HonoEnv } from './hono-env.ts';
 import type { Logger } from './logger.ts';
@@ -13,7 +13,7 @@ import type { LrsMetrics } from './metrics.ts';
 import type { LrsConfig } from './config.ts';
 import type { JwksCache, JwtConfig } from './auth/jwt.ts';
 import type { LrsDeps } from './deps.ts';
-import type { PgListener } from './sse/pg-listener.ts';
+import type { Listener } from './sse/pg-listener.ts';
 import { randomUUID } from 'node:crypto';
 import { HttpError } from './db.ts';
 import { authMiddleware } from './middleware/authentication.ts';
@@ -46,12 +46,12 @@ const ALTERNATE_HEADER_FIELDS = new Set([
 
 export interface AppDeps {
   config: LrsConfig;
-  pool: Pool;
+  pool: DbPool;
   jwksCache: JwksCache;
   jwtConfig: JwtConfig | null;
   metrics: LrsMetrics;
   logger: Logger;
-  pgListener: PgListener;
+  pgListener: Listener;
   sessionSecret: string;
   startedAt: Date;
 }

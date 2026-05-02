@@ -2,7 +2,7 @@
  * xAPI Agent Repository — queries lrsql's actor table directly.
  */
 
-import type { PoolClient } from 'pg';
+import type { DbClient } from '../db.ts';
 
 // ============================================================================
 // Types
@@ -27,7 +27,7 @@ export interface PersonObject {
  * parse IFI fields from it. Names are extracted from all statement payloads
  * where this agent appears, since the actor table only keeps the latest name.
  */
-export async function getPersonObject(client: PoolClient, ifi: string): Promise<PersonObject | null> {
+export async function getPersonObject(client: DbClient, ifi: string): Promise<PersonObject | null> {
   const result = await client.query<{ actor_ifi: string; actor_type: string }>({
     name: 'get_person_by_ifi',
     text: `SELECT actor_ifi, actor_type FROM actor WHERE actor_ifi = $1`,

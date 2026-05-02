@@ -10,6 +10,13 @@ import type { LrsConfig } from '../config.ts';
 
 export type NotificationHandler = (payload: string) => void;
 
+export interface Listener {
+  on(channel: string, handler: NotificationHandler): void;
+  off(channel: string, handler: NotificationHandler): void;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
 /** Allowlisted channel names to prevent SQL injection in LISTEN commands. */
 const ALLOWED_CHANNELS = new Set(['xapi_statement_stored']);
 

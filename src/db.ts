@@ -5,7 +5,23 @@
  */
 
 import { Pool } from 'pg';
-import type { PoolClient, QueryConfig, QueryResult, QueryResultRow } from 'pg';
+import type { QueryConfig, QueryResult, QueryResultRow } from 'pg';
+
+// ============================================================================
+// Driver-agnostic pool interfaces
+// ============================================================================
+
+export interface DbClient {
+  // Default to `any` to match pg's QueryResult<R = any> behavior
+  query<R extends QueryResultRow = any>(config: QueryConfig): Promise<QueryResult<R>>;
+  release(err?: Error | boolean | null): void;
+}
+
+export interface DbPool {
+  connect(): Promise<DbClient>;
+  query<R extends QueryResultRow = any>(config: QueryConfig): Promise<QueryResult<R>>;
+  end(): Promise<void>;
+}
 import type { LrsConfig } from './config.ts';
 import type { Logger } from './logger.ts';
 import type { LrsMetrics } from './metrics.ts';
@@ -15,7 +31,7 @@ import { startTimer } from './metrics.ts';
 // Pool creation
 // ============================================================================
 
-export async function createPool(config: LrsConfig, logger: Logger): Promise<Pool> {
+export async function createPool(config: LrsConfig, logger: Logger): Promise<DbPool> {
   const pool = new Pool({
     connectionString: config.databaseUrl,
     host: config.pgHost,
@@ -76,7 +92,7 @@ function extractQueryName(arg: unknown): string {
   return 'unknown';
 }
 
-function instrumentQuery(client: PoolClient, metrics: LrsMetrics): PoolClient {
+function instrumentQuery(client: DbClient, metrics: LrsMetrics): DbClient {
   const originalQuery = client.query.bind(client);
   client.query = ((...args: unknown[]) => {
     const queryName = extractQueryName(args[0]);
@@ -106,9 +122,9 @@ function instrumentQuery(client: PoolClient, metrics: LrsMetrics): PoolClient {
 
 /** Execute a function within a BEGIN/COMMIT transaction. */
 export async function withClient<T>(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
-  fn: (client: PoolClient) => Promise<T>,
+  fn: (client: DbClient) => Promise<T>,
 ): Promise<T> {
   const client = await pool.connect();
   instrumentQuery(client, metrics);
@@ -127,7 +143,7 @@ export async function withClient<T>(
 }
 
 export async function poolQuery<R extends QueryResultRow = QueryResultRow>(
-  pool: Pool,
+  pool: DbPool,
   metrics: LrsMetrics,
   config: QueryConfig,
 ): Promise<QueryResult<R>> {

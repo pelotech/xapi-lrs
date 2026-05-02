@@ -4,7 +4,8 @@
  * Stores raw attachment binaries (bytea) in the DB per statement.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbClient } from '../db.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
@@ -36,7 +37,7 @@ export interface AttachmentRow {
 // ============================================================================
 
 export async function insertAttachment(
-  client: PoolClient,
+  client: DbClient,
   params: {
     statementId: string;
     sha2: string;
@@ -50,7 +51,7 @@ export async function insertAttachment(
   });
 }
 
-export async function getAttachmentsByStatement(client: PoolClient, statementId: string): Promise<AttachmentRow[]> {
+export async function getAttachmentsByStatement(client: DbClient, statementId: string): Promise<AttachmentRow[]> {
   const result = await client.query({
     ...SELECT_ATTACHMENTS_BY_STATEMENT,
     values: [statementId],

@@ -7,7 +7,7 @@
  */
 
 import type { MiddlewareHandler } from 'hono';
-import type { Pool } from 'pg';
+import type { DbPool } from '../db.ts';
 import type { LrsMetrics } from '../metrics.ts';
 import type { AuthPayloadBasic, AuthInfo, XapiScope } from '../auth/types.ts';
 import type { JwksCache, JwtConfig } from '../auth/jwt.ts';
@@ -58,31 +58,27 @@ interface ScopeRow {
 }
 
 export async function authenticateBasicCredential(
-  pool: Pool,
+  pool: DbPool,
   apiKey: string,
   secretKey: string,
 ): Promise<AuthPayloadBasic | null> {
-  const { rows: creds } = await pool.query<CredentialRow>(
-    {
-      name: 'authenticate_credential',
-      text: `SELECT c.id, c.account_id, a.username AS account_name
-             FROM lrs_credential c
-             JOIN admin_account a ON a.id = c.account_id
-             WHERE c.api_key = $1 AND c.secret_key = $2`,
-    },
-    [apiKey, secretKey],
-  );
+  const { rows: creds } = await pool.query<CredentialRow>({
+    name: 'authenticate_credential',
+    text: `SELECT c.id, c.account_id, a.username AS account_name
+           FROM lrs_credential c
+           JOIN admin_account a ON a.id = c.account_id
+           WHERE c.api_key = $1 AND c.secret_key = $2`,
+    values: [apiKey, secretKey],
+  });
 
   if (creds.length === 0) return null;
   const cred = creds[0];
 
-  const { rows: scopeRows } = await pool.query<ScopeRow>(
-    {
-      name: 'get_credential_scopes',
-      text: `SELECT scope FROM credential_to_scope WHERE credential_id = $1`,
-    },
-    [cred.id],
-  );
+  const { rows: scopeRows } = await pool.query<ScopeRow>({
+    name: 'get_credential_scopes',
+    text: `SELECT scope FROM credential_to_scope WHERE credential_id = $1`,
+    values: [cred.id],
+  });
 
   return {
     credentialId: cred.id,
@@ -98,7 +94,7 @@ export async function authenticateBasicCredential(
 
 /** Deps needed by the auth middleware — subset of LrsDeps */
 export interface AuthDeps {
-  pool: Pool;
+  pool: DbPool;
   jwksCache: JwksCache;
   jwtConfig: JwtConfig | null;
   metrics: LrsMetrics;

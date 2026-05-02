@@ -2,7 +2,8 @@
  * xAPI Agent Profile Repository — lrsql agent_profile_document table.
  */
 
-import type { PoolClient, QueryConfig } from 'pg';
+import type { QueryConfig } from 'pg';
+import type { DbClient } from '../db.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
@@ -49,7 +50,7 @@ export interface AgentProfileRow {
 // ============================================================================
 
 export async function upsertAgentProfile(
-  client: PoolClient,
+  client: DbClient,
   params: {
     profileId: string;
     agentIfi: string;
@@ -72,7 +73,7 @@ export async function upsertAgentProfile(
 }
 
 export async function getAgentProfile(
-  client: PoolClient,
+  client: DbClient,
   params: { profileId: string; agentIfi: string },
 ): Promise<AgentProfileRow | undefined> {
   const result = await client.query({
@@ -83,7 +84,7 @@ export async function getAgentProfile(
 }
 
 export async function listAgentProfileIds(
-  client: PoolClient,
+  client: DbClient,
   params: { agentIfi: string; since?: string },
 ): Promise<string[]> {
   const result = await client.query({
@@ -94,7 +95,7 @@ export async function listAgentProfileIds(
 }
 
 export async function deleteAgentProfile(
-  client: PoolClient,
+  client: DbClient,
   params: { profileId: string; agentIfi: string },
 ): Promise<void> {
   await client.query({
