@@ -7,10 +7,9 @@
 
 import { createRequire } from 'node:module';
 import { createLrsTestServer } from '../integration/test-server.ts';
-import { createTestPool, truncateLrsqlTables } from '../integration/test-db.ts';
+import { truncateLrsqlTables } from '../integration/test-db.ts';
 import { createBasicAuth } from '../integration/fixtures.ts';
 import type { LrsTestServerHandle } from '../integration/test-server.ts';
-import type pg from 'pg';
 
 // The ADL test runner is a CJS module — use createRequire to load it.
 const require = createRequire(import.meta.url);
@@ -107,15 +106,13 @@ export async function runConformanceSuite(options: RunOptions = {}): Promise<Con
   const { grep, timeout = 180_000, onSectionStart } = options;
 
   let server: LrsTestServerHandle | undefined;
-  let pool: pg.Pool | undefined;
 
   try {
-    // 1. Start test server + pool
-    pool = createTestPool();
+    // 1. Start test server
     server = await createLrsTestServer();
 
     // 2. Create Basic Auth credentials (admin_account + lrs_credential + scopes)
-    const basicAuth = await createBasicAuth(pool, {
+    const basicAuth = await createBasicAuth(server.pool, {
       label: 'ADL Conformance Suite',
     });
 
@@ -184,9 +181,12 @@ export async function runConformanceSuite(options: RunOptions = {}): Promise<Con
 
     return result;
   } finally {
-    if (pool) await truncateLrsqlTables(pool);
-    if (server) await server.close();
-    if (pool) await pool.end();
+    if (server) {
+      if (process.env['DATABASE_DRIVER'] !== 'pglite') {
+        await truncateLrsqlTables(server.pool);
+      }
+      await server.close();
+    }
   }
 }
 

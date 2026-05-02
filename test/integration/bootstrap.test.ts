@@ -4,18 +4,21 @@ import { createMetrics } from '../../src/metrics.ts';
 import { hasAnyAdminAccount, createAccount } from '../../src/admin/repositories/accounts.ts';
 import { ensureDefaultCredential, listCredentials } from '../../src/admin/repositories/credentials.ts';
 
+// These tests require a real PostgreSQL connection — skip in PGlite mode.
+const isPglite = process.env['DATABASE_DRIVER'] === 'pglite';
+
 const pool = createTestPool();
 const metrics = createMetrics();
 
 beforeEach(async () => {
-  await truncateLrsqlTables(pool);
+  if (!isPglite) await truncateLrsqlTables(pool);
 });
 
 // ---------------------------------------------------------------------------
 // hasAnyAdminAccount
 // ---------------------------------------------------------------------------
 
-describe('hasAnyAdminAccount', () => {
+describe.skipIf(isPglite)('hasAnyAdminAccount', () => {
   test('returns false when the table is empty', async () => {
     expect(await hasAnyAdminAccount(pool, metrics)).toBe(false);
   });
@@ -30,7 +33,7 @@ describe('hasAnyAdminAccount', () => {
 // ensureDefaultCredential
 // ---------------------------------------------------------------------------
 
-describe('ensureDefaultCredential', () => {
+describe.skipIf(isPglite)('ensureDefaultCredential', () => {
   test("creates the credential with 'all' scope when absent", async () => {
     const accountId = await createAccount(pool, metrics, 'admin', 'password');
     await ensureDefaultCredential(pool, metrics, 'my_key', 'my_secret', accountId);

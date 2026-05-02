@@ -15,10 +15,10 @@ import { test as baseTest, describe, expect } from 'vitest';
 import { createLrsTestServer } from './test-server.ts';
 import { createTestPool, truncateLrsqlTables } from './test-db.ts';
 import type { LrsTestServerHandle } from './test-server.ts';
-import type pg from 'pg';
+import type { DbPool } from '../../src/db.ts';
 
 export interface IntegrationFixtures {
-  pool: pg.Pool;
+  pool: DbPool;
   server: LrsTestServerHandle;
   /** Base64-encoded Basic Auth credentials (api_key:secret_key) */
   basicAuth: string;
@@ -27,12 +27,10 @@ export interface IntegrationFixtures {
 }
 
 export const test = baseTest.extend<IntegrationFixtures>({
+  // Use the server's own pool — works for both pg and PGlite drivers.
   pool: [
-    // oxlint-disable-next-line no-empty-pattern -- vitest fixture API requires {} for fixtures with no dependencies
-    async ({}, use) => {
-      const pool = createTestPool();
-      await use(pool);
-      await pool.end();
+    async ({ server }, use) => {
+      await use(server.pool);
     },
     { scope: 'file' },
   ],
@@ -66,33 +64,28 @@ export const test = baseTest.extend<IntegrationFixtures>({
  * Inserts an admin_account, lrs_credential, and credential_to_scope rows.
  * Returns the Base64-encoded api_key:secret_key string.
  */
-export async function createBasicAuth(
-  pool: pg.Pool,
-  opts: { scopes?: string[]; label?: string } = {},
-): Promise<string> {
+export async function createBasicAuth(pool: DbPool, opts: { scopes?: string[]; label?: string } = {}): Promise<string> {
   const accountId = randomUUID();
   const credentialId = randomUUID();
   const apiKey = randomUUID();
   const secretKey = randomUUID();
   const scopes = opts.scopes ?? ['all'];
 
-  await pool.query(`INSERT INTO admin_account (id, username, passhash) VALUES ($1, $2, 'test')`, [
-    accountId,
-    opts.label ?? `test-${apiKey.slice(0, 8)}`,
-  ]);
+  await pool.query({
+    text: `INSERT INTO admin_account (id, username, passhash) VALUES ($1, $2, 'test')`,
+    values: [accountId, opts.label ?? `test-${apiKey.slice(0, 8)}`],
+  });
 
-  await pool.query(`INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES ($1, $2, $3, $4)`, [
-    credentialId,
-    apiKey,
-    secretKey,
-    accountId,
-  ]);
+  await pool.query({
+    text: `INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES ($1, $2, $3, $4)`,
+    values: [credentialId, apiKey, secretKey, accountId],
+  });
 
   for (const scope of scopes) {
-    await pool.query(`INSERT INTO credential_to_scope (credential_id, scope) VALUES ($1, $2::scope_enum)`, [
-      credentialId,
-      scope,
-    ]);
+    await pool.query({
+      text: `INSERT INTO credential_to_scope (credential_id, scope) VALUES ($1, $2::scope_enum)`,
+      values: [credentialId, scope],
+    });
   }
 
   return Buffer.from(`${apiKey}:${secretKey}`).toString('base64');

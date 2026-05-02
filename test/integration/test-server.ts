@@ -18,6 +18,8 @@ import { createMetrics } from '../../src/metrics.ts';
 import { JwksCache } from '../../src/auth/jwt.ts';
 import type { JwtConfig } from '../../src/auth/jwt.ts';
 import { PgListener } from '../../src/sse/pg-listener.ts';
+import type { Listener } from '../../src/sse/pg-listener.ts';
+import type { DbPool } from '../../src/db.ts';
 import type { Logger } from '../../src/logger.ts';
 import { defaultTestDbConfig } from './test-db.ts';
 import { startJwksServer, signTestJWT } from './test-jwks.ts';
@@ -31,8 +33,8 @@ export interface LrsTestServerHandle {
   readonly apiUrl: string;
   readonly adminUrl: string;
   readonly jwksUrl: string;
-  readonly pool: pg.Pool;
-  readonly pgListener: PgListener;
+  readonly pool: DbPool;
+  readonly pgListener: Listener;
   readonly config: LrsConfig;
   readonly close: () => Promise<void>;
   readonly createToken: (payload: Record<string, unknown>) => Promise<string>;
@@ -43,6 +45,7 @@ export interface LrsTestServerOptions {
 }
 
 export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<LrsTestServerHandle> {
+  const isPglite = process.env['DATABASE_DRIVER'] === 'pglite';
   const jwksServer: JwksServerHandle = await startJwksServer();
 
   const config: LrsConfig = {
@@ -69,21 +72,12 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     trustedProxyHops: 0,
     xapiRateLimitWindow: 60,
     xapiRateLimitMax: 10000,
-    databaseDriver: 'pg',
+    databaseDriver: isPglite ? 'pglite' : 'pg',
     pgliteDataDir: undefined,
     autoMigrate: false,
     logLevel: 'silent',
     nodeEnv: 'test',
   };
-
-  const pool = new Pool({
-    host: config.pgHost,
-    port: config.pgPort,
-    database: config.pgDatabase,
-    user: config.pgUser,
-    password: config.pgPassword,
-    max: config.pgPoolSize,
-  });
 
   const logger: Logger = pino({ level: 'silent' });
   const metrics = createMetrics();
@@ -95,7 +89,26 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     jwksUri: jwksServer.jwksUrl,
   };
 
-  const pgListener = new PgListener(config, logger);
+  let pool: DbPool;
+  let pgListener: Listener;
+
+  if (isPglite) {
+    const { createPgliteBackend } = await import('../../src/db-pglite.ts');
+    const { LocalListener } = await import('../../src/sse/local-listener.ts');
+    const backend = await createPgliteBackend(config);
+    pool = backend.pool;
+    pgListener = new LocalListener(backend.db);
+  } else {
+    pool = new Pool({
+      host: config.pgHost,
+      port: config.pgPort,
+      database: config.pgDatabase,
+      user: config.pgUser,
+      password: config.pgPassword,
+      max: config.pgPoolSize,
+    }) as unknown as DbPool;
+    pgListener = new PgListener(config, logger);
+  }
 
   const deps: AppDeps = {
     config,
@@ -127,7 +140,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
   adminApp.get('/healthz', (c) => c.text('ok'));
   adminApp.get('/ready', async (c) => {
     try {
-      await pool.query('SELECT 1');
+      await pool.query({ text: 'SELECT 1' });
       return c.text('ok');
     } catch {
       return c.text('database unavailable', 503);

@@ -40,14 +40,22 @@ jobs:
       - run: pnpm test
 
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (${{ matrix.driver }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        driver: [pg, pglite]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
+        if: matrix.driver == 'pg'
         run: docker compose up -d --wait
       - name: Load test env
+        if: matrix.driver == 'pg'
         run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
+      - name: Set PGlite data dir
+        if: matrix.driver == 'pglite'
+        run: echo "PGLITE_DATA_DIR=${{ runner.temp }}/pglite-data" >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -55,22 +63,32 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
+        env:
+          DATABASE_DRIVER: ${{ matrix.driver }}
       - name: Postgres logs
-        if: failure()
+        if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres
       - name: Cleanup
-        if: always()
+        if: always() && matrix.driver == 'pg'
         run: docker compose down
 
   conformance-tests:
-    name: Conformance Tests
+    name: Conformance Tests (${{ matrix.driver }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        driver: [pg, pglite]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
+        if: matrix.driver == 'pg'
         run: docker compose up -d --wait
       - name: Load test env
+        if: matrix.driver == 'pg'
         run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
+      - name: Set PGlite data dir
+        if: matrix.driver == 'pglite'
+        run: echo "PGLITE_DATA_DIR=${{ runner.temp }}/pglite-data" >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -78,11 +96,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:conformance
+        env:
+          DATABASE_DRIVER: ${{ matrix.driver }}
       - name: Postgres logs
-        if: failure()
+        if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres
       - name: Cleanup
-        if: always()
+        if: always() && matrix.driver == 'pg'
         run: docker compose down
 
   build:
