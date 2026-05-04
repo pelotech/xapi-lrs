@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.2...xapi-lrs-v0.2.3) (2026-05-04)
+
+
+### Chores
+
+* **deps:** update actions/download-artifact action to v8 ([#41](https://github.com/pelotech/xapi-lrs/issues/41)) ([0156d8c](https://github.com/pelotech/xapi-lrs/commit/0156d8c9055002ee66eed324bcc3221beeb5a57c))
+* fix multi-arch container build & release ([#38](https://github.com/pelotech/xapi-lrs/issues/38)) ([87e32ee](https://github.com/pelotech/xapi-lrs/commit/87e32eea46422c971253b74ea62c95ad036544b9))
+
 ## [0.2.2](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.1...xapi-lrs-v0.2.2) (2026-05-04)
 
 
