@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.2](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.1...xapi-lrs-v0.2.2) (2026-05-04)
+
+
+### Chores
+
+* build multi-arch images natively via matrix + manifest merge ([#32](https://github.com/pelotech/xapi-lrs/issues/32)) ([333bd04](https://github.com/pelotech/xapi-lrs/commit/333bd043170802e67e28ce8ba51768f83ea2b97b))
+* **deps:** lock file maintenance ([#36](https://github.com/pelotech/xapi-lrs/issues/36)) ([11ec428](https://github.com/pelotech/xapi-lrs/commit/11ec428897c9b2a3718dc8be82e19f35c9f44d9d))
+* **deps:** pin dependencies ([#34](https://github.com/pelotech/xapi-lrs/issues/34)) ([123fdca](https://github.com/pelotech/xapi-lrs/commit/123fdca12db07dbf56bacbbb235d51be13caa82a))
+* **deps:** update github artifact actions ([#35](https://github.com/pelotech/xapi-lrs/issues/35)) ([6fb1ca0](https://github.com/pelotech/xapi-lrs/commit/6fb1ca02fe731c154f77689af2337152398aceb4))
+* **deps:** update pnpm/action-setup digest to 8912a91 ([#37](https://github.com/pelotech/xapi-lrs/issues/37)) ([d72e3dd](https://github.com/pelotech/xapi-lrs/commit/d72e3ddafade1c55ccac68fb925faa53da89c115))
+
 ## [0.2.1](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.0...xapi-lrs-v0.2.1) (2026-05-02)
 
 
