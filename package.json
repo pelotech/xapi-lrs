@@ -1,6 +1,6 @@
 {
   "name": "xapi-lrs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "xAPI Learning Record Store — standalone service for xAPI statement storage and document resources",
   "type": "module",
   "exports": {
