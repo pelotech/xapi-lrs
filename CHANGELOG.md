@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/pelotech/xapi-lrs/compare/v0.2.3...v0.2.4) (2026-05-05)
+
+
+### Chores
+
+* omit component name in docker image tag ([#42](https://github.com/pelotech/xapi-lrs/issues/42)) ([1cb6c23](https://github.com/pelotech/xapi-lrs/commit/1cb6c23fe3ea96a7a139a92cef98643cebed5b70))
+
 ## [0.2.3](https://github.com/pelotech/xapi-lrs/compare/xapi-lrs-v0.2.2...xapi-lrs-v0.2.3) (2026-05-04)
 
 
