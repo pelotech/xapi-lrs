@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/pelotech/xapi-lrs/compare/v0.2.4...v0.3.0) (2026-05-12)
+
+
+### Features
+
+* add admin API endpoints: `/api/admin/credentials/*` ([#46](https://github.com/pelotech/xapi-lrs/issues/46)) ([6ac2d3f](https://github.com/pelotech/xapi-lrs/commit/6ac2d3fa7788bf659f5d5045834fa992a5738659))
+
 ## [0.2.4](https://github.com/pelotech/xapi-lrs/compare/v0.2.3...v0.2.4) (2026-05-05)
 
 
