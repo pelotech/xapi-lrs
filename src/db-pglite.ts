@@ -9,6 +9,7 @@
  *   of PgListener for SSE.
  */
 
+import { access, mkdir, constants } from 'node:fs/promises';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -127,7 +128,23 @@ export interface PgliteBackend {
   db: PGlite;
 }
 
+async function assertDataDirWritable(dataDir: string): Promise<void> {
+  try {
+    await mkdir(dataDir, { recursive: true });
+  } catch (err: unknown) {
+    const e = err as NodeJS.ErrnoException;
+    throw new Error(`PGlite data directory "${dataDir}" could not be created: ${e.message}`);
+  }
+  try {
+    await access(dataDir, constants.W_OK);
+  } catch {
+    throw new Error(`PGlite data directory "${dataDir}" is not writable`);
+  }
+}
+
 export async function createPgliteBackend(config: LrsConfig): Promise<PgliteBackend> {
+  if (config.pgliteDataDir) await assertDataDirWritable(config.pgliteDataDir);
+
   const db = await PGlite.create({
     dataDir: config.pgliteDataDir,
     extensions: { pgcrypto },
