@@ -14,6 +14,7 @@ import type { LrsConfig } from './config.ts';
 import type { DbPool } from './db.ts';
 import { HttpError } from './db.ts';
 import type { LrsDeps } from './deps.ts';
+import { resolveClientIp } from './helpers/client-ip.ts';
 import type { HonoEnv } from './hono-env.ts';
 import type { Logger } from './logger.ts';
 import type { LrsMetrics } from './metrics.ts';
@@ -40,6 +41,30 @@ const ALTERNATE_HEADER_FIELDS = new Set([
   'If-Match',
   'If-None-Match',
 ]);
+
+// ============================================================================
+// Logging helpers
+// ============================================================================
+
+/** Parse a Content-Length header to a non-negative integer; undefined if absent/invalid. */
+function parseContentLength(value: string | null | undefined): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/**
+ * Return the matched route pattern (e.g. `/xapi/statements/:statementId`).
+ * Falls back to `c.req.path` for unmatched requests (404s, OPTIONS preflight, etc.)
+ * where Hono's routePath getter is unavailable.
+ */
+function safeRoutePath(c: { req: { routePath: string; path: string } }): string {
+  try {
+    return c.req.routePath || c.req.path;
+  } catch {
+    return c.req.path;
+  }
+}
 
 // ============================================================================
 // App Factory
@@ -106,22 +131,30 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
 
   app.use('*', async (c, next) => {
     const start = Date.now();
+    const requestBodySize = parseContentLength(c.req.header('content-length'));
     await next();
-    const duration = Date.now() - start;
+    const durationMs = Date.now() - start;
     const auth = c.get('auth') as HonoEnv['Variables']['auth'] | undefined;
-    const identity =
+    const endUserId =
       auth?.type === 'basic' ? auth.payload.accountName : auth?.type === 'jwt' ? auth.payload.sub : undefined;
+    const responseBodySize = parseContentLength(c.res.headers.get('content-length'));
+    const queryString = new URL(c.req.url).search.slice(1) || undefined;
     const log = c.get('logger') ?? deps.logger;
     log.info(
       {
-        method: c.req.method,
-        path: c.req.path,
-        query: c.req.query(),
-        status: c.res.status,
-        duration,
-        identity,
+        'http.request.method': c.req.method,
+        'http.response.status_code': c.res.status,
+        'http.route': safeRoutePath(c),
+        'url.path': c.req.path,
+        'url.query': queryString,
+        'client.address': resolveClientIp(c.req.header('x-forwarded-for'), deps.config.trustedProxyHops),
+        'user_agent.original': c.req.header('user-agent'),
+        'http.request.body.size': requestBodySize,
+        'http.response.body.size': responseBodySize,
+        'enduser.id': endUserId,
+        duration_ms: durationMs,
       },
-      `${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`,
+      `${c.req.method} ${c.req.path} ${c.res.status} ${durationMs}ms`,
     );
   });
 
