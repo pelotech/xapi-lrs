@@ -67,6 +67,8 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     jwksCache: deps.jwksCache,
     jwtConfig: deps.jwtConfig,
     xapiVerifySignatures: deps.config.xapiVerifySignatures,
+    stmtGetDefault: deps.config.stmtGetDefault,
+    stmtGetMax: deps.config.stmtGetMax,
   };
 
   // --------------------------------------------------------------------------

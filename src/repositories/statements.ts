@@ -40,6 +40,10 @@ export interface StatementQueryParams {
   limit?: number;
   ascending?: boolean;
   cursor?: string;
+  /** Page size when `limit` is not provided (defaults to 50 if unset). */
+  defaultLimit?: number;
+  /** Hard cap on any user-supplied `limit` (defaults to 50 if unset). */
+  maxLimit?: number;
 }
 
 // ============================================================================
@@ -406,7 +410,9 @@ export async function queryStatements(
     }
   }
 
-  const effectiveLimit = Math.min(params.limit ?? 100, 1000);
+  const defaultLimit = params.defaultLimit ?? 50;
+  const maxLimit = params.maxLimit ?? 50;
+  const effectiveLimit = Math.min(params.limit ?? defaultLimit, maxLimit);
   const orderDir = params.ascending ? 'ASC' : 'DESC';
 
   // Build WHERE: direct matches OR statements targeting voided matches
