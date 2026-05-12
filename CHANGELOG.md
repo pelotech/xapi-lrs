@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/pelotech/xapi-lrs/compare/v0.3.1...v0.3.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* enforce statement page-size cap with default of 50 ([#53](https://github.com/pelotech/xapi-lrs/issues/53)) ([7ceeae1](https://github.com/pelotech/xapi-lrs/commit/7ceeae16286c1088976421a0806727c159ab098f))
+
 ## [0.3.1](https://github.com/pelotech/xapi-lrs/compare/v0.3.0...v0.3.1) (2026-05-12)
 
 
