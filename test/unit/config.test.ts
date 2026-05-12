@@ -1,5 +1,13 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadConfig } from '../../src/config.ts';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -175,5 +183,90 @@ describe('loadConfig LRSQL log level normalization', () => {
 
   test('native LOG_LEVEL takes precedence over LRSQL_LOG_LEVEL', () => {
     expect(loadConfig({ LOG_LEVEL: 'warn', LRSQL_LOG_LEVEL: 'DEBUG' }).logLevel).toBe('warn');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Statement GET limits — native names
+// ---------------------------------------------------------------------------
+
+describe('loadConfig statement GET limits', () => {
+  test('defaults to 50/50 when unset', () => {
+    const c = loadConfig({});
+    expect(c.stmtGetDefault).toBe(50);
+    expect(c.stmtGetMax).toBe(50);
+  });
+
+  test('LRS_STMT_GET_DEFAULT / LRS_STMT_GET_MAX map to stmtGetDefault/stmtGetMax', () => {
+    const c = loadConfig({ LRS_STMT_GET_DEFAULT: '25', LRS_STMT_GET_MAX: '200' });
+    expect(c.stmtGetDefault).toBe(25);
+    expect(c.stmtGetMax).toBe(200);
+  });
+
+  test('native LRS_STMT_GET_* takes precedence over LRSQL_STMT_GET_*', () => {
+    const c = loadConfig({
+      LRS_STMT_GET_DEFAULT: '10',
+      LRSQL_STMT_GET_DEFAULT: '20',
+      LRS_STMT_GET_MAX: '100',
+      LRSQL_STMT_GET_MAX: '200',
+    });
+    expect(c.stmtGetDefault).toBe(10);
+    expect(c.stmtGetMax).toBe(100);
+  });
+
+  test('LRSQL_STMT_GET_* still honored for compatibility', () => {
+    const c = loadConfig({ LRSQL_STMT_GET_DEFAULT: '20', LRSQL_STMT_GET_MAX: '200' });
+    expect(c.stmtGetDefault).toBe(20);
+    expect(c.stmtGetMax).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deprecation warnings
+// ---------------------------------------------------------------------------
+
+describe('loadConfig deprecation warnings', () => {
+  const matchDeprecation = (legacy: string) => expect.stringContaining(`${legacy} is deprecated`);
+
+  test.each([
+    ['LRSQL_DB_NAME', 'mydb'],
+    ['LRSQL_OIDC_ISSUER', 'https://idp'],
+    ['LRSQL_OIDC_AUDIENCE', 'aud'],
+    ['LRSQL_ADMIN_USER_DEFAULT', 'u'],
+    ['LRSQL_ADMIN_PASS_DEFAULT', 'p'],
+    ['LRSQL_API_KEY_DEFAULT', 'k'],
+    ['LRSQL_API_SECRET_DEFAULT', 's'],
+    ['LRSQL_STMT_GET_DEFAULT', '25'],
+    ['LRSQL_STMT_GET_MAX', '100'],
+    ['LRSQL_LOG_LEVEL', 'DEBUG'],
+    ['LRSQL_ALLOW_ALL_ORIGINS', 'true'],
+  ])('warns when %s is used', (legacy, value) => {
+    loadConfig({ [legacy]: value });
+    expect(warnSpy).toHaveBeenCalledWith(matchDeprecation(legacy));
+  });
+
+  test('does not warn when native equivalent is also set (legacy unused)', () => {
+    loadConfig({ JWT_ISSUER: 'native', LRSQL_OIDC_ISSUER: 'legacy' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRSQL_OIDC_ISSUER'));
+  });
+
+  test('does not warn when neither legacy nor native is set', () => {
+    loadConfig({});
+    for (const legacy of [
+      'LRSQL_DB_NAME',
+      'LRSQL_OIDC_ISSUER',
+      'LRSQL_ADMIN_USER_DEFAULT',
+      'LRSQL_API_KEY_DEFAULT',
+      'LRSQL_STMT_GET_DEFAULT',
+      'LRSQL_LOG_LEVEL',
+      'LRSQL_ALLOW_ALL_ORIGINS',
+    ]) {
+      expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation(legacy));
+    }
+  });
+
+  test('LRSQL_ALLOW_ALL_ORIGINS warns even when value is "false"', () => {
+    loadConfig({ LRSQL_ALLOW_ALL_ORIGINS: 'false' });
+    expect(warnSpy).toHaveBeenCalledWith(matchDeprecation('LRSQL_ALLOW_ALL_ORIGINS'));
   });
 });
