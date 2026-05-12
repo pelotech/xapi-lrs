@@ -96,7 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
-      contents: read
+      contents: write # upload SBOMs to the GitHub release
+      id-token: write # OIDC for keyless cosign + attestations
+      attestations: write # actions/attest-build-provenance, actions/attest-sbom
     steps:
       - name: Download digests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -125,6 +127,64 @@ jobs:
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      - name: Capture manifest digest
+        id: digest
+        run: |
+          set -euo pipefail
+          DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${IMAGE_NAME}:${TAG}" \
+            --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          TAG: ${{ steps.meta.outputs.version }}
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Sign image with keyless cosign
+        run: cosign sign --yes "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+      - name: Generate SPDX and CycloneDX SBOMs
+        id: sbom
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          spdx="xapi-lrs-${VERSION}-sbom.spdx.json"
+          cdx="xapi-lrs-${VERSION}-sbom.cdx.json"
+          syft scan "${REGISTRY}/${IMAGE_NAME}@${DIGEST}" \
+            -o "spdx-json=${spdx}" \
+            -o "cyclonedx-json=${cdx}"
+          echo "spdx=${spdx}" >> "$GITHUB_OUTPUT"
+          echo "cdx=${cdx}" >> "$GITHUB_OUTPUT"
+      - name: Attest SBOM (SPDX)
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.spdx }}
+          push-to-registry: true
+      - name: Upload SBOMs to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          SPDX: ${{ steps.sbom.outputs.spdx }}
+          CDX: ${{ steps.sbom.outputs.cdx }}
+        run: gh release upload "$TAG" "$SPDX" "$CDX" --repo "${{ github.repository }}"
 
   # ----------------------------------------------------------------------------
   # Dev path: builds per-arch on every non-release main push, merges into a
@@ -190,6 +250,8 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write # OIDC for keyless cosign + attestations
+      attestations: write # actions/attest-build-provenance
     steps:
       - name: Download digests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -218,3 +280,28 @@ jobs:
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Capture manifest digest
+        id: digest
+        run: |
+          set -euo pipefail
+          DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${IMAGE_NAME}:latest" \
+            --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Sign image with keyless cosign
+        run: cosign sign --yes "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true

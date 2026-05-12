@@ -121,6 +121,33 @@ src/
   server.ts       # Process entrypoint
 ```
 
+## Supply Chain
+
+Container images published to `ghcr.io/pelotech/xapi-lrs` are signed with [Sigstore cosign](https://docs.sigstore.dev/) (keyless / OIDC) and carry SLSA build provenance attestations. Release images additionally have SPDX and CycloneDX SBOMs attached as Sigstore attestations and as downloadable release artifacts.
+
+Verify an image (substitute the tag):
+
+```bash
+# Signature
+cosign verify ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Build provenance
+cosign verify-attestation ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --type slsaprovenance \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# SBOM (releases only)
+cosign verify-attestation ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --type spdxjson \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+SBOM files are also attached to each GitHub Release as `xapi-lrs-<version>-sbom.spdx.json` and `xapi-lrs-<version>-sbom.cdx.json`.
+
 ## License
 
 Apache 2.0
