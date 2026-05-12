@@ -26,10 +26,10 @@ services:
       PGDATABASE: xapi_lrs
       PGUSER: xapi_lrs
       PGPASSWORD: xapi_lrs
-      LRS_PORT: 8081
-      LRS_ADMIN_PORT: 8091
-      LRS_ADMIN_USER: admin
-      LRS_ADMIN_PASSWORD: admin
+      XAPI_LRS_PORT: 8081
+      XAPI_LRS_ADMIN_PORT: 8091
+      XAPI_LRS_ADMIN_USER: admin
+      XAPI_LRS_ADMIN_PASSWORD: admin
       ADMIN_SESSION_SECRET: dev-session-secret-change-me
       LOG_LEVEL: info
       CORS_ENABLED: 'false'
@@ -42,5 +42,5 @@ services:
       # at startup so this quick-start still boots against an empty database.
       AUTO_MIGRATE: 'true'
     ports:
-      - '${LRS_PORT:-8081}:8081'
-      - '${LRS_ADMIN_PORT:-8091}:8091'
+      - '${XAPI_LRS_PORT:-8081}:8081'
+      - '${XAPI_LRS_ADMIN_PORT:-8091}:8091'

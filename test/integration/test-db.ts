@@ -24,11 +24,15 @@ export interface TestDbConfig {
 /** Default test DB config — uses env vars or sensible defaults. */
 export const defaultTestDbConfig: TestDbConfig = {
   host: process.env['TEST_DB_HOST'] ?? process.env['PGHOST'] ?? 'localhost',
-  port: parseInt(process.env['LRS_TEST_DB_PORT'] ?? process.env['TEST_DB_PORT'] ?? process.env['PGPORT'] ?? '5432', 10),
-  database: process.env['LRS_TEST_DB_NAME'] ?? process.env['TEST_DB_NAME'] ?? process.env['PGDATABASE'] ?? 'xapi_lrs',
-  user: process.env['LRS_TEST_DB_USER'] ?? process.env['TEST_DB_USER'] ?? process.env['PGUSER'] ?? 'test',
+  port: parseInt(
+    process.env['XAPI_LRS_TEST_DB_PORT'] ?? process.env['TEST_DB_PORT'] ?? process.env['PGPORT'] ?? '5432',
+    10,
+  ),
+  database:
+    process.env['XAPI_LRS_TEST_DB_NAME'] ?? process.env['TEST_DB_NAME'] ?? process.env['PGDATABASE'] ?? 'xapi_lrs',
+  user: process.env['XAPI_LRS_TEST_DB_USER'] ?? process.env['TEST_DB_USER'] ?? process.env['PGUSER'] ?? 'test',
   password:
-    process.env['LRS_TEST_DB_PASSWORD'] ?? process.env['TEST_DB_PASSWORD'] ?? process.env['PGPASSWORD'] ?? 'test',
+    process.env['XAPI_LRS_TEST_DB_PASSWORD'] ?? process.env['TEST_DB_PASSWORD'] ?? process.env['PGPASSWORD'] ?? 'test',
 };
 
 export function createTestPool(config: TestDbConfig = defaultTestDbConfig): pg.Pool {

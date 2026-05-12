@@ -148,8 +148,8 @@ jobs:
         # spec requires an AUTHENTICATED smoke, so bootstrap a known credential
         # and hit /xapi/statements with it.
         run: |
-          LRS_ADMIN_USER=admin LRS_ADMIN_PASSWORD=admin-ci-password \
-          LRS_API_KEY_DEFAULT=ci-key LRS_API_SECRET_DEFAULT=ci-secret \
+          XAPI_LRS_ADMIN_USER=admin XAPI_LRS_ADMIN_PASSWORD=admin-ci-password \
+          XAPI_LRS_API_KEY_DEFAULT=ci-key XAPI_LRS_API_SECRET_DEFAULT=ci-secret \
           node dist/server.js &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT

@@ -42,7 +42,7 @@ describe('bootstrapAccounts — explicit credentials configured', () => {
     await bootstrapAccounts(
       pool,
       metrics,
-      cfg({ LRS_ADMIN_USER: 'alice', LRS_ADMIN_PASSWORD: 'pass' }),
+      cfg({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_ADMIN_PASSWORD: 'pass' }),
       makeLogger(),
       deps,
     );
@@ -54,7 +54,7 @@ describe('bootstrapAccounts — explicit credentials configured', () => {
     await bootstrapAccounts(
       pool,
       metrics,
-      cfg({ LRS_ADMIN_USER: 'alice', LRS_ADMIN_PASSWORD: 'pass' }),
+      cfg({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_ADMIN_PASSWORD: 'pass' }),
       makeLogger(),
       deps,
     );
@@ -64,7 +64,13 @@ describe('bootstrapAccounts — explicit credentials configured', () => {
   test('logs info after ensuring the account', async () => {
     const logger = makeLogger();
     const deps = makeDeps();
-    await bootstrapAccounts(pool, metrics, cfg({ LRS_ADMIN_USER: 'alice', LRS_ADMIN_PASSWORD: 'pass' }), logger, deps);
+    await bootstrapAccounts(
+      pool,
+      metrics,
+      cfg({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_ADMIN_PASSWORD: 'pass' }),
+      logger,
+      deps,
+    );
     expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({ username: 'alice' }), expect.any(String));
   });
 });
@@ -142,10 +148,10 @@ describe('bootstrapAccounts — default credential', () => {
       pool,
       metrics,
       cfg({
-        LRS_ADMIN_USER: 'alice',
-        LRS_ADMIN_PASSWORD: 'pass',
-        LRS_API_KEY_DEFAULT: 'k',
-        LRS_API_SECRET_DEFAULT: 's',
+        XAPI_LRS_ADMIN_USER: 'alice',
+        XAPI_LRS_ADMIN_PASSWORD: 'pass',
+        XAPI_LRS_API_KEY_DEFAULT: 'k',
+        XAPI_LRS_API_SECRET_DEFAULT: 's',
       }),
       makeLogger(),
       deps,
@@ -161,7 +167,7 @@ describe('bootstrapAccounts — default credential', () => {
     await bootstrapAccounts(
       pool,
       metrics,
-      cfg({ LRS_API_KEY_DEFAULT: 'k', LRS_API_SECRET_DEFAULT: 's' }),
+      cfg({ XAPI_LRS_API_KEY_DEFAULT: 'k', XAPI_LRS_API_SECRET_DEFAULT: 's' }),
       makeLogger(),
       deps,
     );
@@ -175,7 +181,7 @@ describe('bootstrapAccounts — default credential', () => {
     await bootstrapAccounts(
       pool,
       metrics,
-      cfg({ LRS_API_KEY_DEFAULT: 'k', LRS_API_SECRET_DEFAULT: 's' }),
+      cfg({ XAPI_LRS_API_KEY_DEFAULT: 'k', XAPI_LRS_API_SECRET_DEFAULT: 's' }),
       logger,
       deps,
     );
@@ -188,7 +194,7 @@ describe('bootstrapAccounts — default credential', () => {
     await bootstrapAccounts(
       pool,
       metrics,
-      cfg({ LRS_ADMIN_USER: 'alice', LRS_ADMIN_PASSWORD: 'pass', LRS_API_KEY_DEFAULT: 'k' }),
+      cfg({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_ADMIN_PASSWORD: 'pass', XAPI_LRS_API_KEY_DEFAULT: 'k' }),
       makeLogger(),
       deps,
     );

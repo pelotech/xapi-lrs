@@ -40,7 +40,7 @@ export async function bootstrapAccounts(
     logger.warn(
       { username: bootstrapUsername, password: generatedPassword },
       'No admin account configured — generated a one-time admin account. ' +
-        'Set LRS_ADMIN_USER and LRS_ADMIN_PASSWORD to suppress this warning.',
+        'Set XAPI_LRS_ADMIN_USER and XAPI_LRS_ADMIN_PASSWORD to suppress this warning.',
     );
   } else {
     bootstrapUsername = config.adminUser ?? '';
@@ -53,7 +53,7 @@ export async function bootstrapAccounts(
       logger.info({ apiKey: config.apiKeyDefault }, 'Default xAPI credential bootstrapped');
     } else {
       logger.warn(
-        'LRS_API_KEY_DEFAULT / LRSQL_API_KEY_DEFAULT set but no admin account available to own it — skipping credential bootstrap',
+        'XAPI_LRS_API_KEY_DEFAULT set but no admin account available to own it — skipping credential bootstrap',
       );
     }
   }
