@@ -74,6 +74,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     xapiRateLimitMax: 10000,
     stmtGetDefault: 50,
     stmtGetMax: 50,
+    shutdownTimeoutMs: 5_000,
     pgStatementTimeoutMs: 30_000,
     pgIdleInTransactionTimeoutMs: 60_000,
     databaseDriver: isPglite ? 'pglite' : 'pg',
@@ -114,6 +115,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     pgListener = new PgListener(config, logger);
   }
 
+  const shutdownController = new AbortController();
   const deps: AppDeps = {
     config,
     pool,
@@ -124,6 +126,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     pgListener,
     sessionSecret: 'test-secret',
     startedAt: new Date(),
+    shutdownSignal: shutdownController.signal,
   };
   const app = createApp(deps);
 
@@ -167,6 +170,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
   const adminUrl = `http://localhost:${adminAddress.port}`;
 
   const close = async (): Promise<void> => {
+    shutdownController.abort();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await new Promise<void>((resolve) => adminServer.close(() => resolve()));
     await metrics.shutdown();

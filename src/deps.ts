@@ -16,4 +16,6 @@ export interface LrsDeps {
   xapiVerifySignatures: boolean;
   stmtGetDefault: number;
   stmtGetMax: number;
+  /** Fires when the process is shutting down; long-lived handlers (SSE) must exit. */
+  shutdownSignal: AbortSignal;
 }

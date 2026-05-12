@@ -12,12 +12,20 @@ import type { Listener, NotificationHandler } from './pg-listener.ts';
 export class LocalListener implements Listener {
   private handlers = new Map<string, Set<NotificationHandler>>();
   private unsubs = new Map<string, () => Promise<void>>();
+  private stopped = false;
 
   constructor(private db: PGlite) {}
 
   async start(): Promise<void> {}
 
+  isReady(): boolean {
+    // PGlite db.listen is in-process and effectively always available
+    // once the backend has been created.
+    return !this.stopped;
+  }
+
   async stop(): Promise<void> {
+    this.stopped = true;
     for (const unsub of this.unsubs.values()) {
       await unsub().catch(() => {});
     }

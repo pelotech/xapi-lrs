@@ -122,6 +122,10 @@ async function main(): Promise<void> {
   });
   const tAdmin = performance.now();
 
+  // AbortController fires on SIGTERM/SIGINT; long-lived handlers (SSE) watch it.
+  const shutdownController = new AbortController();
+  let shuttingDown = false;
+
   // Hono app
   const startedAt = new Date();
   const app = createApp({
@@ -134,6 +138,7 @@ async function main(): Promise<void> {
     pgListener: listener,
     sessionSecret,
     startedAt,
+    shutdownSignal: shutdownController.signal,
   });
 
   // Log registered routes
@@ -152,18 +157,40 @@ async function main(): Promise<void> {
   });
 
   // Admin server (health + metrics)
-  // Security: this port exposes unauthenticated /healthz, /ready, and /metrics
-  // endpoints. It MUST NOT be exposed to the public internet — restrict access
-  // via network policy, firewall rules, or bind to a loopback/internal interface.
-  const adminApp = new Hono();
-  adminApp.get('/healthz', (c) => c.text('ok'));
-  adminApp.get('/ready', async (c) => {
+  // Security: this port exposes unauthenticated /healthz, /readyz, /ready, and
+  // /metrics endpoints. It MUST NOT be exposed to the public internet — restrict
+  // access via network policy, firewall rules, or bind to a loopback/internal
+  // interface.
+  //
+  // Probe semantics (k8s convention):
+  //   /healthz — liveness: the process is alive. Always 200 unless deadlocked.
+  //   /readyz  — readiness: the process can accept new traffic. 503 during
+  //              startup deps unavailable, during shutdown, or if a downstream
+  //              (DB, pg_notify) is unhealthy.
+  //   /ready   — deprecated alias for /readyz, kept for backward compatibility.
+  const readyz = async () => {
+    if (shuttingDown) {
+      return { ok: false, status: 503 as const, body: 'shutting down' };
+    }
     try {
       await pool.query({ text: 'SELECT 1' });
-      return c.text('ok');
     } catch {
-      return c.text('database unavailable', 503);
+      return { ok: false, status: 503 as const, body: 'database unavailable' };
     }
+    if (!listener.isReady()) {
+      return { ok: false, status: 503 as const, body: 'pg_notify listener not ready' };
+    }
+    return { ok: true, status: 200 as const, body: 'ok' };
+  };
+  const adminApp = new Hono();
+  adminApp.get('/healthz', (c) => c.text('ok'));
+  adminApp.get('/readyz', async (c) => {
+    const r = await readyz();
+    return c.text(r.body, r.status);
+  });
+  adminApp.get('/ready', async (c) => {
+    const r = await readyz();
+    return c.text(r.body, r.status);
   });
   adminApp.get('/metrics', async (c) => {
     const content = await metrics.getPrometheusText();
@@ -184,19 +211,50 @@ async function main(): Promise<void> {
     'Startup timing',
   );
 
-  // Graceful shutdown
-  const shutdown = async () => {
-    logger.info('Shutting down LRS service');
-    server.close();
-    adminServer.close();
-    await metrics.shutdown();
-    await listener.stop();
-    await pool.end();
-    process.exit(0);
+  // Graceful shutdown sequence:
+  //  1. Flip `shuttingDown` so /readyz immediately returns 503 — load balancers
+  //     stop routing new traffic.
+  //  2. Abort the shutdown signal — SSE heartbeat loops exit and their streams
+  //     close, releasing the HTTP connections holding the server open.
+  //  3. Close the HTTP listeners; the close callbacks fire only after all
+  //     in-flight requests have completed.
+  //  4. Stop the pg_notify listener (frees its dedicated DB connection).
+  //  5. Drain the pool (closes remaining DB connections).
+  //  6. Shut down metrics.
+  // A hard deadline (config.shutdownTimeoutMs) force-exits if any step hangs.
+  let shutdownInProgress = false;
+  const shutdown = async (signal: string) => {
+    if (shutdownInProgress) return;
+    shutdownInProgress = true;
+    logger.info({ signal, timeoutMs: config.shutdownTimeoutMs }, 'Shutdown initiated');
+
+    const forceExit = setTimeout(() => {
+      logger.error({ timeoutMs: config.shutdownTimeoutMs }, 'Shutdown timed out; forcing exit');
+      process.exit(1);
+    }, config.shutdownTimeoutMs);
+    forceExit.unref();
+
+    shuttingDown = true;
+    shutdownController.abort();
+
+    try {
+      await Promise.all([
+        new Promise<void>((resolve) => server.close(() => resolve())),
+        new Promise<void>((resolve) => adminServer.close(() => resolve())),
+      ]);
+      await listener.stop();
+      await pool.end();
+      await metrics.shutdown();
+      logger.info('Shutdown complete');
+      process.exit(0);
+    } catch (err) {
+      logger.error(err, 'Error during shutdown');
+      process.exit(1);
+    }
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 main().catch((err) => {
