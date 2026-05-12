@@ -10,6 +10,7 @@ import { test, describe, expect } from './fixtures.ts';
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Required by the xAPI spec (§3.2); not needed for admin API routes at /api/admin/*
 const XAPI_HEADERS = { 'X-Experience-API-Version': '1.0.3' } as const;
 
 /**
