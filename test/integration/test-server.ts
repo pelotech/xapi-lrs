@@ -72,6 +72,8 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     trustedProxyHops: 0,
     xapiRateLimitWindow: 60,
     xapiRateLimitMax: 10000,
+    stmtGetDefault: 50,
+    stmtGetMax: 50,
     databaseDriver: isPglite ? 'pglite' : 'pg',
     pgliteDataDir: undefined,
     autoMigrate: false,

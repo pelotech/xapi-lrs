@@ -81,6 +81,8 @@ All configuration is via environment variables. See `.env.test` for defaults.
 | `ADMIN_SESSION_SECRET`          | (random)    | Session secret (required in production)              |
 | `LOG_LEVEL`                     | `info`      | Log level (silent/fatal/error/warn/info/debug/trace) |
 | `CORS_ORIGIN`                   | `*`         | CORS allowed origin                                  |
+| `LRSQL_STMT_GET_DEFAULT`        | `50`        | Default `GET /statements` page size when no `limit`  |
+| `LRSQL_STMT_GET_MAX`            | `50`        | Hard cap on `GET /statements` `limit` (silent clamp) |
 
 ## Scripts
 

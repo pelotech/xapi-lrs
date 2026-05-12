@@ -298,6 +298,8 @@ export function createStatementsApp() {
         limit,
         ascending,
         cursor,
+        defaultLimit: deps.stmtGetDefault,
+        maxLimit: deps.stmtGetMax,
       });
 
       const statements = rows.map((row) => formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage));

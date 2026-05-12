@@ -14,4 +14,6 @@ export interface LrsDeps {
   jwksCache: JwksCache;
   jwtConfig: JwtConfig | null;
   xapiVerifySignatures: boolean;
+  stmtGetDefault: number;
+  stmtGetMax: number;
 }

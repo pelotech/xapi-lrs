@@ -70,6 +70,10 @@ const configSchema = z.object({
   xapiRateLimitWindow: z.coerce.number().int().positive().default(60),
   xapiRateLimitMax: z.coerce.number().int().positive().default(300),
 
+  /** Statement GET page size: default when no `limit` is sent, hard cap on any user-supplied limit */
+  stmtGetDefault: z.coerce.number().int().positive().default(50),
+  stmtGetMax: z.coerce.number().int().positive().default(50),
+
   /** Feature flags */
   xapiVerifySignatures: z.preprocess((v) => String(v ?? 'true') === 'true', z.boolean()).default(true),
 
@@ -143,6 +147,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     xapiRateLimitWindow: env.XAPI_RATE_LIMIT_WINDOW,
     xapiRateLimitMax: env.XAPI_RATE_LIMIT_MAX,
+    stmtGetDefault: env.LRSQL_STMT_GET_DEFAULT,
+    stmtGetMax: env.LRSQL_STMT_GET_MAX,
     xapiVerifySignatures: env.XAPI_VERIFY_SIGNATURES,
     logLevel: env.LOG_LEVEL ?? lrsqlLogLevel,
     nodeEnv: env.NODE_ENV,
