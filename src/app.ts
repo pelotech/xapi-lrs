@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { createAdminApiApp } from './admin/api.ts';
 import { createAdminApp } from './admin/index.ts';
 import type { JwksCache, JwtConfig } from './auth/jwt.ts';
 import type { LrsConfig } from './config.ts';
@@ -420,7 +421,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   // Mount Admin UI at /admin
   // --------------------------------------------------------------------------
 
-  const adminApp = createAdminApp({
+  const adminDeps = {
     pool: deps.pool,
     metrics: deps.metrics,
     logger: deps.logger,
@@ -428,8 +429,9 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     sessionSecret: deps.sessionSecret,
     startedAt: deps.startedAt,
     trustedProxyHops: deps.config.trustedProxyHops,
-  });
-  app.route('/admin', adminApp);
+  };
+  app.route('/admin', createAdminApp(adminDeps));
+  app.route('/api/admin', createAdminApiApp(adminDeps));
 
   return app;
 }
