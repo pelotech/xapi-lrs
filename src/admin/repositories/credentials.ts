@@ -12,7 +12,7 @@ type Query = Omit<QueryConfig, 'values'>;
 const LIST_CREDENTIALS = {
   name: 'admin_list_credentials',
   text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
-                COALESCE(array_agg(s.scope) FILTER (WHERE s.scope IS NOT NULL), '{}') AS scopes
+                COALESCE(json_agg(s.scope::text ORDER BY s.scope::text) FILTER (WHERE s.scope IS NOT NULL), '[]') AS scopes
          FROM lrs_credential c
          JOIN admin_account a ON a.id = c.account_id
          LEFT JOIN credential_to_scope s ON s.credential_id = c.id
@@ -72,8 +72,9 @@ export async function createCredential(
   return result.rows[0].id;
 }
 
-export async function deleteCredential(pool: DbPool, metrics: LrsMetrics, credentialId: string): Promise<void> {
-  await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL, values: [credentialId] });
+export async function deleteCredential(pool: DbPool, metrics: LrsMetrics, credentialId: string): Promise<boolean> {
+  const result = await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL, values: [credentialId] });
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function rotateSecret(
@@ -81,8 +82,9 @@ export async function rotateSecret(
   metrics: LrsMetrics,
   credentialId: string,
   newSecret: string,
-): Promise<void> {
-  await poolQuery(pool, metrics, { ...ROTATE_SECRET, values: [newSecret, credentialId] });
+): Promise<boolean> {
+  const result = await poolQuery(pool, metrics, { ...ROTATE_SECRET, values: [newSecret, credentialId] });
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function ensureDefaultCredential(
@@ -108,9 +110,16 @@ export async function setCredentialScopes(
   metrics: LrsMetrics,
   credentialId: string,
   scopes: string[],
-): Promise<void> {
+): Promise<boolean> {
+  const exists = await poolQuery<{ exists: boolean }>(pool, metrics, {
+    name: 'admin_credential_exists',
+    text: 'SELECT EXISTS(SELECT 1 FROM lrs_credential WHERE id = $1) AS exists',
+    values: [credentialId],
+  });
+  if (!exists.rows[0].exists) return false;
   await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL_SCOPES, values: [credentialId] });
   for (const scope of scopes) {
     await poolQuery(pool, metrics, { ...INSERT_CREDENTIAL_SCOPE, values: [credentialId, scope] });
   }
+  return true;
 }
