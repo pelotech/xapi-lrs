@@ -10,7 +10,7 @@ import { test, describe, expect } from './fixtures.ts';
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Required by the xAPI spec (§3.2); not needed for admin API routes at /api/admin/*
+// Required by the xAPI spec (§3.2); not needed for admin API routes
 const XAPI_HEADERS = { 'X-Experience-API-Version': '1.0.3' } as const;
 
 /**
@@ -108,6 +108,49 @@ describe('Admin API — POST /credentials', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /credentials/:id/scopes — replaces, not appends
+// ---------------------------------------------------------------------------
+
+describe('Admin API — PUT /credentials/:id/scopes', () => {
+  test('replaces all existing scopes with the new set', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const adminHeaders = { Authorization: `Basic ${adminAuth}`, 'Content-Type': 'application/json' };
+    const base = `${server.apiUrl}/api/admin`;
+
+    const createRes = await fetch(`${base}/credentials`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ scopes: ['all'] }),
+    });
+    expect(createRes.status).toBe(201);
+    const { id } = (await createRes.json()) as { id: string };
+
+    const putRes = await fetch(`${base}/credentials/${id}/scopes`, {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({ scopes: ['statements/read'] }),
+    });
+    expect(putRes.status).toBe(200);
+    expect(((await putRes.json()) as { scopes: string[] }).scopes).toEqual(['statements/read']);
+
+    const listRes = await fetch(`${base}/credentials`, { headers: { Authorization: `Basic ${adminAuth}` } });
+    const list = (await listRes.json()) as Array<{ id: string; scopes: string[] }>;
+    const cred = list.find((c) => c.id === id);
+    expect(cred?.scopes).toEqual(['statements/read']);
+  });
+
+  test('returns 404 for a non-existent credential', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const res = await fetch(`${server.apiUrl}/api/admin/credentials/${randomUUID()}/scopes`, {
+      method: 'PUT',
+      headers: { Authorization: `Basic ${adminAuth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scopes: [] }),
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /credentials/:id — revokes xAPI access
 // ---------------------------------------------------------------------------
 
@@ -148,6 +191,15 @@ describe('Admin API — DELETE /credentials/:id', () => {
       headers: { Authorization: xapiAuth, ...XAPI_HEADERS },
     });
     expect(afterRes.status).toBe(401);
+  });
+
+  test('returns 404 for a non-existent credential', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const res = await fetch(`${server.apiUrl}/api/admin/credentials/${randomUUID()}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(res.status).toBe(404);
   });
 });
 
@@ -205,5 +257,14 @@ describe('Admin API — POST /credentials/:id/rotate', () => {
       headers: { Authorization: newXapiAuth, ...XAPI_HEADERS },
     });
     expect(newAfterRes.status).toBe(200);
+  });
+
+  test('returns 404 for a non-existent credential', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const res = await fetch(`${server.apiUrl}/api/admin/credentials/${randomUUID()}/rotate`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(res.status).toBe(404);
   });
 });

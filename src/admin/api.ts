@@ -96,7 +96,8 @@ export function createAdminApiApp(deps: AdminDeps): Hono<AdminApiEnv> {
   // Delete
   app.delete('/credentials/:id', async (c) => {
     const credId = c.req.param('id');
-    await deleteCredential(deps.pool, deps.metrics, credId);
+    const found = await deleteCredential(deps.pool, deps.metrics, credId);
+    if (!found) return c.json({ error: 'Not Found' }, 404);
     c.var.logger.info(
       { admin: c.var.adminUsername, action: 'credential.delete', target: credId },
       'Credential deleted',
@@ -114,7 +115,8 @@ export function createAdminApiApp(deps: AdminDeps): Hono<AdminApiEnv> {
       // treat missing/non-JSON body as empty scopes
     }
     const scopes = Array.isArray(body.scopes) ? (body.scopes as string[]) : [];
-    await setCredentialScopes(deps.pool, deps.metrics, credId, scopes);
+    const found = await setCredentialScopes(deps.pool, deps.metrics, credId, scopes);
+    if (!found) return c.json({ error: 'Not Found' }, 404);
     c.var.logger.info(
       { admin: c.var.adminUsername, action: 'credential.scopes', target: credId, scopes },
       'Scopes updated',
@@ -126,7 +128,8 @@ export function createAdminApiApp(deps: AdminDeps): Hono<AdminApiEnv> {
   app.post('/credentials/:id/rotate', async (c) => {
     const credId = c.req.param('id');
     const newSecret = randomBytes(32).toString('hex');
-    await rotateSecret(deps.pool, deps.metrics, credId, newSecret);
+    const found = await rotateSecret(deps.pool, deps.metrics, credId, newSecret);
+    if (!found) return c.json({ error: 'Not Found' }, 404);
     c.var.logger.info({ admin: c.var.adminUsername, action: 'credential.rotate', target: credId }, 'Secret rotated');
     return c.json({ secret_key: newSecret });
   });
