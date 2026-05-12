@@ -92,6 +92,7 @@ export const STATEMENTS_KNOWN_PARAMS = new Set([
   'limit',
   'ascending',
   'attachments',
+  '_cursor',
 ]);
 
 // ============================================================================

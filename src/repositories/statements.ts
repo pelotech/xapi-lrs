@@ -39,6 +39,7 @@ export interface StatementQueryParams {
   until?: string;
   limit?: number;
   ascending?: boolean;
+  cursor?: string;
 }
 
 // ============================================================================
@@ -376,21 +377,33 @@ export async function queryStatements(
     paramIndex++;
   }
 
-  // Since/until use SQUUID boundary comparison
-  if (params.since) {
-    const sinceMs = new Date(params.since).getTime();
-    const sinceId = squuidMin(sinceMs);
-    timeConds.push(`s.id > $${paramIndex}`);
-    values.push(sinceId);
+  if (params.cursor) {
+    // Pagination cursor: use the exact SQUUID from the previous page boundary.
+    // ascending uses >, descending uses < (both exclusive — cursor row not repeated).
+    timeConds.push(params.ascending ? `s.id > $${paramIndex}` : `s.id < $${paramIndex}`);
+    values.push(params.cursor);
     paramIndex++;
-  }
-
-  if (params.until) {
-    const untilMs = new Date(params.until).getTime();
-    const untilId = squuidMin(untilMs);
-    timeConds.push(`s.id <= $${paramIndex}`);
-    values.push(untilId);
-    paramIndex++;
+    // Preserve the opposite time bound from the original query if present.
+    if (params.ascending && params.until) {
+      timeConds.push(`s.id <= $${paramIndex}`);
+      values.push(squuidMin(new Date(params.until).getTime()));
+      paramIndex++;
+    } else if (!params.ascending && params.since) {
+      timeConds.push(`s.id > $${paramIndex}`);
+      values.push(squuidMin(new Date(params.since).getTime()));
+      paramIndex++;
+    }
+  } else {
+    if (params.since) {
+      timeConds.push(`s.id > $${paramIndex}`);
+      values.push(squuidMin(new Date(params.since).getTime()));
+      paramIndex++;
+    }
+    if (params.until) {
+      timeConds.push(`s.id <= $${paramIndex}`);
+      values.push(squuidMin(new Date(params.until).getTime()));
+      paramIndex++;
+    }
   }
 
   const effectiveLimit = Math.min(params.limit ?? 100, 1000);

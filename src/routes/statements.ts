@@ -214,6 +214,7 @@ export function createStatementsApp() {
     }
     const ascending = c.req.query('ascending') === 'true';
     const attachments = c.req.query('attachments') === 'true';
+    const cursor = c.req.query('_cursor') ?? undefined;
 
     // Reject unknown query params
     const url = new URL(c.req.url);
@@ -296,6 +297,7 @@ export function createStatementsApp() {
         until,
         limit,
         ascending,
+        cursor,
       });
 
       const statements = rows.map((row) => formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage));
@@ -312,14 +314,11 @@ export function createStatementsApp() {
         if (related_agents) moreParams.set('related_agents', 'true');
         if (limit) moreParams.set('limit', limit.toString());
         if (effectiveFormat !== 'exact') moreParams.set('format', effectiveFormat);
-
-        const lastStored = lastRow.payload.stored as string;
+        moreParams.set('_cursor', lastRow.id);
         if (ascending) {
           moreParams.set('ascending', 'true');
-          moreParams.set('since', lastStored);
           if (until) moreParams.set('until', until);
         } else {
-          moreParams.set('until', lastStored);
           if (since) moreParams.set('since', since);
         }
 
