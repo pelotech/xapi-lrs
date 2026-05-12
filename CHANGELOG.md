@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/pelotech/xapi-lrs/compare/v0.3.0...v0.3.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* fail fast on startup if PGlite data directory is not writable ([#49](https://github.com/pelotech/xapi-lrs/issues/49)) ([646c2af](https://github.com/pelotech/xapi-lrs/commit/646c2afe18dbc6cc70817342439e7ec8823c349a))
+* use exact SQUUID cursor for statement pagination ([#51](https://github.com/pelotech/xapi-lrs/issues/51)) ([11adfa4](https://github.com/pelotech/xapi-lrs/commit/11adfa4c6b6347bc953c8f2ff3088086de6de0b0))
+
 ## [0.3.0](https://github.com/pelotech/xapi-lrs/compare/v0.2.4...v0.3.0) (2026-05-12)
 
 
