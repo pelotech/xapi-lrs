@@ -60,29 +60,31 @@ The LRS will be available at `http://localhost:8081` and the admin server at `ht
 
 All configuration is via environment variables. See `.env.test` for defaults.
 
-| Variable                        | Default     | Description                                          |
-| ------------------------------- | ----------- | ---------------------------------------------------- |
-| `LRS_PORT` / `PORT`             | `8081`      | xAPI HTTP port                                       |
-| `LRS_ADMIN_PORT` / `ADMIN_PORT` | `8091`      | Admin/health/metrics port                            |
-| `DATABASE_DRIVER`               | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`       |
-| `PGLITE_DATA_DIR`               | (none)      | PGlite data directory; omit for in-memory            |
-| `PGHOST`                        | `localhost` | PostgreSQL host                                      |
-| `PGPORT`                        | `5432`      | PostgreSQL port                                      |
-| `PGDATABASE`                    | `xapi_lrs`  | PostgreSQL database                                  |
-| `PGUSER`                        | `xapi_lrs`  | PostgreSQL user                                      |
-| `PGPASSWORD`                    | (empty)     | PostgreSQL password                                  |
-| `DATABASE_URL`                  | (none)      | Full connection string (overrides PG\* vars)         |
-| `JWT_ISSUER`                    | (none)      | JWT issuer for token validation                      |
-| `JWT_AUDIENCE`                  | (none)      | JWT audience for token validation                    |
-| `JWKS_URI`                      | (none)      | JWKS endpoint URI                                    |
-| `OIDC_DISCOVERY_URL`            | (none)      | OIDC discovery URL (auto-discovers JWKS)             |
-| `LRS_ADMIN_USER`                | (none)      | Bootstrap admin username                             |
-| `LRS_ADMIN_PASSWORD`            | (none)      | Bootstrap admin password                             |
-| `ADMIN_SESSION_SECRET`          | (random)    | Session secret (required in production)              |
-| `LOG_LEVEL`                     | `info`      | Log level (silent/fatal/error/warn/info/debug/trace) |
-| `CORS_ORIGIN`                   | `*`         | CORS allowed origin                                  |
-| `LRSQL_STMT_GET_DEFAULT`        | `50`        | Default `GET /statements` page size when no `limit`  |
-| `LRSQL_STMT_GET_MAX`            | `50`        | Hard cap on `GET /statements` `limit` (silent clamp) |
+| Variable                            | Default     | Description                                           |
+| ----------------------------------- | ----------- | ----------------------------------------------------- |
+| `LRS_PORT` / `PORT`                 | `8081`      | xAPI HTTP port                                        |
+| `LRS_ADMIN_PORT` / `ADMIN_PORT`     | `8091`      | Admin/health/metrics port                             |
+| `DATABASE_DRIVER`                   | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`        |
+| `PGLITE_DATA_DIR`                   | (none)      | PGlite data directory; omit for in-memory             |
+| `PGHOST`                            | `localhost` | PostgreSQL host                                       |
+| `PGPORT`                            | `5432`      | PostgreSQL port                                       |
+| `PGDATABASE`                        | `xapi_lrs`  | PostgreSQL database                                   |
+| `PGUSER`                            | `xapi_lrs`  | PostgreSQL user                                       |
+| `PGPASSWORD`                        | (empty)     | PostgreSQL password                                   |
+| `DATABASE_URL`                      | (none)      | Full connection string (overrides PG\* vars)          |
+| `JWT_ISSUER`                        | (none)      | JWT issuer for token validation                       |
+| `JWT_AUDIENCE`                      | (none)      | JWT audience for token validation                     |
+| `JWKS_URI`                          | (none)      | JWKS endpoint URI                                     |
+| `OIDC_DISCOVERY_URL`                | (none)      | OIDC discovery URL (auto-discovers JWKS)              |
+| `LRS_ADMIN_USER`                    | (none)      | Bootstrap admin username                              |
+| `LRS_ADMIN_PASSWORD`                | (none)      | Bootstrap admin password                              |
+| `ADMIN_SESSION_SECRET`              | (random)    | Session secret (required in production)               |
+| `LOG_LEVEL`                         | `info`      | Log level (silent/fatal/error/warn/info/debug/trace)  |
+| `CORS_ORIGIN`                       | `*`         | CORS allowed origin                                   |
+| `LRSQL_STMT_GET_DEFAULT`            | `50`        | Default `GET /statements` page size when no `limit`   |
+| `LRSQL_STMT_GET_MAX`                | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
+| `PG_STATEMENT_TIMEOUT_MS`           | `30000`     | Per-statement DB query timeout (`0` disables)         |
+| `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS` | `60000`     | Idle-in-transaction connection timeout (`0` disables) |
 
 ## Scripts
 

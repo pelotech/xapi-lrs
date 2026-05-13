@@ -57,6 +57,14 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
 
   // --------------------------------------------------------------------------
   // Security headers
+  //
+  // CSP: default-src 'none' denies everything that isn't explicitly granted.
+  // `base-uri 'self'` is added explicitly because the CSP spec does NOT fall
+  // it back through default-src — without it an injected <base> tag can
+  // rewrite every relative URL on the page.
+  //
+  // Permissions-Policy disables browser APIs the admin UI never uses, so a
+  // compromised dependency can't quietly request them.
   // --------------------------------------------------------------------------
   app.use('*', async (c, next) => {
     c.header('X-Content-Type-Options', 'nosniff');
@@ -64,9 +72,32 @@ export function createAdminApp(deps: AdminDeps): Hono<AdminEnv> {
     c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     c.header(
       'Content-Security-Policy',
-      "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'",
+      [
+        "default-src 'none'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "connect-src 'self'",
+        "img-src 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+      ].join('; '),
     );
-    if (process.env.NODE_ENV === 'production') {
+    c.header(
+      'Permissions-Policy',
+      [
+        'accelerometer=()',
+        'camera=()',
+        'geolocation=()',
+        'gyroscope=()',
+        'magnetometer=()',
+        'microphone=()',
+        'payment=()',
+        'usb=()',
+        'interest-cohort=()',
+      ].join(', '),
+    );
+    if (deps.nodeEnv === 'production') {
       c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
     await next();

@@ -74,6 +74,8 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     xapiRateLimitMax: 10000,
     stmtGetDefault: 50,
     stmtGetMax: 50,
+    pgStatementTimeoutMs: 30_000,
+    pgIdleInTransactionTimeoutMs: 60_000,
     databaseDriver: isPglite ? 'pglite' : 'pg',
     pgliteDataDir: undefined,
     autoMigrate: false,
