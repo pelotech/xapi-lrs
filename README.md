@@ -60,30 +60,30 @@ The LRS will be available at `http://localhost:8081` and the admin server at `ht
 
 All configuration is via environment variables. See `.env.test` for defaults.
 
-| Variable                            | Default     | Description                                          |
-| ----------------------------------- | ----------- | ---------------------------------------------------- |
-| `LRS_PORT` / `PORT`                 | `8081`      | xAPI HTTP port                                       |
-| `LRS_ADMIN_PORT` / `ADMIN_PORT`     | `8091`      | Admin/health/metrics port                            |
-| `DATABASE_DRIVER`                   | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`       |
-| `PGLITE_DATA_DIR`                   | (none)      | PGlite data directory; omit for in-memory            |
-| `PGHOST`.                           | `localhost` | PostgreSQL host                                      |
-| `PGPORT`                            | `5432`      | PostgreSQL port                                      |
-| `PGDATABASE`                        | `xapi_lrs`  | PostgreSQL database                                  |
-| `PGUSER`                            | `xapi_lrs`  | PostgreSQL user                                      |
-| `PGPASSWORD`                        | (empty)     | PostgreSQL password                                  |
-| `DATABASE_URL`                      | (none)      | Full connection string (overrides PG\* vars)         |
-| `JWT_ISSUER`                        | (none)      | JWT issuer for token validation                      |
-| `JWT_AUDIENCE`.                     | (none)      | JWT audience for token validation                    |
-| `JWKS_URI`.                         | (none)      | JWKS endpoint URI                                    |
-| `OIDC_DISCOVERY_URL`                | (none)      | OIDC discovery URL (auto-discovers JWKS)             |
-| `LRS_ADMIN_USER`                    | (none)      | Bootstrap admin username                             |
-| `LRS_ADMIN_PASSWORD`                | (none)      | Bootstrap admin password                             |
-| `ADMIN_SESSION_SECRET`              | (random)    | Session secret (required in production)              |
-| `LOG_LEVEL`                         | `info`      | Log level (silent/fatal/error/warn/info/debug/trace) |
-| `CORS_ORIGIN`                       | `*`         | CORS allowed origin                                  |
-| `LRSQL_STMT_GET_DEFAULT`.           | `50`        | Default `GET /statements` page size when no `limit`  |
-| `LRSQL_STMT_GET_MAX`.               | `50`        | Hard cap on `GET /statements` `limit` (silent clamp) |
-| `SHUTDOWN_TIMEOUT_MS`               | `30000`     | Hard deadline for graceful shutdown before exit      |
+| Variable                            | Default     | Description                                           |
+| ----------------------------------- | ----------- | ----------------------------------------------------- |
+| `LRS_PORT` / `PORT`                 | `8081`      | xAPI HTTP port                                        |
+| `LRS_ADMIN_PORT` / `ADMIN_PORT`     | `8091`      | Admin/health/metrics port                             |
+| `DATABASE_DRIVER`                   | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`        |
+| `PGLITE_DATA_DIR`                   | (none)      | PGlite data directory; omit for in-memory             |
+| `PGHOST`.                           | `localhost` | PostgreSQL host                                       |
+| `PGPORT`                            | `5432`      | PostgreSQL port                                       |
+| `PGDATABASE`                        | `xapi_lrs`  | PostgreSQL database                                   |
+| `PGUSER`                            | `xapi_lrs`  | PostgreSQL user                                       |
+| `PGPASSWORD`                        | (empty)     | PostgreSQL password                                   |
+| `DATABASE_URL`                      | (none)      | Full connection string (overrides PG\* vars)          |
+| `JWT_ISSUER`                        | (none)      | JWT issuer for token validation                       |
+| `JWT_AUDIENCE`.                     | (none)      | JWT audience for token validation                     |
+| `JWKS_URI`.                         | (none)      | JWKS endpoint URI                                     |
+| `OIDC_DISCOVERY_URL`                | (none)      | OIDC discovery URL (auto-discovers JWKS)              |
+| `LRS_ADMIN_USER`                    | (none)      | Bootstrap admin username                              |
+| `LRS_ADMIN_PASSWORD`                | (none)      | Bootstrap admin password                              |
+| `ADMIN_SESSION_SECRET`              | (random)    | Session secret (required in production)               |
+| `LOG_LEVEL`                         | `info`      | Log level (silent/fatal/error/warn/info/debug/trace)  |
+| `CORS_ORIGIN`                       | `*`         | CORS allowed origin                                   |
+| `LRSQL_STMT_GET_DEFAULT`.           | `50`        | Default `GET /statements` page size when no `limit`   |
+| `LRSQL_STMT_GET_MAX`.               | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
+| `SHUTDOWN_TIMEOUT_MS`               | `30000`     | Hard deadline for graceful shutdown before exit       |
 | `PG_STATEMENT_TIMEOUT_MS`           | `30000`     | Per-statement DB query timeout (`0` disables)         |
 | `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS` | `60000`     | Idle-in-transaction connection timeout (`0` disables) |
 
@@ -135,6 +135,33 @@ src/
   db.ts           # PostgreSQL pool management
   server.ts       # Process entrypoint
 ```
+
+## Supply Chain
+
+Container images published to `ghcr.io/pelotech/xapi-lrs` are signed with [Sigstore cosign](https://docs.sigstore.dev/) (keyless / OIDC) and carry SLSA build provenance attestations. Release images additionally have SPDX and CycloneDX SBOMs attached as Sigstore attestations and as downloadable release artifacts.
+
+Verify an image (substitute the tag):
+
+```bash
+# Signature
+cosign verify ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Build provenance
+cosign verify-attestation ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --type slsaprovenance \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# SBOM (releases only)
+cosign verify-attestation ghcr.io/pelotech/xapi-lrs:0.4.0 \
+  --type spdxjson \
+  --certificate-identity-regexp 'https://github.com/pelotech/xapi-lrs/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+SBOM files are also attached to each GitHub Release as `xapi-lrs-<version>-sbom.spdx.json` and `xapi-lrs-<version>-sbom.cdx.json`.
 
 ## License
 
