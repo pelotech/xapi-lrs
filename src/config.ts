@@ -83,6 +83,9 @@ const configSchema = z.object({
    */
   pgIdleInTransactionTimeoutMs: z.coerce.number().int().nonnegative().default(60_000),
 
+  /** Graceful shutdown hard deadline in ms (after SIGTERM/SIGINT, before process.exit). */
+  shutdownTimeoutMs: z.coerce.number().int().positive().default(30_000),
+
   /** Feature flags */
   xapiVerifySignatures: z.preprocess((v) => String(v ?? 'true') === 'true', z.boolean()).default(true),
 
@@ -160,6 +163,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     stmtGetMax: env.LRSQL_STMT_GET_MAX,
     pgStatementTimeoutMs: env.PG_STATEMENT_TIMEOUT_MS,
     pgIdleInTransactionTimeoutMs: env.PG_IDLE_IN_TRANSACTION_TIMEOUT_MS,
+    shutdownTimeoutMs: env.SHUTDOWN_TIMEOUT_MS,
     xapiVerifySignatures: env.XAPI_VERIFY_SIGNATURES,
     logLevel: env.LOG_LEVEL ?? lrsqlLogLevel,
     nodeEnv: env.NODE_ENV,

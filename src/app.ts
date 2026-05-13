@@ -80,6 +80,7 @@ export interface AppDeps {
   pgListener: Listener;
   sessionSecret: string;
   startedAt: Date;
+  shutdownSignal: AbortSignal;
 }
 
 export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
@@ -94,6 +95,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     xapiVerifySignatures: deps.config.xapiVerifySignatures,
     stmtGetDefault: deps.config.stmtGetDefault,
     stmtGetMax: deps.config.stmtGetMax,
+    shutdownSignal: deps.shutdownSignal,
   };
 
   // --------------------------------------------------------------------------
@@ -423,6 +425,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
       maxConnectionsGlobal: deps.config.sseMaxConnectionsGlobal,
       maxConnectionsPerIp: deps.config.sseMaxConnectionsPerIp,
       trustedProxyHops: deps.config.trustedProxyHops,
+      shutdownSignal: deps.shutdownSignal,
     }),
   );
 

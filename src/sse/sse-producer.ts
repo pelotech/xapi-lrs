@@ -23,6 +23,16 @@ export interface SseProducerDeps {
   maxConnectionsGlobal: number;
   maxConnectionsPerIp: number;
   trustedProxyHops: number;
+  /** Fires on SIGTERM/SIGINT — heartbeat loops must exit so the process can shut down. */
+  shutdownSignal: AbortSignal;
+}
+
+/** Resolves when the signal aborts. */
+function waitForAbort(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    signal.addEventListener('abort', () => resolve(), { once: true });
+  });
 }
 
 export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
@@ -98,10 +108,11 @@ export function createSseRoute(deps: SseProducerDeps): OpenAPIHono {
         log.debug({ ip }, 'SSE client disconnected');
       });
 
-      // Heartbeat loop — keeps connection alive
-      while (true) {
+      // Heartbeat loop — keeps connection alive. Exits on server shutdown
+      // (deps.shutdownSignal aborts) so the process can finish draining.
+      while (!deps.shutdownSignal.aborted) {
         await stream.write(':heartbeat\n\n');
-        await stream.sleep(HEARTBEAT_INTERVAL_MS);
+        await Promise.race([stream.sleep(HEARTBEAT_INTERVAL_MS), waitForAbort(deps.shutdownSignal)]);
       }
     });
   });

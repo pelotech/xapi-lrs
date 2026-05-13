@@ -15,6 +15,8 @@ export interface Listener {
   off(channel: string, handler: NotificationHandler): void;
   start(): Promise<void>;
   stop(): Promise<void>;
+  /** True when the listener is connected and ready to deliver notifications. */
+  isReady(): boolean;
 }
 
 /** Allowlisted channel names to prevent SQL injection in LISTEN commands. */
@@ -40,6 +42,10 @@ export class PgListener {
   async start(): Promise<void> {
     this.stopped = false;
     await this.connect();
+  }
+
+  isReady(): boolean {
+    return !this.stopped && this.client !== null;
   }
 
   async stop(): Promise<void> {
