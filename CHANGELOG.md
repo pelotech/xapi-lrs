@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/pelotech/xapi-lrs/compare/v0.4.0...v0.5.0) (2026-05-13)
+
+
+### Features
+
+* add `GET /api/admin/credentials/:id` for single-credential lookup ([#60](https://github.com/pelotech/xapi-lrs/issues/60)) ([d91a58b](https://github.com/pelotech/xapi-lrs/commit/d91a58b4e1def0be6d3722acb835fa1952302781))
+
 ## [0.4.0](https://github.com/pelotech/xapi-lrs/compare/v0.3.2...v0.4.0) (2026-05-13)
 
 
