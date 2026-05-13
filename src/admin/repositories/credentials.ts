@@ -20,6 +20,17 @@ const LIST_CREDENTIALS = {
          ORDER BY c.api_key`,
 } as const satisfies Query;
 
+const GET_CREDENTIAL = {
+  name: 'admin_get_credential',
+  text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
+                COALESCE(json_agg(s.scope::text ORDER BY s.scope::text) FILTER (WHERE s.scope IS NOT NULL), '[]') AS scopes
+         FROM lrs_credential c
+         JOIN admin_account a ON a.id = c.account_id
+         LEFT JOIN credential_to_scope s ON s.credential_id = c.id
+         WHERE c.id = $1
+         GROUP BY c.id, c.api_key, a.username, a.id`,
+} as const satisfies Query;
+
 const CREATE_CREDENTIAL = {
   name: 'admin_create_credential',
   text: 'INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id',
@@ -56,6 +67,18 @@ export interface CredentialRow {
 export async function listCredentials(pool: DbPool, metrics: LrsMetrics): Promise<CredentialRow[]> {
   const result = await poolQuery<CredentialRow>(pool, metrics, LIST_CREDENTIALS);
   return result.rows;
+}
+
+export async function getCredentialById(
+  pool: DbPool,
+  metrics: LrsMetrics,
+  credentialId: string,
+): Promise<CredentialRow | null> {
+  const result = await poolQuery<CredentialRow>(pool, metrics, {
+    ...GET_CREDENTIAL,
+    values: [credentialId],
+  });
+  return result.rows[0] ?? null;
 }
 
 export async function createCredential(
