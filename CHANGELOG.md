@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/pelotech/xapi-lrs/compare/v0.3.2...v0.4.0) (2026-05-13)
+
+
+### Features
+
+* graceful shutdown and split k8s probes ([#56](https://github.com/pelotech/xapi-lrs/issues/56)) ([141f465](https://github.com/pelotech/xapi-lrs/commit/141f4650668652302b74305cdfa00762ffb26377))
+* tighten admin CSP + enforce DB `statement_timeout` ([#55](https://github.com/pelotech/xapi-lrs/issues/55)) ([cf7e608](https://github.com/pelotech/xapi-lrs/commit/cf7e608684094203976d8fb2389342ced550e7b7))
+
+
+### Chores
+
+* align request logging with OpenTelemetry HTTP semconv ([#54](https://github.com/pelotech/xapi-lrs/issues/54)) ([8fecb12](https://github.com/pelotech/xapi-lrs/commit/8fecb1291434b5cc0583e97eeb89217410686e49))
+
 ## [0.3.2](https://github.com/pelotech/xapi-lrs/compare/v0.3.1...v0.3.2) (2026-05-12)
 
 
