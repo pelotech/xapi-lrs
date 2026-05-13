@@ -74,6 +74,15 @@ const configSchema = z.object({
   stmtGetDefault: z.coerce.number().int().positive().default(50),
   stmtGetMax: z.coerce.number().int().positive().default(50),
 
+  /** PostgreSQL statement_timeout (ms) — aborts any single SQL statement that runs longer. */
+  pgStatementTimeoutMs: z.coerce.number().int().nonnegative().default(30_000),
+  /**
+   * PostgreSQL idle_in_transaction_session_timeout (ms) — closes connections
+   * that sit idle inside a transaction. Prevents stuck pool entries from
+   * exhausting `max_connections` when an app bug leaves a BEGIN open.
+   */
+  pgIdleInTransactionTimeoutMs: z.coerce.number().int().nonnegative().default(60_000),
+
   /** Feature flags */
   xapiVerifySignatures: z.preprocess((v) => String(v ?? 'true') === 'true', z.boolean()).default(true),
 
@@ -149,6 +158,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     xapiRateLimitMax: env.XAPI_RATE_LIMIT_MAX,
     stmtGetDefault: env.LRSQL_STMT_GET_DEFAULT,
     stmtGetMax: env.LRSQL_STMT_GET_MAX,
+    pgStatementTimeoutMs: env.PG_STATEMENT_TIMEOUT_MS,
+    pgIdleInTransactionTimeoutMs: env.PG_IDLE_IN_TRANSACTION_TIMEOUT_MS,
     xapiVerifySignatures: env.XAPI_VERIFY_SIGNATURES,
     logLevel: env.LOG_LEVEL ?? lrsqlLogLevel,
     nodeEnv: env.NODE_ENV,

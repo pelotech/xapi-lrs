@@ -44,6 +44,12 @@ export async function createPool(config: LrsConfig, logger: Logger): Promise<DbP
     connectionTimeoutMillis: 5000,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
+    // Cap per-statement runtime so a slow/runaway query can't tie up a pool
+    // connection indefinitely. 0 disables the cap (PostgreSQL default).
+    statement_timeout: config.pgStatementTimeoutMs || undefined,
+    // Reclaim connections that sit idle inside a transaction (app held
+    // BEGIN without COMMIT/ROLLBACK). 0 disables.
+    idle_in_transaction_session_timeout: config.pgIdleInTransactionTimeoutMs || undefined,
   });
 
   pool.on('error', (err) => {

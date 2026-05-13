@@ -466,6 +466,7 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     sessionSecret: deps.sessionSecret,
     startedAt: deps.startedAt,
     trustedProxyHops: deps.config.trustedProxyHops,
+    nodeEnv: deps.config.nodeEnv,
   };
   app.route('/admin', createAdminApp(adminDeps));
   app.route('/api/admin', createAdminApiApp(adminDeps));

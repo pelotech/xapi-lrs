@@ -30,4 +30,6 @@ export interface AdminDeps {
   sessionSecret: string;
   startedAt: Date;
   trustedProxyHops: number;
+  /** From LrsConfig — drives production-only headers like HSTS. */
+  nodeEnv: 'development' | 'production' | 'test';
 }
