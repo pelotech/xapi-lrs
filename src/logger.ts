@@ -8,13 +8,13 @@ import type { LrsConfig } from './config.ts';
 export type { Logger };
 
 /**
- * xAPI GET /statements query parameters whose VALUES leak PII into request
- * logs: `agent` carries the actor IFI (often an mbox email or hashed mbox)
- * and `registration` correlates learner sessions. Their values are masked
- * before pino emits the log line; parameter names and other params (verb,
- * activity, limit, since, until, ...) remain visible for diagnostics.
+ * xAPI GET /statements query parameter whose VALUE leaks PII into request
+ * logs: `agent` carries the actor IFI (often an mbox email or hashed mbox).
+ * Its value is masked before pino emits the log line; the parameter name
+ * and other params (verb, activity, registration, limit, since, until, ...)
+ * remain visible for diagnostics.
  */
-const REDACTED_QUERY_PARAMS = ['agent', 'registration'] as const;
+const REDACTED_QUERY_PARAMS = ['agent'] as const;
 
 const REDACT_QUERY_RE = new RegExp(`(^|&)(${REDACTED_QUERY_PARAMS.join('|')})=[^&]*`, 'g');
 

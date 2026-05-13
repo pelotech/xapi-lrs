@@ -3,22 +3,20 @@ import { describe, test, expect } from 'vitest';
 import { redactQueryString } from '../../src/logger.ts';
 
 describe('redactQueryString', () => {
-  test('masks agent value', () => {
+  test('masks agent value, preserves other params', () => {
     const input = 'agent=%7B%22mbox%22%3A%22mailto%3Afoo%40bar%22%7D&limit=50';
     expect(redactQueryString(input)).toBe('agent=[REDACTED]&limit=50');
   });
 
-  test('masks registration value', () => {
-    expect(redactQueryString('registration=abc-123&verb=did')).toBe('registration=[REDACTED]&verb=did');
+  test('masks agent when not first param', () => {
+    expect(redactQueryString('limit=50&agent=foo&verb=did')).toBe('limit=50&agent=[REDACTED]&verb=did');
   });
 
-  test('masks both when both present, preserves other params', () => {
-    expect(redactQueryString('limit=50&agent=foo&verb=did&registration=xyz')).toBe(
-      'limit=50&agent=[REDACTED]&verb=did&registration=[REDACTED]',
-    );
+  test('leaves registration alone (only agent is masked)', () => {
+    expect(redactQueryString('registration=abc-123&verb=did')).toBe('registration=abc-123&verb=did');
   });
 
-  test('masks every occurrence when a sensitive key repeats', () => {
+  test('masks every occurrence when agent repeats', () => {
     expect(redactQueryString('agent=a&agent=b')).toBe('agent=[REDACTED]&agent=[REDACTED]');
   });
 
@@ -26,8 +24,8 @@ describe('redactQueryString', () => {
     expect(redactQueryString('limit=50&verb=did')).toBe('limit=50&verb=did');
   });
 
-  test('does not match params whose name merely ends with a sensitive key', () => {
-    expect(redactQueryString('myagent=foo&xregistration=bar')).toBe('myagent=foo&xregistration=bar');
+  test('does not match params whose name merely ends with "agent"', () => {
+    expect(redactQueryString('myagent=foo&useragent=bar')).toBe('myagent=foo&useragent=bar');
   });
 
   test('returns empty string unchanged', () => {
@@ -60,9 +58,9 @@ describe('pino redact integration', () => {
     return JSON.parse(lines[lines.length - 1]) as Record<string, unknown>;
   }
 
-  test('redacts agent and registration in url.query', () => {
+  test('redacts agent in url.query', () => {
     const out = captureSingleLog({ 'url.query': 'agent=foo&limit=50&registration=xyz' });
-    expect(out['url.query']).toBe('agent=[REDACTED]&limit=50&registration=[REDACTED]');
+    expect(out['url.query']).toBe('agent=[REDACTED]&limit=50&registration=xyz');
   });
 
   test('passes through queries with no sensitive params', () => {
