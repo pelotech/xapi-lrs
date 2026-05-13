@@ -10,6 +10,7 @@ import type { Logger } from '../logger.ts';
 import { verifyPassword } from './repositories/accounts.ts';
 import {
   listCredentials,
+  getCredentialById,
   createCredential,
   deleteCredential,
   rotateSecret,
@@ -67,6 +68,13 @@ export function createAdminApiApp(deps: AdminDeps): Hono<AdminApiEnv> {
   app.get('/credentials', async (c) => {
     const rows = await listCredentials(deps.pool, deps.metrics);
     return c.json(rows.map(({ id, api_key, scopes }) => ({ id, api_key, scopes })));
+  });
+
+  // Get one — same projection as list; secret_key never returned
+  app.get('/credentials/:id', async (c) => {
+    const row = await getCredentialById(deps.pool, deps.metrics, c.req.param('id'));
+    if (!row) return c.json({ error: 'Not Found' }, 404);
+    return c.json({ id: row.id, api_key: row.api_key, scopes: row.scopes });
   });
 
   // Create — returns secret_key once

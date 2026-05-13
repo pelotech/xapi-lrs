@@ -33,6 +33,7 @@ async function createAdminAuth(pool: DbPool, opts: { username?: string; password
 
 const ALL_ENDPOINTS: Array<{ method: string; path: string }> = [
   { method: 'GET', path: '/api/admin/credentials' },
+  { method: 'GET', path: '/api/admin/credentials/some-id' },
   { method: 'POST', path: '/api/admin/credentials' },
   { method: 'DELETE', path: '/api/admin/credentials/some-id' },
   { method: 'PUT', path: '/api/admin/credentials/some-id/scopes' },
@@ -104,6 +105,42 @@ describe('Admin API — POST /credentials', () => {
     for (const item of list) {
       expect(item).not.toHaveProperty('secret_key');
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /credentials/:id — single-credential lookup; no secret_key
+// ---------------------------------------------------------------------------
+
+describe('Admin API — GET /credentials/:id', () => {
+  test('returns the credential without secret_key', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const adminHeaders = { Authorization: `Basic ${adminAuth}`, 'Content-Type': 'application/json' };
+    const base = `${server.apiUrl}/api/admin`;
+
+    const createRes = await fetch(`${base}/credentials`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ scopes: ['statements/read'] }),
+    });
+    expect(createRes.status).toBe(201);
+    const { id, api_key } = (await createRes.json()) as { id: string; api_key: string };
+
+    const getRes = await fetch(`${base}/credentials/${id}`, {
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(getRes.status).toBe(200);
+    const body = (await getRes.json()) as Record<string, unknown>;
+    expect(body).toEqual({ id, api_key, scopes: ['statements/read'] });
+    expect(body).not.toHaveProperty('secret_key');
+  });
+
+  test('returns 404 for a non-existent credential', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const res = await fetch(`${server.apiUrl}/api/admin/credentials/${randomUUID()}`, {
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(res.status).toBe(404);
   });
 });
 
