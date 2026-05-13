@@ -52,9 +52,7 @@ export async function bootstrapAccounts(
       await deps.ensureDefaultCredential(pool, metrics, config.apiKeyDefault, config.apiSecretDefault, account.id);
       logger.info({ apiKey: config.apiKeyDefault }, 'Default xAPI credential bootstrapped');
     } else {
-      logger.warn(
-        'LRS_API_KEY_DEFAULT / LRSQL_API_KEY_DEFAULT set but no admin account available to own it — skipping credential bootstrap',
-      );
+      logger.warn('LRS_API_KEY_DEFAULT set but no admin account available to own it — skipping credential bootstrap');
     }
   }
 }

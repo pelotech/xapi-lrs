@@ -81,8 +81,8 @@ All configuration is via environment variables. See `.env.test` for defaults.
 | `ADMIN_SESSION_SECRET`              | (random)    | Session secret (required in production)               |
 | `LOG_LEVEL`                         | `info`      | Log level (silent/fatal/error/warn/info/debug/trace)  |
 | `CORS_ORIGIN`                       | `*`         | CORS allowed origin                                   |
-| `LRSQL_STMT_GET_DEFAULT`.           | `50`        | Default `GET /statements` page size when no `limit`   |
-| `LRSQL_STMT_GET_MAX`.               | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
+| `LRS_STMT_GET_DEFAULT`              | `50`        | Default `GET /statements` page size when no `limit`   |
+| `LRS_STMT_GET_MAX`                  | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
 | `SHUTDOWN_TIMEOUT_MS`               | `30000`     | Hard deadline for graceful shutdown before exit       |
 | `PG_STATEMENT_TIMEOUT_MS`           | `30000`     | Per-statement DB query timeout (`0` disables)         |
 | `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS` | `60000`     | Idle-in-transaction connection timeout (`0` disables) |

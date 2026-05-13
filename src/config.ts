@@ -121,11 +121,45 @@ function normalizeLrsqlLogLevel(level: string): string {
   }
 }
 
+// Direct LRSQL_* → native alias mappings. Warning fires when the legacy
+// var is set and the native equivalent isn't.
+const DEPRECATED_ALIASES: ReadonlyArray<readonly [legacy: string, replacement: string]> = [
+  ['LRSQL_DB_NAME', 'PGDATABASE'],
+  ['LRSQL_OIDC_ISSUER', 'JWT_ISSUER'],
+  ['LRSQL_OIDC_AUDIENCE', 'JWT_AUDIENCE'],
+  ['LRSQL_ADMIN_USER_DEFAULT', 'LRS_ADMIN_USER'],
+  ['LRSQL_ADMIN_PASS_DEFAULT', 'LRS_ADMIN_PASSWORD'],
+  ['LRSQL_API_KEY_DEFAULT', 'LRS_API_KEY_DEFAULT'],
+  ['LRSQL_API_SECRET_DEFAULT', 'LRS_API_SECRET_DEFAULT'],
+  ['LRSQL_STMT_GET_DEFAULT', 'LRS_STMT_GET_DEFAULT'],
+  ['LRSQL_STMT_GET_MAX', 'LRS_STMT_GET_MAX'],
+];
+
 export function loadConfig(env: Record<string, string | undefined> = process.env): LrsConfig {
+  const deprecations: string[] = [];
+  for (const [legacy, replacement] of DEPRECATED_ALIASES) {
+    if (env[legacy] !== undefined && env[replacement] === undefined) {
+      deprecations.push(
+        `${legacy} is deprecated; set ${replacement} instead. ${legacy} will be removed in a future release.`,
+      );
+    }
+  }
+
   // LRSQL_ALLOW_ALL_ORIGINS=true is equivalent to CORS_ORIGIN=* + CORS_ENABLED=true
   const lrsqlAllowAll = env.LRSQL_ALLOW_ALL_ORIGINS === 'true';
+  if (env.LRSQL_ALLOW_ALL_ORIGINS !== undefined) {
+    deprecations.push(
+      'LRSQL_ALLOW_ALL_ORIGINS is deprecated; set CORS_ENABLED=true with CORS_ORIGIN=* instead. ' +
+        'LRSQL_ALLOW_ALL_ORIGINS will be removed in a future release.',
+    );
+  }
 
   const lrsqlLogLevel = env.LRSQL_LOG_LEVEL ? normalizeLrsqlLogLevel(env.LRSQL_LOG_LEVEL) : undefined;
+  if (env.LRSQL_LOG_LEVEL !== undefined && env.LOG_LEVEL === undefined) {
+    deprecations.push(
+      'LRSQL_LOG_LEVEL is deprecated; set LOG_LEVEL instead. LRSQL_LOG_LEVEL will be removed in a future release.',
+    );
+  }
 
   const config = configSchema.parse({
     databaseDriver: env.DATABASE_DRIVER,
@@ -159,8 +193,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     xapiRateLimitWindow: env.XAPI_RATE_LIMIT_WINDOW,
     xapiRateLimitMax: env.XAPI_RATE_LIMIT_MAX,
-    stmtGetDefault: env.LRSQL_STMT_GET_DEFAULT,
-    stmtGetMax: env.LRSQL_STMT_GET_MAX,
+    stmtGetDefault: env.LRS_STMT_GET_DEFAULT ?? env.LRSQL_STMT_GET_DEFAULT,
+    stmtGetMax: env.LRS_STMT_GET_MAX ?? env.LRSQL_STMT_GET_MAX,
     pgStatementTimeoutMs: env.PG_STATEMENT_TIMEOUT_MS,
     pgIdleInTransactionTimeoutMs: env.PG_IDLE_IN_TRANSACTION_TIMEOUT_MS,
     shutdownTimeoutMs: env.SHUTDOWN_TIMEOUT_MS,
@@ -168,6 +202,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     logLevel: env.LOG_LEVEL ?? lrsqlLogLevel,
     nodeEnv: env.NODE_ENV,
   });
+
+  for (const msg of deprecations) {
+    console.warn(`WARNING: ${msg}`);
+  }
 
   if (!config.xapiVerifySignatures) {
     console.warn(
