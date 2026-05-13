@@ -146,6 +146,8 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
         'http.response.status_code': c.res.status,
         'http.route': safeRoutePath(c),
         'url.path': c.req.path,
+        // Sensitive xAPI params (agent, registration) are masked by pino's
+        // redact config — see src/logger.ts.
         'url.query': queryString,
         'client.address': resolveClientIp(c.req.header('x-forwarded-for'), deps.config.trustedProxyHops),
         'user_agent.original': c.req.header('user-agent'),
