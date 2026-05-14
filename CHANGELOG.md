@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/pelotech/xapi-lrs/compare/v0.5.0...v0.5.1) (2026-05-14)
+
+
+### Bug Fixes
+
+* add `?api_key=` filter to `GET /api/admin/credentials` ([#62](https://github.com/pelotech/xapi-lrs/issues/62)) ([8c6dcd6](https://github.com/pelotech/xapi-lrs/commit/8c6dcd6c58a36e678d8caf33a5a8bc0fb74fec58))
+
 ## [0.5.0](https://github.com/pelotech/xapi-lrs/compare/v0.4.0...v0.5.0) (2026-05-13)
 
 
