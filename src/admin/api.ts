@@ -64,9 +64,11 @@ export function createAdminApiApp(deps: AdminDeps): Hono<AdminApiEnv> {
   // Credentials
   // --------------------------------------------------------------------------
 
-  // List — secret_key omitted; only shown at create/rotate time
+  // List — secret_key omitted; only shown at create/rotate time.
+  // Optional ?api_key=<value> filter for lookup by public key.
   app.get('/credentials', async (c) => {
-    const rows = await listCredentials(deps.pool, deps.metrics);
+    const apiKey = c.req.query('api_key');
+    const rows = await listCredentials(deps.pool, deps.metrics, apiKey !== undefined ? { apiKey } : {});
     return c.json(rows.map(({ id, api_key, scopes }) => ({ id, api_key, scopes })));
   });
 

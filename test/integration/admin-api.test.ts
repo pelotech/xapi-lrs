@@ -109,6 +109,52 @@ describe('Admin API — POST /credentials', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /credentials?api_key=… — filter the list by public api_key
+// ---------------------------------------------------------------------------
+
+describe('Admin API — GET /credentials?api_key', () => {
+  test('returns only the matching credential and never leaks secret_key', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const adminHeaders = { Authorization: `Basic ${adminAuth}`, 'Content-Type': 'application/json' };
+    const base = `${server.apiUrl}/api/admin`;
+
+    // Two credentials so we can confirm the filter actually filters
+    const targetRes = await fetch(`${base}/credentials`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ scopes: ['statements/read'] }),
+    });
+    expect(targetRes.status).toBe(201);
+    const target = (await targetRes.json()) as { id: string; api_key: string };
+
+    const otherRes = await fetch(`${base}/credentials`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ scopes: ['all'] }),
+    });
+    expect(otherRes.status).toBe(201);
+
+    const filterRes = await fetch(`${base}/credentials?api_key=${encodeURIComponent(target.api_key)}`, {
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(filterRes.status).toBe(200);
+    const list = (await filterRes.json()) as Array<Record<string, unknown>>;
+    expect(list).toHaveLength(1);
+    expect(list[0]).toEqual({ id: target.id, api_key: target.api_key, scopes: ['statements/read'] });
+    expect(list[0]).not.toHaveProperty('secret_key');
+  });
+
+  test('returns an empty array for an unknown api_key', async ({ server, pool }) => {
+    const adminAuth = await createAdminAuth(pool);
+    const res = await fetch(`${server.apiUrl}/api/admin/credentials?api_key=does-not-exist`, {
+      headers: { Authorization: `Basic ${adminAuth}` },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /credentials/:id — single-credential lookup; no secret_key
 // ---------------------------------------------------------------------------
 
