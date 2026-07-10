@@ -73,11 +73,16 @@ jobs:
         run: docker compose down
 
   conformance-tests:
-    name: Conformance Tests (${{ matrix.driver }})
+    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }})
     runs-on: ubuntu-latest
+    # 2.0 jobs are expected red until Phase 2 makes the server 2.0-conformant;
+    # continue-on-error keeps them visible without blocking the workflow.
+    # Phase 2's final task removes this line.
+    continue-on-error: ${{ matrix.xapi-version == '2.0.0' }}
     strategy:
       matrix:
         driver: [pg, pglite]
+        xapi-version: ['1.0.3', '2.0.0']
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
@@ -98,6 +103,7 @@ jobs:
       - run: pnpm test:conformance
         env:
           DATABASE_DRIVER: ${{ matrix.driver }}
+          CONFORMANCE_XAPI_VERSION: ${{ matrix.xapi-version }}
       - name: Postgres logs
         if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres
