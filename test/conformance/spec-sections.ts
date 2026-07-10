@@ -137,6 +137,7 @@ export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
  * until Tasks 5/6 record observed totals; then raised to ~95% of observed.
  */
 export const TOTAL_FLOOR: Record<XapiVersion, number> = {
-  '1.0.3': 1,
+  // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d) — floor = 95%
+  '1.0.3': 1296,
   '2.0.0': 1,
 };
