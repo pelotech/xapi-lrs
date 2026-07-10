@@ -136,6 +136,8 @@ export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
  * battery (bad grep, dependency change, partial run) passing CI. Each floor
  * is ~95% of the observed total recorded in its entry's comment; update the
  * observed totals (and floors) whenever the pinned suite commit is bumped.
+ * The 2.0 floor should be sanity-checked against the executed-run total once
+ * Phase 2 makes the battery actually run.
  */
 export const TOTAL_FLOOR: Record<XapiVersion, number> = {
   // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d) — floor = 95%
@@ -143,5 +145,7 @@ export const TOTAL_FLOOR: Record<XapiVersion, number> = {
   // 2.0.0 battery observed registered total: 1435 on 2026-07-10 (suite 5bc232d),
   // recorded from a bootstrap-aborted run — registration count is
   // execution-independent, so the floor is valid. Floor = 95%.
+  // 2.0 is red-by-design until Phase 2 lands version negotiation — see
+  // docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
   '2.0.0': 1363,
 };
