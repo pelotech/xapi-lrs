@@ -111,6 +111,8 @@ export const SPEC_SECTIONS: Record<XapiVersion, SpecSection[]> = {
 };
 
 export interface PendingAllowlistEntry {
+  /** Parent suite path exactly as reported in `pendingTests[].suite`. */
+  suite: string;
   /** Exact leaf-test title as reported by the suite. */
   title: string;
   /** Why this is a suite defect, not an implementation gap. */

@@ -209,14 +209,14 @@ const isMain = process.argv[1]?.endsWith('run-adl-suite.ts') || process.argv[1]?
 if (isMain) {
   const args = process.argv.slice(2);
 
-  const unknown = args.find((a) => a.startsWith('--') && !a.startsWith('--xapi-version='));
+  const unknown = args.find((a) => a.startsWith('-') && !a.startsWith('--xapi-version='));
   if (unknown) {
     console.error(`Unknown flag: ${unknown}`);
     process.exit(2);
   }
 
   const versionFlag = args.find((a) => a.startsWith('--xapi-version='));
-  const grep = args.find((a) => !a.startsWith('--')); // first positional arg is grep pattern
+  const grep = args.find((a) => !a.startsWith('-')); // first positional arg is grep pattern
 
   let xapiVersion: XapiVersion;
   try {

@@ -30,12 +30,13 @@ const sections = SPEC_SECTIONS[XAPI_VERSION];
 
 let result: ConformanceSuiteResult;
 
-function findSection(match: string): CleanLogNode | undefined {
-  return result.log?.tests.find((t) => t.title.includes(match));
+function findSections(match: string): CleanLogNode[] {
+  return result.log?.tests.filter((t) => t.title.includes(match)) ?? [];
 }
 
 describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
   beforeAll(async () => {
+    if (GREP) console.warn('CONFORMANCE_GREP set — coverage guards are disabled for this run');
     result = await runConformanceSuite({
       xapiVersion: XAPI_VERSION,
       timeout: 600_000,
@@ -43,12 +44,12 @@ describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
       onSectionStart: (title) => console.log(`  ▸ ${title}`),
     });
     expect(result.state).toBe('finished');
-    expect(result.total).toBeGreaterThan(0);
+    expect(result.total, 'suite ran zero tests — empty grep match or battery failed to load').toBeGreaterThan(0);
   }, 660_000);
 
   it.each(sections)('$label — $match', ({ match, mayBeAbsent }) => {
-    const section = findSection(match);
-    if (!section) {
+    const matched = findSections(match);
+    if (matched.length === 0) {
       // With a grep filter, unmatched sections simply didn't run.
       if (GREP || mayBeAbsent) return;
       // `return` keeps TypeScript's narrowing happy below (expect.fail throws).
@@ -57,8 +58,17 @@ describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
           'Either the battery changed shape (update spec-sections.ts) or the run lost coverage.',
       );
     }
+    if (matched.length > 1) {
+      // A second suite matching the same entry must never pass silently — a
+      // duplicated spec ref means the battery changed and the map needs updating.
+      return expect.fail(
+        `Map entry "${match}" matched ${matched.length} suite sections: ` +
+          `${matched.map((s) => `"${s.title}"`).join(', ')}. ` +
+          'Each entry must match exactly one top-level suite — update spec-sections.ts.',
+      );
+    }
 
-    const leaves = collectLeafTests(section);
+    const leaves = matched.flatMap(collectLeafTests);
     for (const leaf of leaves) {
       if (leaf.status === 'failed') {
         const req = leaf.requirement ? `[${leaf.requirement}] ` : '';
@@ -81,8 +91,11 @@ describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
   });
 
   it.skipIf(Boolean(GREP))('has no pending tests outside the allowlist', () => {
-    const allowed = new Set(PENDING_ALLOWLIST[XAPI_VERSION].map((a) => a.title));
-    const unexpected = result.pendingTests.filter((p) => !allowed.has(p.title));
+    expect(result.pendingTests.length, 'clean-log pending tree disagrees with runner summary counters').toBe(
+      result.pending,
+    );
+    const allowed = new Set(PENDING_ALLOWLIST[XAPI_VERSION].map((a) => `${a.suite} :: ${a.title}`));
+    const unexpected = result.pendingTests.filter((p) => !allowed.has(`${p.suite} :: ${p.title}`));
     for (const p of unexpected) {
       expect.soft(p, `Pending test not in allowlist: [${p.suite}] ${p.title}`).toBeUndefined();
     }
