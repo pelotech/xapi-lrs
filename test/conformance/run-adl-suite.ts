@@ -94,11 +94,7 @@ export interface RunOptions {
   xapiVersion?: XapiVersion;
   /** Mocha grep pattern to filter tests (e.g., "XAPI-00113" or "Statement Resource"). */
   grep?: string;
-  /**
-   * Timeout in ms to wait for the suite to finish. Default: 600_000 (10 min) —
-   * deliberately raised from the old 180_000: full official batteries run
-   * longer than the fork's, especially under pglite.
-   */
+  /** Timeout in ms to wait for the suite to finish. Default: 600_000 (10 min). */
   timeout?: number;
   /** Called when a top-level ADL suite section starts running. */
   onSectionStart?: (title: string) => void;
@@ -145,10 +141,10 @@ export async function runConformanceSuite(options: RunOptions = {}): Promise<Con
           basicAuth: true,
           authUser,
           authPass,
-          // xapiVersion MUST live in flags (3rd arg): the suite's child process
-          // receives flags as its option set. A `directory` entry in the 5th
-          // (options) arg is ignored, and an unspecified version silently
-          // defaults to the v2_0 battery.
+          // xapiVersion must be passed here in flags (3rd arg): the suite's
+          // child process receives flags as its option set. A `directory`
+          // entry in the 5th (options) arg is ignored, and an unspecified
+          // version defaults to the v2_0 battery.
           xapiVersion,
         },
         null,

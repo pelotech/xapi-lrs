@@ -85,8 +85,8 @@ const SPEC_SECTIONS_2_0_0: SpecSection[] = [
   { match: '(4.2.7)', label: 'Additional Requirements for Data Types' },
   { match: '(Communication 1.1)', label: 'HEAD Request Implementation' },
   { match: '(Communication 1.2)', label: 'Headers', mayBeAbsent: true },
-  // Top-level title is '(4.1.4) Concurrency'; unlike the other refs this one
-  // leads the title, and v1_0_3's '(Communication 3.1)' ref is gone in v2_0:
+  // The v2_0 battery titles this section '(4.1.4) Concurrency'; it has no
+  // '(Communication 3.1)' ref:
   { match: '(4.1.4) Concurrency', label: 'Concurrency' },
   // Single placeholder test; alternate request syntax was removed in xAPI 2.0:
   { match: 'Alternate Request Syntax Requirements', label: 'Alternate Request Syntax (placeholder)' },
@@ -122,9 +122,9 @@ export interface PendingAllowlistEntry {
 }
 
 /**
- * Pending tests tolerated per battery. Per the design spec, this list must
- * stay empty unless an entry documents a defect in the suite itself, with an
- * upstream issue link. It never covers gaps in our implementation.
+ * Pending tests tolerated per battery. Must stay empty unless an entry
+ * documents a defect in the suite itself, with an upstream issue link; never
+ * use it to paper over gaps in our implementation.
  */
 export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
   '1.0.3': [],
@@ -132,20 +132,19 @@ export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
 };
 
 /**
- * Minimum expected total test count per battery — guards against a shrunken
+ * Minimum expected total test count per battery, guarding against a shrunken
  * battery (bad grep, dependency change, partial run) passing CI. Each floor
  * is ~95% of the observed total recorded in its entry's comment; update the
  * observed totals (and floors) whenever the pinned suite commit is bumped.
- * The 2.0 floor should be sanity-checked against the executed-run total once
- * Phase 2 makes the battery actually run.
+ * Sanity-check the 2.0 floor against the executed-run total once the server
+ * accepts 2.0 requests and the battery actually executes.
  */
 export const TOTAL_FLOOR: Record<XapiVersion, number> = {
-  // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d) — floor = 95%
+  // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d), floor = 95%
   '1.0.3': 1296,
-  // 2.0.0 battery observed registered total: 1435 on 2026-07-10 (suite 5bc232d),
-  // recorded from a bootstrap-aborted run — registration count is
-  // execution-independent, so the floor is valid. Floor = 95%.
-  // 2.0 is red-by-design until Phase 2 lands version negotiation — see
-  // docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
+  // 2.0.0 battery registered total: 1435 on 2026-07-10 (suite 5bc232d), floor = 95%.
+  // The 2.0 run currently aborts at bootstrap (the server rejects 2.0 version
+  // headers), but tests register before execution, so the count still holds.
+  // See docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
   '2.0.0': 1363,
 };

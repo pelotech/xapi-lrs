@@ -3,14 +3,14 @@
  *
  * Runs one full ADL battery (selected by CONFORMANCE_XAPI_VERSION, default
  * 1.0.3), then reports results as one Vitest test per spec section, plus
- * three guards that make silent coverage loss impossible:
+ * three guards against silent coverage loss:
  *   - a section expected by our map but missing from the log fails
  *   - a pending/cancelled test outside the allowlist fails
  *   - a total test count below the recorded floor fails
  * Guards are skipped when CONFORMANCE_GREP filters the run.
  *
  * The 2.0 battery currently fails at bootstrap (all sections "not reported"
- * plus a pending-guard mismatch) — see
+ * plus a pending-guard mismatch); see
  * docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
  *
  * Usage:
@@ -40,7 +40,7 @@ function findSections(match: string): CleanLogNode[] {
 
 describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
   beforeAll(async () => {
-    if (GREP) console.warn('CONFORMANCE_GREP set — coverage guards are disabled for this run');
+    if (GREP) console.warn('CONFORMANCE_GREP set; coverage guards are disabled for this run');
     result = await runConformanceSuite({
       xapiVersion: XAPI_VERSION,
       timeout: 600_000,
@@ -48,23 +48,22 @@ describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
       onSectionStart: (title) => console.log(`  ▸ ${title}`),
     });
     expect(result.state).toBe('finished');
-    expect(result.total, 'suite ran zero tests — empty grep match or battery failed to load').toBeGreaterThan(0);
+    expect(result.total, 'suite ran zero tests (empty grep match or battery failed to load)').toBeGreaterThan(0);
   }, 660_000);
 
   it.each(sections)('$label — $match', ({ match, mayBeAbsent }) => {
     const matched = findSections(match);
     if (matched.length === 0) {
-      // With a grep filter, unmatched sections simply didn't run.
+      // Under a grep filter, unmatched sections didn't run.
       if (GREP || mayBeAbsent) return;
-      // `return` keeps TypeScript's narrowing happy below (expect.fail throws).
       return expect.fail(
         `Expected suite section matching "${match}" was not reported. ` +
           'Either the battery changed shape (update spec-sections.ts) or the run lost coverage.',
       );
     }
     if (matched.length > 1) {
-      // A second suite matching the same entry must never pass silently — a
-      // duplicated spec ref means the battery changed and the map needs updating.
+      // Two suites matching one entry means the battery changed shape and the
+      // map needs updating; the extra suite must not pass unexamined.
       return expect.fail(
         `Map entry "${match}" matched ${matched.length} suite sections: ` +
           `${matched.map((s) => `"${s.title}"`).join(', ')}. ` +
