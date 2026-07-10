@@ -208,9 +208,23 @@ const isMain = process.argv[1]?.endsWith('run-adl-suite.ts') || process.argv[1]?
 
 if (isMain) {
   const args = process.argv.slice(2);
+
+  const unknown = args.find((a) => a.startsWith('--') && !a.startsWith('--xapi-version='));
+  if (unknown) {
+    console.error(`Unknown flag: ${unknown}`);
+    process.exit(2);
+  }
+
   const versionFlag = args.find((a) => a.startsWith('--xapi-version='));
-  const xapiVersion = parseXapiVersion(versionFlag?.split('=')[1]);
   const grep = args.find((a) => !a.startsWith('--')); // first positional arg is grep pattern
+
+  let xapiVersion: XapiVersion;
+  try {
+    xapiVersion = parseXapiVersion(versionFlag?.slice('--xapi-version='.length));
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(2);
+  }
 
   console.log(`Starting ADL xAPI ${xapiVersion} Conformance Suite (LRS)...`);
   if (grep) console.log(`  Grep filter: ${grep}`);

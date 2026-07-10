@@ -17,6 +17,7 @@
     "test:integration": "vitest run --project integration",
     "test:all": "vitest run",
     "test:conformance": "vitest run --project conformance",
+    "test:conformance:2.0": "CONFORMANCE_XAPI_VERSION=2.0.0 vitest run --project conformance",
     "lint:deps": "depcruise src --config .dependency-cruiser.mjs",
     "lint:complexity": "fta src --config-path fta.json",
     "lint:arch": "pnpm lint:deps && pnpm lint:complexity",
