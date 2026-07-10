@@ -109,6 +109,9 @@ describe('validateStatement', () => {
     it('rejects a statement timestamp with -00:00 offset (without millis)', () => {
       const result = validateStatement({ ...VALID_STMT, timestamp: '2013-05-18T05:32:34-00:00' });
       expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.errors.some((e) => e.path === 'timestamp')).toBe(true);
+      }
     });
 
     it('rejects a substatement timestamp with -00:00 offset', () => {
@@ -126,6 +129,20 @@ describe('validateStatement', () => {
       if (!result.valid) {
         expect(result.errors.some((e) => e.path.includes('timestamp'))).toBe(true);
       }
+    });
+
+    it('accepts a substatement timestamp with a normal offset', () => {
+      const result = validateStatement({
+        ...VALID_STMT,
+        object: {
+          objectType: 'SubStatement',
+          actor: { mbox: 'mailto:sub@example.com' },
+          verb: { id: 'http://example.com/verbs/did' },
+          object: { id: 'http://example.com/activities/sub' },
+          timestamp: '2013-05-18T05:32:34.804+02:00',
+        },
+      });
+      expect(result.valid).toBe(true);
     });
 
     it.each([
