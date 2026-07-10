@@ -133,11 +133,15 @@ export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
 
 /**
  * Minimum expected total test count per battery — guards against a shrunken
- * battery (bad grep, dependency change, partial run) passing CI. Set to 1
- * until Tasks 5/6 record observed totals; then raised to ~95% of observed.
+ * battery (bad grep, dependency change, partial run) passing CI. Each floor
+ * is ~95% of the observed total recorded in its entry's comment; update the
+ * observed totals (and floors) whenever the pinned suite commit is bumped.
  */
 export const TOTAL_FLOOR: Record<XapiVersion, number> = {
   // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d) — floor = 95%
   '1.0.3': 1296,
-  '2.0.0': 1,
+  // 2.0.0 battery observed registered total: 1435 on 2026-07-10 (suite 5bc232d),
+  // recorded from a bootstrap-aborted run — registration count is
+  // execution-independent, so the floor is valid. Floor = 95%.
+  '2.0.0': 1363,
 };
