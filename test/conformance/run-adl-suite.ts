@@ -1,8 +1,9 @@
 /**
- * ADL xAPI 1.0.3 Conformance Test Suite Runner for the LRS package.
+ * ADL xAPI Conformance Test Suite Runner for the LRS package.
  *
  * Programmatically invokes the official ADL LRS conformance test suite
- * (adl-lrs-conformance-tests) against the standalone LRS service.
+ * (adlnet/lrs-conformance-test-suite) against the standalone LRS service,
+ * in either the v1_0_3 or v2_0 battery.
  */
 
 import { createRequire } from 'node:module';
@@ -10,6 +11,7 @@ import { createBasicAuth } from '../integration/fixtures.ts';
 import { truncateLrsqlTables } from '../integration/test-db.ts';
 import { createLrsTestServer } from '../integration/test-server.ts';
 import type { LrsTestServerHandle } from '../integration/test-server.ts';
+import { parseXapiVersion, type XapiVersion } from './spec-sections.ts';
 
 // The ADL test runner is a CJS module — use createRequire to load it.
 const require = createRequire(import.meta.url);
@@ -88,9 +90,15 @@ function collectPending(
 // ============================================================================
 
 export interface RunOptions {
+  /** Which ADL battery to run. Default: '1.0.3'. */
+  xapiVersion?: XapiVersion;
   /** Mocha grep pattern to filter tests (e.g., "XAPI-00113" or "Statement Resource"). */
   grep?: string;
-  /** Timeout in ms to wait for the suite to finish. Default: 180_000 (3 min). */
+  /**
+   * Timeout in ms to wait for the suite to finish. Default: 600_000 (10 min) —
+   * deliberately raised from the old 180_000: full official batteries run
+   * longer than the fork's, especially under pglite.
+   */
   timeout?: number;
   /** Called when a top-level ADL suite section starts running. */
   onSectionStart?: (title: string) => void;
@@ -103,7 +111,7 @@ export interface RunOptions {
  * then tears everything down.
  */
 export async function runConformanceSuite(options: RunOptions = {}): Promise<ConformanceSuiteResult> {
-  const { grep, timeout = 180_000, onSectionStart } = options;
+  const { xapiVersion = '1.0.3', grep, timeout = 600_000, onSectionStart } = options;
 
   let server: LrsTestServerHandle | undefined;
 
@@ -137,12 +145,14 @@ export async function runConformanceSuite(options: RunOptions = {}): Promise<Con
           basicAuth: true,
           authUser,
           authPass,
+          // xapiVersion MUST live in flags (3rd arg): the suite's child process
+          // receives flags as its option set. A `directory` entry in the 5th
+          // (options) arg is ignored, and an unspecified version silently
+          // defaults to the v2_0 battery.
+          xapiVersion,
         },
         null,
-        {
-          grep,
-          directory: ['v1_0_3'],
-        },
+        { grep },
         'mustPassAll',
       );
 
@@ -197,12 +207,15 @@ export async function runConformanceSuite(options: RunOptions = {}): Promise<Con
 const isMain = process.argv[1]?.endsWith('run-adl-suite.ts') || process.argv[1]?.endsWith('run-adl-suite.js');
 
 if (isMain) {
-  const grep = process.argv[2]; // Optional: first positional arg is grep pattern
+  const args = process.argv.slice(2);
+  const versionFlag = args.find((a) => a.startsWith('--xapi-version='));
+  const xapiVersion = parseXapiVersion(versionFlag?.split('=')[1]);
+  const grep = args.find((a) => !a.startsWith('--')); // first positional arg is grep pattern
 
-  console.log('Starting ADL xAPI 1.0.3 Conformance Suite (LRS)...');
+  console.log(`Starting ADL xAPI ${xapiVersion} Conformance Suite (LRS)...`);
   if (grep) console.log(`  Grep filter: ${grep}`);
 
-  runConformanceSuite({ grep })
+  runConformanceSuite({ grep, xapiVersion })
     .then((result) => {
       console.log('\n=== ADL Conformance Suite Results (LRS) ===');
       console.log(`  Version:  ${result.version}`);

@@ -53,7 +53,7 @@
     "@types/node": "^24.12.2",
     "@types/pg": "^8.20.0",
     "@typescript/native-preview": "7.0.0-dev.20260501.1",
-    "adl-lrs-conformance-tests": "^1.2.3",
+    "adl-lrs-conformance-tests": "github:adlnet/lrs-conformance-test-suite#5bc232d349c60faded8240da698f195106091638",
     "dependency-cruiser": "^17.3.10",
     "fta-cli": "^3.0.0",
     "oxfmt": "^0.47.0",
@@ -62,5 +62,11 @@
     "typescript": "6.0.3",
     "vitest": "^4.1.5"
   },
-  "packageManager": "pnpm@10.33.2"
+  "packageManager": "pnpm@10.33.2",
+  "pnpm": {
+    "overrides": {
+      "adl-lrs-conformance-tests>super-request": "github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b",
+      "adl-lrs-conformance-tests>supertest": "github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2"
+    }
+  }
 }
