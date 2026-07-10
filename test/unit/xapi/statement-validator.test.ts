@@ -97,6 +97,49 @@ describe('validateStatement', () => {
     }
   });
 
+  describe('timestamp offset validation (xAPI 1.0.3 Data 4.5)', () => {
+    it('rejects a statement timestamp with -00:00 offset (with millis)', () => {
+      const result = validateStatement({ ...VALID_STMT, timestamp: '2013-05-18T05:32:34.804-00:00' });
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.errors.some((e) => e.path === 'timestamp')).toBe(true);
+      }
+    });
+
+    it('rejects a statement timestamp with -00:00 offset (without millis)', () => {
+      const result = validateStatement({ ...VALID_STMT, timestamp: '2013-05-18T05:32:34-00:00' });
+      expect(result.valid).toBe(false);
+    });
+
+    it('rejects a substatement timestamp with -00:00 offset', () => {
+      const result = validateStatement({
+        ...VALID_STMT,
+        object: {
+          objectType: 'SubStatement',
+          actor: { mbox: 'mailto:sub@example.com' },
+          verb: { id: 'http://example.com/verbs/did' },
+          object: { id: 'http://example.com/activities/sub' },
+          timestamp: '2013-05-18T05:32:34.804-00:00',
+        },
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.errors.some((e) => e.path.includes('timestamp'))).toBe(true);
+      }
+    });
+
+    it.each([
+      '2013-05-18T05:32:34.804+00:00',
+      '2013-05-18T05:32:34.804Z',
+      '2013-05-18T05:32:34.804+02:00',
+      '2013-05-18T05:32:34.804-07:00',
+      '2013-05-18T05:32:34+00:00',
+    ])('accepts timestamp %s', (timestamp) => {
+      const result = validateStatement({ ...VALID_STMT, timestamp });
+      expect(result.valid).toBe(true);
+    });
+  });
+
   it('strips stored and authority from output', () => {
     const result = validateStatement({
       ...VALID_STMT,
