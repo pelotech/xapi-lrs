@@ -7,7 +7,7 @@
  */
 
 import { createRequire } from 'node:module';
-import { createBasicAuth } from '../integration/fixtures.ts';
+import { createBasicAuth } from '../integration/basic-auth.ts';
 import { truncateLrsqlTables } from '../integration/test-db.ts';
 import { createLrsTestServer } from '../integration/test-server.ts';
 import type { LrsTestServerHandle } from '../integration/test-server.ts';
