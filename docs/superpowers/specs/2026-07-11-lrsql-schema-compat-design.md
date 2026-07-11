@@ -60,7 +60,16 @@ of lrsql's in-file migrations applied. Concretely:
   timestamp/stored/reaction_id/trigger_id`), final enum value sets (including
   the prefixed profile scopes), constraints, and index/constraint **names** —
   names matter because the parity test diffs catalogs.
-- **No column defaults.** lrsql generates ids application-side; so will we.
+- **Only lrsql's column defaults** (`xapi_statement.is_voided DEFAULT FALSE`,
+  `state_document.registration DEFAULT NULL`) — in particular no id or
+  timestamp defaults. lrsql generates ids application-side; so will we.
+- **No `CREATE EXTENSION`.** lrsql's DDL creates none, and takeover operators
+  may lack the privilege anyway. Admin password hashing moves application-side
+  (bcrypt library) instead of pgcrypto's `crypt()`/`gen_salt()`; bcrypt output
+  is format-compatible with what pgcrypto produced. Statement-pipeline id
+  generation stops depending on `gen_random_uuid()` defaults (Postgres 13+
+  has it built in where still used inline for junction-row ids, whose ordering
+  lrsql never relies on).
 - Idempotent against both starting states: empty database (fresh install) and
   live lrsql database (takeover no-op). `CREATE TABLE IF NOT EXISTS`,
   guarded enum creation, `ADD COLUMN IF NOT EXISTS`.
@@ -90,21 +99,64 @@ database — verified during implementation).
 - **Inserts populate lrsql's columns explicitly:** `registration` from
   `context.registration`; `timestamp` from the statement's timestamp;
   `stored` from the server clock (no more `DEFAULT now()` — there is no
-  default). All ids supplied by the application everywhere (junction tables,
-  documents, credentials, bootstrap).
+  default). Row ids are never left to column defaults (there are none):
+  statement ids are application-generated UUIDv7; document, credential, and
+  bootstrap ids are application-generated; junction-row ids may use inline
+  `gen_random_uuid()` in the insert SQL, since lrsql never relies on their
+  ordering.
+- **Group members lose the `'Member'` usage.** lrsql's `actor_usage_enum` has
+  no `'Member'` value (its exact value set is enforced by the parity test),
+  so our decomposition's member rows
+  (`statement-decomposition.ts`) would fail the enum cast. We adopt lrsql's
+  member representation instead — its exact insertion behavior is extracted
+  from lrsql v0.9.5's source as an early implementation task, and our
+  agent-filter queries (which today match `usage = 'Member'`) change to match.
+  This is a behavioral change to statement decomposition, not just a schema
+  edit, and the takeover suite must include group-with-members statements
+  written by both products.
+- **Junction-row dedup moves application-side.** lrsql's `statement_to_actor`
+  has no unique constraint, so our `ON CONFLICT DO NOTHING` dedup never fires
+  under the new shape; the insert path deduplicates before writing.
+- **Admin credential CRUD is rewritten, not just audited.**
+  `src/admin/repositories/credentials.ts` joins, inserts, and deletes
+  `credential_to_scope` by `credential_id` today; every one of those queries
+  is re-keyed by `(api_key, secret_key)`, with scope-row deletion relying on
+  lrsql's composite `ON DELETE CASCADE` FK where appropriate.
+  `lrs_credential`'s column set follows lrsql's exactly (including `label`).
+- **Scope vocabulary follows lrsql's final enum.** `XapiScope`
+  (`src/auth/types.ts`) and scope-granting code shed values lrsql's final
+  `scope_enum` doesn't have (e.g. bare `profile`) and gain the prefixed
+  profile scopes.
+- **Admin login handles lrsql accounts.** `admin_account.passhash` is nullable
+  (lrsql OIDC accounts); login skips NULL-passhash accounts. lrsql's passhash
+  format (buddy) is not verifiable by us — see Takeover scope below.
 - **Reaction columns** (`reaction_id`, `trigger_id`) are written as NULL; the
   reactions feature itself is not implemented.
-- `ON CONFLICT` targets and any query that names columns are audited against
-  the new shape (the takeover test suite is the enforcement).
+- All remaining `ON CONFLICT` targets and column-naming queries are audited
+  against the new shape (the takeover test suite is the enforcement).
 - Statement `stored`/`timestamp` remain baked into the JSON payload as today;
   the columns are populated in addition, as lrsql does.
+
+## Takeover scope: what ports and what doesn't
+
+- **Ports fully:** the xAPI data plane — statements, actors, activities,
+  attachments, documents — and LRS credentials (`api_key`/`secret_key` pairs
+  with their scopes). An LMS talking to lrsql keeps working against xapi-lrs
+  with the same credentials.
+- **Does not port: admin-console accounts.** lrsql hashes admin passwords with
+  buddy (Clojure); we cannot verify those hashes, and lrsql cannot verify
+  ours. lrsql's `admin_account` rows remain untouched (they satisfy
+  `lrs_credential.account_id` FKs) but cannot log into our admin UI; operators
+  bootstrap a fresh admin via `LRS_ADMIN_USER`/`LRS_ADMIN_PASSWORD`, exactly
+  as on a fresh install. Documented in release notes.
 
 ## Startup safety: schema probe
 
 At boot (both drivers), probe `information_schema` for shape markers — at
 minimum `credential_to_scope.api_key` and `xapi_statement.stored`. On mismatch,
-exit with a clear message naming the found shape (legacy xapi-lrs 0.5.x, or
-unknown) and pointing at the release notes. This converts the silent
+exit with a clear message naming the found shape (legacy xapi-lrs 0.5.x,
+empty database in pg mode with migrations disabled — "run dist/migrate.js" —
+or unknown) and pointing at the release notes. This converts the silent
 divergence that produced issue 1 into a fail-fast with instructions. The probe
 runs after migrations (pg: graphile; pglite: raw runner), so a fresh database
 passes trivially.
@@ -123,8 +175,12 @@ passes trivially.
 
 1. **Parity test (new, CI):** create two schemas — one via our committed
    migration, one via the vendored lrsql DDL — and diff catalogs: tables,
-   columns (type/nullability/default), constraints, indexes, enum values.
+   columns (type/nullability/default), constraints, indexes, and enum values
+   **in declaration order** (lrsql's own migration guards are order-sensitive).
    Empty diff or fail. This is the "matching lrsql's DDL exactly" invariant.
+   Validating that the vendored DDL executes sequentially on a fresh database
+   (its guarded migrations are append-only when run in order) is the first
+   implementation task, since the rest of the test strategy stands on it.
 2. **Takeover suite (new, CI):** provision a database from the vendored lrsql
    DDL, seed it with lrsql-style data (credential with composite-keyed scopes,
    pre-existing statements with lrsql-generated shapes), then run the full
@@ -137,7 +193,9 @@ passes trivially.
    authenticated xAPI call. This is the issue-2 regression gate and would have
    caught it.
 5. **Existing suites** (180 unit tests, integration, 1.0.3 conformance on both
-   drivers) keep passing on freshly-provisioned databases.
+   drivers) keep passing on freshly-provisioned databases. Test-isolation
+   plumbing (e.g. the truncation list in `test-db.ts`) is extended to cover
+   the newly-carried tables (`reaction`, `blocked_jwt`).
 
 ## Release
 
