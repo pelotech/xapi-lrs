@@ -76,8 +76,9 @@ export async function authenticateBasicCredential(
 
   const { rows: scopeRows } = await pool.query<ScopeRow>({
     name: 'get_credential_scopes',
-    text: `SELECT scope FROM credential_to_scope WHERE credential_id = $1`,
-    values: [cred.id],
+    text: `SELECT scope FROM credential_to_scope
+           WHERE api_key = $1 AND secret_key = $2 AND scope IS NOT NULL`,
+    values: [apiKey, secretKey],
   });
 
   return {

@@ -5,15 +5,18 @@
  * Must run AFTER authentication middleware (c.var.auth must be set).
  *
  * Scope model follows the xAPI / lrsql convention:
- *   - all              — unrestricted
- *   - all/read         — read-only on all resources
- *   - statements/write — POST/PUT /xapi/statements
- *   - statements/read  — GET /xapi/statements (all)
- *   - statements/read/mine — GET /xapi/statements (own only, not enforced here)
- *   - state            — CRUD /xapi/activities/state
- *   - state/read       — read-only /xapi/activities/state
- *   - profile          — CRUD /xapi/activities/profile, /xapi/agents/profile
- *   - define           — write activity definitions (via profile endpoints)
+ *   - all                     — unrestricted
+ *   - all/read                — read-only on all resources
+ *   - statements/write        — POST/PUT /xapi/statements
+ *   - statements/read         — GET /xapi/statements (all)
+ *   - statements/read/mine    — GET /xapi/statements (own only, not enforced here)
+ *   - state                   — CRUD /xapi/activities/state
+ *   - state/read              — read-only /xapi/activities/state
+ *   - activities_profile      — CRUD /xapi/activities/profile
+ *   - activities_profile/read — read-only /xapi/activities/profile, GET /xapi/activities
+ *   - agents_profile          — CRUD /xapi/agents/profile
+ *   - agents_profile/read     — read-only /xapi/agents/profile, GET /xapi/agents
+ *   - define                  — write activity definitions (via profile endpoints)
  */
 
 import type { MiddlewareHandler } from 'hono';
@@ -54,27 +57,27 @@ export function requiredScopes(path: string, method: string): ScopeRule | null {
   // /xapi/activities/profile
   if (path === '/xapi/activities/profile') {
     if (isRead) {
-      return { scopes: ['profile', 'all/read', 'all'] };
+      return { scopes: ['activities_profile', 'activities_profile/read', 'all/read', 'all'] };
     }
-    return { scopes: ['profile', 'define', 'all'] };
+    return { scopes: ['activities_profile', 'define', 'all'] };
   }
 
   // /xapi/agents/profile
   if (path === '/xapi/agents/profile') {
     if (isRead) {
-      return { scopes: ['profile', 'all/read', 'all'] };
+      return { scopes: ['agents_profile', 'agents_profile/read', 'all/read', 'all'] };
     }
-    return { scopes: ['profile', 'all'] };
+    return { scopes: ['agents_profile', 'all'] };
   }
 
   // /xapi/agents (GET only)
   if (path === '/xapi/agents') {
-    return { scopes: ['profile', 'all/read', 'all'] };
+    return { scopes: ['agents_profile/read', 'all/read', 'all'] };
   }
 
   // /xapi/activities (GET only — activity definition lookup)
   if (path === '/xapi/activities') {
-    return { scopes: ['profile', 'all/read', 'all'] };
+    return { scopes: ['activities_profile/read', 'all/read', 'all'] };
   }
 
   // /xapi/stream (SSE — real-time statement feed)

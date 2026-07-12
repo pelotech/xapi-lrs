@@ -26,14 +26,15 @@ export async function createBasicAuth(pool: DbPool, opts: { scopes?: string[]; l
   });
 
   await pool.query({
-    text: `INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES ($1, $2, $3, $4)`,
-    values: [credentialId, apiKey, secretKey, accountId],
+    text: `INSERT INTO lrs_credential (id, api_key, secret_key, account_id, label) VALUES ($1, $2, $3, $4, $5)`,
+    values: [credentialId, apiKey, secretKey, accountId, opts.label ?? null],
   });
 
   for (const scope of scopes) {
     await pool.query({
-      text: `INSERT INTO credential_to_scope (credential_id, scope) VALUES ($1, $2::scope_enum)`,
-      values: [credentialId, scope],
+      text: `INSERT INTO credential_to_scope (id, api_key, secret_key, scope)
+             VALUES ($1, $2, $3, $4::scope_enum)`,
+      values: [randomUUID(), apiKey, secretKey, scope],
     });
   }
 
