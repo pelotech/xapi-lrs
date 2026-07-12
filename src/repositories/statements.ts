@@ -118,18 +118,33 @@ const BATCH_UPSERT_ACTIVITIES = {
 
 const INSERT_STATEMENT_TO_STATEMENT = {
   name: 'insert_statement_to_statement',
-  // ancestor_id/descendant_id both carry NOT NULL FKs to
-  // xapi_statement(statement_id) (lrsql's ancestor_fk/descendant_fk). Per
-  // xAPI Data 2.3.2, a Statement MAY reference (e.g. void) a StatementRef
-  // whose target the LRS has never seen — "the LRS SHOULD NOT reject the
-  // request on the grounds of the Object of that voiding Statement not
-  // being present" — so this insert must be conditional on the ancestor
-  // already existing, or it 500s on the FK violation instead of silently
-  // skipping the relationship row (descendant_id is always safe: it's the
-  // statement we just inserted in this same call).
+  // lrsql v0.9.5 semantics (ops/command/statement.clj + query.sql
+  // stmt-ref-subquery): ancestor_id = the NEW referencing statement ($1),
+  // descendant_id = the referenced target. lrsql also inserts TRANSITIVE
+  // links — the referencer additionally links to each of the target's own
+  // descendants — so the second UNION branch copies (target -> d) rows as
+  // (referencer -> d). UNION (not UNION ALL) dedupes the direct link
+  // against a hypothetical target self-link.
+  //
+  // Both columns carry NOT NULL FKs to xapi_statement(statement_id)
+  // (lrsql's ancestor_fk/descendant_fk), but per xAPI Data 2.3.2 a
+  // Statement MAY reference (e.g. void) a StatementRef target the LRS has
+  // never seen — "the LRS SHOULD NOT reject the request on the grounds of
+  // the Object of that voiding Statement not being present" — so the
+  // direct link is gated on the DESCENDANT (target, $2) existing, or this
+  // would 500 on the FK violation instead of silently skipping the row.
+  // (ancestor_id is always safe: it's the statement we just inserted in
+  // this same call; transitive descendants exist by FK on the copied rows.)
   text: `INSERT INTO statement_to_statement (id, ancestor_id, descendant_id)
-         SELECT gen_random_uuid(), $1, $2
-         WHERE EXISTS (SELECT 1 FROM xapi_statement WHERE statement_id = $1)`,
+         SELECT gen_random_uuid(), $1, d.descendant_id
+         FROM (
+           SELECT $2::uuid AS descendant_id
+            WHERE EXISTS (SELECT 1 FROM xapi_statement WHERE statement_id = $2)
+           UNION
+           SELECT sts.descendant_id
+             FROM statement_to_statement sts
+            WHERE sts.ancestor_id = $2
+         ) AS d`,
 } as const satisfies Query;
 
 export interface InsertStatementResult {
@@ -206,12 +221,14 @@ export async function insertStatement(
     });
   }
 
-  // StatementRef relationships
+  // StatementRef relationships: ancestor = this (referencing) statement,
+  // descendant = the referenced target (lrsql column semantics; see
+  // INSERT_STATEMENT_TO_STATEMENT).
   const obj = payload.object as Record<string, unknown> | undefined;
   if (obj?.objectType === 'StatementRef' && obj.id) {
     await client.query({
       ...INSERT_STATEMENT_TO_STATEMENT,
-      values: [obj.id as string, statementId],
+      values: [statementId, obj.id as string],
     });
   }
 
@@ -465,11 +482,15 @@ export async function queryStatements(
   let whereClause: string;
   if (voidedContentConds.length > 0) {
     const voidedFilter = voidedContentConds.join(' AND ');
+    // lrsql direction: ancestor_id = the referencing statement (s here),
+    // descendant_id = the referenced/voided target (v). Transitive rows
+    // written at insert time mean s matches for the whole reference chain,
+    // matching lrsql's stmt-ref-subquery behavior.
     const targetingExists = `EXISTS (
       SELECT 1 FROM statement_to_statement sts
-      JOIN xapi_statement v ON v.statement_id = sts.ancestor_id
+      JOIN xapi_statement v ON v.statement_id = sts.descendant_id
         AND v.is_voided = true AND ${voidedFilter}
-      WHERE sts.descendant_id = s.statement_id
+      WHERE sts.ancestor_id = s.statement_id
     )`;
     const targetingWhere = ['s.is_voided = false', ...timeConds, targetingExists].join(' AND ');
     whereClause = `(${directWhere}) OR (${targetingWhere})`;
