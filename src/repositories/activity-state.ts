@@ -83,6 +83,15 @@ export interface StateDocumentRow {
 // Functions
 // ============================================================================
 
+/**
+ * Upsert a state document (lrsql app-side UPDATE-then-INSERT).
+ *
+ * Invariant: MUST be called within an already-open transaction — it issues one
+ * insert-retry SAVEPOINT (`state_doc_insert`) per call. A future caller batching
+ * two state writes in one transaction is fine (the savepoint is created, used,
+ * and released within a single call), but must not itself hold an open savepoint
+ * of the same name.
+ */
 export async function upsertStateDocument(
   client: DbClient,
   params: {
@@ -128,7 +137,13 @@ export async function upsertStateDocument(
   } catch (err) {
     if (!isUniqueViolation(err)) throw err;
     await client.query(ROLLBACK_STATE_INSERT);
+    // The retried UPDATE may legitimately match 0 rows if the concurrently
+    // inserted row was deleted between our failed INSERT and this retry — benign
+    // last-write-wins, matching lrsql (no error, the delete simply won).
     await client.query({ ...UPDATE_STATE_DOCUMENT, values });
+    // Release for symmetry with the success path. Harmless today (the savepoint
+    // is freed at COMMIT regardless), but tidier and safe against future reuse.
+    await client.query(RELEASE_STATE_INSERT);
   }
 }
 

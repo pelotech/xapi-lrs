@@ -32,6 +32,10 @@ export default defineConfig({
           // in-memory database, so this only bit real pg. Files each use unique
           // random credentials and query by specific ids, so serial execution
           // against the shared DB is safe. Conformance is already serialized.
+          //
+          // This is a stopgap: the principled fix — isolating bootstrap.test.ts's
+          // shared-table truncation so fileParallelism can be restored — is folded
+          // into Task 9's test-provisioning rework.
           maxWorkers: 1,
           fileParallelism: false,
           sequence: { concurrent: false, groupOrder: 2 },
