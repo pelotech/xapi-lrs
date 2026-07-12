@@ -24,8 +24,16 @@ export default defineConfig({
           include: ['test/integration/**/*.test.ts'],
           globalSetup: ['test/integration/global-setup.ts'],
           pool: 'forks',
-          maxWorkers: 6,
-          fileParallelism: true,
+          // Serialize integration files. Under the pg driver every worker shares
+          // ONE Postgres database, and bootstrap.test.ts TRUNCATEs the shared
+          // credential/account tables in beforeEach — running files in parallel
+          // lets that truncation clobber other files' file-scoped credentials
+          // (spurious 401/500s). The pglite driver gives each fork its own
+          // in-memory database, so this only bit real pg. Files each use unique
+          // random credentials and query by specific ids, so serial execution
+          // against the shared DB is safe. Conformance is already serialized.
+          maxWorkers: 1,
+          fileParallelism: false,
           sequence: { concurrent: false, groupOrder: 2 },
           testTimeout: 30_000,
           hookTimeout: 30_000,

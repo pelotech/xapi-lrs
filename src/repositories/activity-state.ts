@@ -7,13 +7,36 @@ import type { DbClient } from '../db.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
-const UPSERT_STATE_DOCUMENT = {
-  name: 'upsert_state_document',
-  text: `INSERT INTO state_document (id, state_id, activity_iri, agent_ifi, registration, last_modified, content_type, content_length, contents)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
-     ON CONFLICT (state_id, activity_iri, agent_ifi, COALESCE(registration::text, ''))
-     DO UPDATE SET last_modified = $5, content_type = $6, content_length = $7, contents = $8`,
+// lrsql upserts state documents app-side (select-then-update/insert), not via
+// ON CONFLICT: its state_doc_idx is UNIQUE(state_id, activity_iri, agent_ifi,
+// registration) and Postgres treats NULL registrations as DISTINCT, so a single
+// ON CONFLICT target cannot cover both the registration-scoped and the
+// no-registration cases. `registration IS NOT DISTINCT FROM $4` is the NULL-safe
+// match predicate (matches the no-registration row when $4 is NULL).
+const UPDATE_STATE_DOCUMENT = {
+  name: 'update_state_document',
+  text: `UPDATE state_document
+     SET last_modified = $5, content_type = $6, content_length = $7, contents = $8
+     WHERE state_id = $1 AND activity_iri = $2 AND agent_ifi = $3
+       AND registration IS NOT DISTINCT FROM $4`,
 } as const satisfies Query;
+
+const INSERT_STATE_DOCUMENT = {
+  name: 'insert_state_document',
+  text: `INSERT INTO state_document (id, state_id, activity_iri, agent_ifi, registration, last_modified, content_type, content_length, contents)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)`,
+} as const satisfies Query;
+
+// Savepoint control for the insert retry. Kept unnamed (simple protocol) and
+// scoped to the caller's transaction so a unique violation doesn't poison it.
+const SAVEPOINT_STATE_INSERT = { text: 'SAVEPOINT state_doc_insert' } as const satisfies Query;
+const RELEASE_STATE_INSERT = { text: 'RELEASE SAVEPOINT state_doc_insert' } as const satisfies Query;
+const ROLLBACK_STATE_INSERT = { text: 'ROLLBACK TO SAVEPOINT state_doc_insert' } as const satisfies Query;
+
+/** Postgres unique_violation. */
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && 'code' in err && (err as { code?: unknown }).code === '23505';
+}
 
 const SELECT_STATE_DOCUMENT = {
   name: 'select_state_document',
@@ -72,19 +95,41 @@ export async function upsertStateDocument(
     lastModified: string;
   },
 ): Promise<void> {
-  await client.query({
-    ...UPSERT_STATE_DOCUMENT,
-    values: [
-      params.stateId,
-      params.activityIri,
-      params.agentIfi,
-      params.registration ?? null,
-      params.lastModified,
-      params.contentType,
-      params.contents.length,
-      params.contents,
-    ],
-  });
+  const values = [
+    params.stateId,
+    params.activityIri,
+    params.agentIfi,
+    params.registration ?? null,
+    params.lastModified,
+    params.contentType,
+    params.contents.length,
+    params.contents,
+  ];
+
+  // App-side upsert matching lrsql semantics: UPDATE first, INSERT only when no
+  // row matched. The route layer (src/routes/activities.ts) has already computed
+  // `contents` — raw body for PUT (replace), merged JSON for POST — so this repo
+  // just persists whatever it is given; the merge-vs-replace decision stays there.
+  const updated = await client.query({ ...UPDATE_STATE_DOCUMENT, values });
+  if ((updated.rowCount ?? 0) > 0) return;
+
+  // No existing row — insert. Two writers can race to this point:
+  //  - NULL registration: there is no unique constraint (neither has lrsql), so a
+  //    lost-update race is last-write-wins, matching lrsql's semantics exactly.
+  //  - Non-NULL registration: state_doc_idx backstops us. A concurrent insert
+  //    makes ours raise 23505; by the time that surfaces the other writer has
+  //    committed, so the row is now visible and a retried UPDATE matches it.
+  // The SAVEPOINT keeps the retry inside the caller's transaction (all callers
+  // wrap this in withClient); without it the 23505 would abort the whole tx.
+  try {
+    await client.query(SAVEPOINT_STATE_INSERT);
+    await client.query({ ...INSERT_STATE_DOCUMENT, values });
+    await client.query(RELEASE_STATE_INSERT);
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    await client.query(ROLLBACK_STATE_INSERT);
+    await client.query({ ...UPDATE_STATE_DOCUMENT, values });
+  }
 }
 
 export async function getStateDocument(
