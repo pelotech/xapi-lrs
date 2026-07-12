@@ -7,18 +7,25 @@ import type { DbPool } from './db.ts';
 
 export class SchemaProbeError extends Error {}
 
+// Column-existence checks go through pg_catalog rather than
+// information_schema.columns: the latter is privilege-filtered (a column only
+// appears if the current role holds some privilege on it), so a
+// least-privilege / separate-migration-role deployment could false-negative on
+// a valid database. to_regclass is already privilege-agnostic; going
+// all-pg_catalog keeps the whole probe consistent.
+const COLUMN_EXISTS = (table: string, column: string) => `
+    EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+              JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+              JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+             WHERE n.nspname = 'public' AND c.relname = '${table}'
+               AND a.attname = '${column}' AND a.attnum > 0 AND NOT a.attisdropped)`;
+
 const MARKERS_SQL = `
   SELECT
     to_regclass('public.xapi_statement') IS NOT NULL                       AS has_statement_table,
-    EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema='public' AND table_name='credential_to_scope'
-               AND column_name='api_key')                                  AS scopes_by_keypair,
-    EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema='public' AND table_name='credential_to_scope'
-               AND column_name='credential_id')                            AS scopes_by_credential_id,
-    EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema='public' AND table_name='xapi_statement'
-               AND column_name='registration')                             AS statement_has_registration
+    ${COLUMN_EXISTS('credential_to_scope', 'api_key')}                      AS scopes_by_keypair,
+    ${COLUMN_EXISTS('credential_to_scope', 'credential_id')}               AS scopes_by_credential_id,
+    ${COLUMN_EXISTS('xapi_statement', 'registration')}                     AS statement_has_registration
 `;
 
 interface SchemaMarkers {
@@ -34,7 +41,12 @@ export async function probeSchema(pool: DbPool): Promise<void> {
   const {
     rows: [m],
   } = await pool.query<SchemaMarkers>({ text: MARKERS_SQL });
-  if (m.has_statement_table && m.scopes_by_keypair && m.statement_has_registration) return;
+  // A valid lrsql-shaped DB has the keypair scope column and NO credential_id
+  // column. A schema carrying BOTH (a partial / hand-run migration) is
+  // ambiguous — exactly what this gate exists to catch — so it must fall
+  // through to the pre-0.6 / generic-mismatch branches rather than false-pass.
+  if (m.has_statement_table && m.scopes_by_keypair && !m.scopes_by_credential_id && m.statement_has_registration)
+    return;
   if (!m.has_statement_table) {
     throw new SchemaProbeError(
       'Database has no xAPI schema. Run migrations first: `node dist/migrate.js` (or set AUTO_MIGRATE=true).',

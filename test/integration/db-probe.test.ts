@@ -27,6 +27,27 @@ const LEGACY_PRE_0_6_DDL = `
   );
 `;
 
+// "Mixed" shape: xapi_statement HAS registration, but credential_to_scope
+// carries BOTH marker columns (api_key AND credential_id) — a partial /
+// hand-run migration. Ambiguous; must NOT be classified as a valid lrsql DB.
+const MIXED_SHAPE_DDL = `
+  CREATE TABLE xapi_statement (
+    id uuid,
+    statement_id uuid,
+    registration uuid,
+    verb_iri text,
+    is_voided bool,
+    payload json,
+    stored timestamptz
+  );
+  CREATE TABLE credential_to_scope (
+    id uuid,
+    api_key text,
+    credential_id uuid,
+    scope text
+  );
+`;
+
 // "Unknown" shape: xapi_statement exists but lacks registration, and
 // credential_to_scope has neither marker column (api_key nor credential_id).
 const UNKNOWN_SHAPE_DDL = `
@@ -98,6 +119,18 @@ describe('probeSchema', () => {
       await expect(probeSchema(poolFor(db))).rejects.toThrow(SchemaProbeError);
       await expect(probeSchema(poolFor(db))).rejects.toThrow(/no xAPI schema/);
       await expect(probeSchema(poolFor(db))).rejects.toThrow(/dist\/migrate\.js/);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('does not false-pass a mixed shape carrying both api_key and credential_id', async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(MIXED_SHAPE_DDL);
+      // Registration + keypair are present, but the stray credential_id marker
+      // makes this ambiguous — the probe must reject rather than return ok.
+      await expect(probeSchema(poolFor(db))).rejects.toThrow(SchemaProbeError);
     } finally {
       await db.close();
     }
