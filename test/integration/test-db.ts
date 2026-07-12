@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
 import type { DbPool } from '../../src/db.ts';
+import { applyUpstreamLrsqlDdl } from '../fixtures/lrsql/apply-upstream-ddl.ts';
 
 const { Pool } = pg;
 
@@ -49,6 +50,29 @@ export function testConnectionString(config: TestDbConfig = defaultTestDbConfig)
 export async function applyLrsqlSchema(pool: pg.Pool): Promise<void> {
   const ddl = readFileSync(join(import.meta.dirname, '../../db/migrations/committed/000001-lrsql-schema.sql'), 'utf8');
   await pool.query(ddl);
+}
+
+/**
+ * How the test/conformance database is provisioned, selected by the
+ * `SCHEMA_SOURCE` env var:
+ *   - `migration` (default): apply the committed migration directly.
+ *   - `lrsql`: apply lrsql's own upstream DDL first, THEN the committed
+ *     migration on top — the operator takeover flow.
+ */
+export function schemaSource(): 'migration' | 'lrsql' {
+  return process.env['SCHEMA_SOURCE'] === 'lrsql' ? 'lrsql' : 'migration';
+}
+
+/**
+ * Provision the test database according to `SCHEMA_SOURCE`. For `lrsql`, runs
+ * the vendored upstream DDL (as lrsql itself would) before the committed
+ * migration, so the schema the tests run against is a taken-over lrsql database.
+ */
+export async function provisionSchema(pool: pg.Pool): Promise<void> {
+  if (schemaSource() === 'lrsql') {
+    await applyUpstreamLrsqlDdl({ exec: (text) => pool.query(text) });
+  }
+  await applyLrsqlSchema(pool);
 }
 
 const TRUNCATE_SQL = `

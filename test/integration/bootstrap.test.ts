@@ -1,17 +1,70 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import pg from 'pg';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { hasAnyAdminAccount, createAccount } from '../../src/admin/repositories/accounts.ts';
 import { ensureDefaultCredential, listCredentials } from '../../src/admin/repositories/credentials.ts';
 import { createMetrics } from '../../src/metrics.ts';
-import { createTestPool, truncateLrsqlTables } from './test-db.ts';
+import { applyLrsqlSchema, createTestPool, defaultTestDbConfig } from './test-db.ts';
+
+const { Pool } = pg;
 
 // These tests require a real PostgreSQL connection — skip in PGlite mode.
 const isPglite = process.env['DATABASE_DRIVER'] === 'pglite';
 
-const pool = createTestPool();
+// Isolation: bootstrap's assertions are whole-table (e.g. "no admin account
+// exists yet") and its beforeEach TRUNCATEs the account/credential tables.
+// Every integration file shares ONE Postgres database, so running that against
+// the shared `public` schema clobbers other files' file-scoped fixtures under
+// parallel forks. Instead, this file provisions its OWN schema and pins the
+// connection's search_path to it (public excluded), so the truncation and the
+// emptiness assertions are fully contained. This is what lets vitest restore
+// fileParallelism for the integration project.
+const SCHEMA = 'bootstrap_isolated';
+
+const pool = new Pool({
+  host: defaultTestDbConfig.host,
+  port: defaultTestDbConfig.port,
+  database: defaultTestDbConfig.database,
+  user: defaultTestDbConfig.user,
+  password: defaultTestDbConfig.password,
+  max: 5,
+  // search_path excludes public so CREATE TABLE IF NOT EXISTS / to_regtype in
+  // the migration resolve against (and populate) THIS schema, not the shared
+  // public one.
+  options: `-c search_path=${SCHEMA}`,
+});
 const metrics = createMetrics();
 
+beforeAll(async () => {
+  if (isPglite) return;
+  // Reset the isolated schema from a public-search_path connection, then
+  // provision the committed migration into it via the pinned pool.
+  const admin = createTestPool();
+  try {
+    await admin.query(`DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`);
+    await admin.query(`CREATE SCHEMA ${SCHEMA}`);
+  } finally {
+    await admin.end();
+  }
+  await applyLrsqlSchema(pool);
+});
+
+afterAll(async () => {
+  if (!isPglite) {
+    const admin = createTestPool();
+    try {
+      await admin.query(`DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE`);
+    } finally {
+      await admin.end();
+    }
+  }
+  await pool.end();
+});
+
 beforeEach(async () => {
-  if (!isPglite) await truncateLrsqlTables(pool);
+  // Safe now that it's scoped to this file's own schema.
+  if (!isPglite) {
+    await pool.query(`TRUNCATE credential_to_scope, lrs_credential, admin_account CASCADE`);
+  }
 });
 
 // ---------------------------------------------------------------------------

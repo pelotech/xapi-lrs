@@ -4,15 +4,18 @@
  * Creates the lrsql-compatible schema in the test database.
  */
 
-import { createTestPool, applyLrsqlSchema, truncateLrsqlTables } from './test-db.ts';
+import { createTestPool, provisionSchema, truncateLrsqlTables } from './test-db.ts';
 
 export async function setup(): Promise<void> {
-  // PGlite applies the schema automatically in createPgliteBackend — no shared setup needed.
+  // PGlite provisions per-instance inside the test server (createPgliteBackend,
+  // including the SCHEMA_SOURCE=lrsql takeover path) — no shared setup needed.
   if (process.env['DATABASE_DRIVER'] === 'pglite') return;
 
   const pool = createTestPool();
   try {
-    await applyLrsqlSchema(pool);
+    // Honors SCHEMA_SOURCE: `lrsql` applies upstream DDL then the committed
+    // migration on top (takeover); `migration` (default) applies it directly.
+    await provisionSchema(pool);
     await truncateLrsqlTables(pool);
   } finally {
     await pool.end();
