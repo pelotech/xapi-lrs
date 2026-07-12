@@ -45,6 +45,9 @@ beforeAll(async () => {
   } finally {
     await admin.end();
   }
+  // Always migration-only (applyLrsqlSchema), regardless of SCHEMA_SOURCE:
+  // bootstrap just needs a valid schema for its account/credential repos, and
+  // takeover of the admin tables is covered end-to-end by takeover.test.ts.
   await applyLrsqlSchema(pool);
 });
 

@@ -414,7 +414,13 @@ describe('lrsql takeover (end to end)', () => {
 
   afterAll(async () => {
     // server.close() ends the pool, which closes the injected PGlite instance.
-    await server?.close();
+    // If beforeAll threw before the server was created, close the instance
+    // directly so it doesn't leak.
+    if (server) {
+      await server.close();
+    } else {
+      await db?.close();
+    }
   });
 
   test('the takeover migration is a schema no-op except for adding the SSE trigger', async () => {

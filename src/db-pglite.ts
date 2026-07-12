@@ -146,12 +146,13 @@ async function assertDataDirWritable(dataDir: string): Promise<void> {
  *
  * @param config   LRS config (data dir, etc.).
  * @param instance Optional pre-created PGlite instance. When supplied, the
- *   backend adopts it as-is instead of creating its own — the caller is
- *   responsible for its data dir / lifecycle. This is the takeover seam: a
- *   test can pre-create the instance, apply lrsql's upstream DDL to it, and
- *   hand it in; the migration pass below then runs the committed migration on
- *   top, performing exactly the operator takeover of a live lrsql database.
- *   When omitted the behavior is unchanged from before this parameter existed.
+ *   backend adopts it as-is instead of creating its own — the caller owns
+ *   PROVISIONING it (data dir, any pre-applied DDL), but the returned backend
+ *   still owns its lifecycle from here on: pool.end() closes the instance
+ *   unconditionally, injected or not. This is the takeover seam: a test can
+ *   pre-create the instance, apply lrsql's upstream DDL to it, and hand it in;
+ *   the migration pass below then runs the committed migration on top,
+ *   performing exactly the operator takeover of a live lrsql database.
  */
 export async function createPgliteBackend(config: LrsConfig, instance?: PGlite): Promise<PgliteBackend> {
   let db: PGlite;
