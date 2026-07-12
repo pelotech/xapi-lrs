@@ -21,6 +21,7 @@ import type { JwtConfig } from './auth/jwt.ts';
 import { bootstrapAccounts } from './bootstrap.ts';
 import { loadConfig } from './config.ts';
 import type { LrsConfig } from './config.ts';
+import { probeSchema, SchemaProbeError } from './db-probe.ts';
 import { createPool } from './db.ts';
 import type { DbPool } from './db.ts';
 import { createLogger } from './logger.ts';
@@ -48,6 +49,23 @@ async function initJwt(config: LrsConfig, logger: Logger, jwksCache: JwksCache):
   logger.debug({ issuer: config.jwtIssuer }, 'JWT authentication configured');
 
   return { issuer: config.jwtIssuer, audience: config.jwtAudience, jwksUri };
+}
+
+// Verifies the connected database has the lrsql-shaped schema this release
+// requires; a wrong-shape database (legacy pre-0.6, empty, or otherwise
+// unrecognized) fails the boot immediately with an actionable message
+// instead of surfacing as a runtime 500 on first authenticated request
+// (field issue 1).
+async function probeStartupSchema(pool: DbPool, logger: Logger): Promise<void> {
+  try {
+    await probeSchema(pool);
+  } catch (err) {
+    if (err instanceof SchemaProbeError) {
+      logger.fatal(err, 'Startup schema probe failed');
+      process.exit(1);
+    }
+    throw err;
+  }
 }
 
 async function main(): Promise<void> {
@@ -88,6 +106,12 @@ async function main(): Promise<void> {
     pool = backend.pool;
     listener = new LocalListener(backend.db);
     jwtConfig = jwt;
+
+    // PGlite's internal migrations have already run by the time
+    // createPgliteBackend() returns; probe right away so a wrong-shape
+    // pre-existing data directory fails fast instead of surfacing as a
+    // runtime 500 on first authenticated request.
+    await probeStartupSchema(pool, logger);
   } else {
     // Optional: run graphile-migrate before starting (pg only)
     if (config.autoMigrate) {
@@ -108,6 +132,12 @@ async function main(): Promise<void> {
     ]);
     pool = pgPool;
     jwtConfig = jwt;
+
+    // Migrations are either pre-applied by the operator or just ran above
+    // via AUTO_MIGRATE; probe before touching the pool for anything else so
+    // a wrong-shape database (field issue 1) fails fast with an actionable
+    // message instead of a runtime 500 on first authenticated request.
+    await probeStartupSchema(pool, logger);
   }
 
   const tParallel = performance.now();
