@@ -82,13 +82,38 @@ async function migrationsTableExists(db: PGlite): Promise<boolean> {
   return row.exists;
 }
 
-async function triggerNames(db: PGlite): Promise<string[]> {
+async function xapiStatementTriggerNames(db: PGlite): Promise<string[]> {
   const { rows } = await db.query<{ tgname: string }>(
     `SELECT tgname FROM pg_trigger
       WHERE tgrelid = 'xapi_statement'::regclass AND NOT tgisinternal
       ORDER BY tgname`,
   );
   return rows.map((r) => r.tgname);
+}
+
+interface GlobalObjectCounts {
+  triggers: number;
+  functions: number;
+  views: number;
+  sequences: number;
+}
+
+// Database-wide counts of the object kinds lrsql's schema has none of
+// (verified upstream fact: zero triggers/functions/views/sequences). These
+// prove the documented parity exceptions are EXHAUSTIVE — a stray trigger on
+// another table or an extra helper function can't hide behind the
+// per-table assertions.
+async function globalObjectCounts(db: PGlite): Promise<GlobalObjectCounts> {
+  const {
+    rows: [row],
+  } = await db.query<GlobalObjectCounts>(
+    `SELECT
+       (SELECT count(*)::int FROM pg_trigger WHERE NOT tgisinternal) AS triggers,
+       (SELECT count(*)::int FROM pg_proc WHERE pronamespace = 'public'::regnamespace) AS functions,
+       (SELECT count(*)::int FROM pg_views WHERE schemaname = 'public') AS views,
+       (SELECT count(*)::int FROM information_schema.sequences WHERE sequence_schema = 'public') AS sequences`,
+  );
+  return row;
 }
 
 describe('schema parity: migration-built vs upstream-lrsql-built', () => {
@@ -118,18 +143,37 @@ describe('schema parity: migration-built vs upstream-lrsql-built', () => {
       // CATALOG_SQL, so assert them out-of-band: exactly one trigger named
       // trg_xapi_statement_stored on xapi_statement in the migration-built
       // DB, and zero triggers on xapi_statement in the upstream-built DB.
-      expect(await triggerNames(migrationDb)).toEqual(['trg_xapi_statement_stored']);
-      expect(await triggerNames(upstreamDb)).toEqual([]);
+      expect(await xapiStatementTriggerNames(migrationDb)).toEqual(['trg_xapi_statement_stored']);
+      expect(await xapiStatementTriggerNames(upstreamDb)).toEqual([]);
 
       // The trigger's backing function likewise never appears in a catalog
       // query that only selects columns/constraints/indexes/enums; confirm
-      // it exists in the migration-built DB as a sanity check.
+      // it exists in the migration-built DB — and NOT in the upstream one.
+      const fnExistsSql = `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'notify_xapi_statement_stored') AS exists`;
       const {
-        rows: [fnRow],
-      } = await migrationDb.query<{ exists: boolean }>(
-        `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'notify_xapi_statement_stored') AS exists`,
-      );
-      expect(fnRow.exists).toBe(true);
+        rows: [migrationFnRow],
+      } = await migrationDb.query<{ exists: boolean }>(fnExistsSql);
+      expect(migrationFnRow.exists).toBe(true);
+      const {
+        rows: [upstreamFnRow],
+      } = await upstreamDb.query<{ exists: boolean }>(fnExistsSql);
+      expect(upstreamFnRow.exists).toBe(false);
+
+      // Exhaustiveness: database-wide, the ONLY objects beyond lrsql's
+      // tables/enums/constraints/indexes are our SSE trigger + its function.
+      // lrsql itself ships zero triggers, functions, views, and sequences.
+      expect(await globalObjectCounts(migrationDb)).toEqual({
+        triggers: 1,
+        functions: 1,
+        views: 0,
+        sequences: 0,
+      });
+      expect(await globalObjectCounts(upstreamDb)).toEqual({
+        triggers: 0,
+        functions: 0,
+        views: 0,
+        sequences: 0,
+      });
 
       // Everything else — every table, column, constraint, index, and enum
       // label — must match exactly. Sorting both lists (already done by
