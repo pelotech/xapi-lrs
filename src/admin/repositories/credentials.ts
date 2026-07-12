@@ -57,11 +57,6 @@ const DELETE_CREDENTIAL = {
   text: 'DELETE FROM lrs_credential WHERE id = $1',
 } as const satisfies Query;
 
-const GET_CREDENTIAL_KEYS = {
-  name: 'admin_get_credential_keys',
-  text: 'SELECT api_key, secret_key FROM lrs_credential WHERE id = $1',
-} as const satisfies Query;
-
 const GET_CREDENTIAL_KEYS_FOR_UPDATE = {
   name: 'admin_get_credential_keys_for_update',
   text: 'SELECT api_key, secret_key FROM lrs_credential WHERE id = $1 FOR UPDATE',
@@ -202,22 +197,31 @@ export async function ensureDefaultCredential(
   }
 }
 
+/**
+ * Replace a credential's scopes.
+ *
+ * Runs inside a transaction with the lrs_credential row locked FOR UPDATE:
+ * a concurrent rotateSecret would otherwise change (api_key, secret_key)
+ * after we read it, making every scope insert violate `credential_fk`.
+ */
 export async function setCredentialScopes(
   pool: DbPool,
   metrics: LrsMetrics,
   credentialId: string,
   scopes: string[],
 ): Promise<boolean> {
-  const keysResult = await poolQuery<{ api_key: string; secret_key: string }>(pool, metrics, {
-    ...GET_CREDENTIAL_KEYS,
-    values: [credentialId],
-  });
-  const keys = keysResult.rows[0];
-  if (!keys) return false;
+  return withClient(pool, metrics, async (client: DbClient) => {
+    const keysResult = await client.query<{ api_key: string; secret_key: string }>({
+      ...GET_CREDENTIAL_KEYS_FOR_UPDATE,
+      values: [credentialId],
+    });
+    const keys = keysResult.rows[0];
+    if (!keys) return false;
 
-  await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL_SCOPES, values: [keys.api_key, keys.secret_key] });
-  for (const scope of scopes) {
-    await poolQuery(pool, metrics, { ...INSERT_CREDENTIAL_SCOPE, values: [keys.api_key, keys.secret_key, scope] });
-  }
-  return true;
+    await client.query({ ...DELETE_CREDENTIAL_SCOPES, values: [keys.api_key, keys.secret_key] });
+    for (const scope of scopes) {
+      await client.query({ ...INSERT_CREDENTIAL_SCOPE, values: [keys.api_key, keys.secret_key, scope] });
+    }
+    return true;
+  });
 }
