@@ -5,7 +5,7 @@
 
 ## Goal
 
-Make xapi-lrs genuinely lrsql-compatible at the database layer: the bundled schema
+Make xapi-lrs lrsql-compatible at the database layer: the bundled schema
 becomes lrsql's actual Postgres schema, a live lrsql database can be taken over
 in place, and data we write remains readable by lrsql (round-trip compatible).
 This fixes both field-reported v0.5.1 issues:
@@ -52,12 +52,16 @@ Replace the current file (a test fixture that drifted from upstream) with the
 of lrsql's in-file migrations applied. Concretely:
 
 - All 15 lrsql tables, including ones we don't use yet (`reaction`,
-  `blocked_jwt`) — parity means a fresh xapi-lrs database is indistinguishable
-  from a fresh lrsql database.
+  `blocked_jwt`) — parity means a fresh xapi-lrs database matches a fresh
+  lrsql database up to an explicit, enumerated exception list: our SSE
+  `pg_notify` trigger + function on `xapi_statement` (lrsql has no triggers;
+  ours must also be created on takeover or statement streaming dies) and the
+  migration-tracking tables (`graphile_migrate.*` / `_pglite_migrations`).
+  The parity test knows this list; anything else is drift.
 - lrsql's exact column types (`VARCHAR(255)` not `text`), nullability
   (`credential_to_scope.scope` nullable, `admin_account.passhash` nullable),
   added columns (`admin_account.oidc_issuer`, `xapi_statement.registration/
-  timestamp/stored/reaction_id/trigger_id`), final enum value sets (including
+timestamp/stored/reaction_id/trigger_id`), final enum value sets (including
   the prefixed profile scopes), constraints, and index/constraint **names** —
   names matter because the parity test diffs catalogs.
 - **Only lrsql's column defaults** (`xapi_statement.is_voided DEFAULT FALSE`,
