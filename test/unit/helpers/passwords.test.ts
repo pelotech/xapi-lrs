@@ -13,6 +13,16 @@ describe('passwords', () => {
     expect(await verifyPassword('anything', null)).toBe(false);
   });
 
+  it('rejects lrsql buddy-format hashes (takeover: admin accounts do not port)', async () => {
+    expect(await verifyPassword('anything', 'bcrypt+sha512$abc123$12$deadbeef')).toBe(false);
+  });
+
+  it('fails closed on structurally-$2 but corrupt hashes instead of throwing', async () => {
+    // Illegal rounds (99) — bcryptjs rejects; must yield false, not a thrown error
+    const corrupt = '$2b$99$TeySrIyCJGtXM0wHM2gHB.Ot2hXOxMw3RXlHGXcVR1eMOt56pDJp2';
+    expect(await verifyPassword('anything', corrupt)).toBe(false);
+  });
+
   it('verifies hashes produced by pgcrypto crypt(..., gen_salt(bf))', async () => {
     // Generated via: docker compose up -d postgres && set -a && source .env.test && set +a
     //   psql -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"

@@ -16,5 +16,10 @@ export function hashPassword(plain: string): Promise<string> {
 
 export async function verifyPassword(plain: string, passhash: string | null): Promise<boolean> {
   if (!passhash || !passhash.startsWith('$2')) return false; // NULL or non-bcrypt (e.g. lrsql buddy format)
-  return bcrypt.compare(plain, passhash);
+  try {
+    return await bcrypt.compare(plain, passhash);
+  } catch {
+    // Structurally-$2 but invalid (e.g. illegal rounds) — fail closed, not 500
+    return false;
+  }
 }
