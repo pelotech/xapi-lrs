@@ -137,6 +137,12 @@ describe('schema parity: migration-built vs upstream-lrsql-built', () => {
       // unified diff if the migration ever drifts from upstream.
       const migrationSnapshot = await catalogSnapshot(migrationDb);
       const upstreamSnapshot = await catalogSnapshot(upstreamDb);
+      // Floor assertion: guards against a vacuous pass if CATALOG_SQL ever
+      // degraded identically on both sides (observed row count is 195; 150
+      // gives headroom without tolerating degeneracy).
+      expect(migrationSnapshot.length, 'catalog snapshot suspiciously small — CATALOG_SQL degraded?').toBeGreaterThan(
+        150,
+      );
       expect(migrationSnapshot).toEqual(upstreamSnapshot);
     } finally {
       await migrationDb.close();
