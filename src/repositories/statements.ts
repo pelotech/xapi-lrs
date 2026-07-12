@@ -52,8 +52,8 @@ export interface StatementQueryParams {
 
 const INSERT_XAPI_STATEMENT = {
   name: 'insert_xapi_statement',
-  text: `INSERT INTO xapi_statement (id, statement_id, verb_iri, is_voided, payload)
-         VALUES ($1, $2, $3, false, $4)
+  text: `INSERT INTO xapi_statement (id, statement_id, registration, verb_iri, is_voided, payload, timestamp, stored)
+         VALUES ($1, $2, $3, $4, false, $5, $6, $7)
          ON CONFLICT (statement_id) DO NOTHING`,
 } as const satisfies Query;
 
@@ -75,11 +75,17 @@ const BATCH_UPSERT_ACTORS = {
              FROM unique_actors ua
            ON CONFLICT (actor_ifi, actor_type) DO NOTHING
          )
+         -- lrsql has no unique constraint on statement_to_actor and does no
+         -- junction dedup (plain INSERTs, insert.sql:43-51); a bare
+         -- ON CONFLICT here can never fire and would read as protection it
+         -- isn't. Duplicate-row prevention across re-POSTs is handled by the
+         -- statement-insert gating above (this query never runs when the
+         -- statement row itself didn't insert), and within-statement
+         -- duplicates are deduped by extractActors before this query runs.
          INSERT INTO statement_to_actor (id, statement_id, usage, actor_ifi, actor_type)
          SELECT gen_random_uuid(), $3::uuid, u.usage::actor_usage_enum, u.ifi, u.atype::actor_type_enum
            FROM UNNEST($1::text[], $2::text[], $4::text[])
-             AS u(ifi, atype, usage)
-         ON CONFLICT DO NOTHING`,
+             AS u(ifi, atype, usage)`,
 } as const satisfies Query;
 
 /**
@@ -101,18 +107,29 @@ const BATCH_UPSERT_ACTIVITIES = {
            ON CONFLICT (activity_iri)
            DO UPDATE SET payload = EXCLUDED.payload
          )
+         -- No unique constraint on statement_to_activity either; see the
+         -- comment on the statement_to_actor insert above — the bare
+         -- ON CONFLICT DO NOTHING removed here could never fire.
          INSERT INTO statement_to_activity (id, statement_id, usage, activity_iri)
          SELECT gen_random_uuid(), $3::uuid, u.usage::activity_usage_enum, u.iri
            FROM UNNEST($1::text[], $4::text[])
-             AS u(iri, usage)
-         ON CONFLICT DO NOTHING`,
+             AS u(iri, usage)`,
 } as const satisfies Query;
 
 const INSERT_STATEMENT_TO_STATEMENT = {
   name: 'insert_statement_to_statement',
+  // ancestor_id/descendant_id both carry NOT NULL FKs to
+  // xapi_statement(statement_id) (lrsql's ancestor_fk/descendant_fk). Per
+  // xAPI Data 2.3.2, a Statement MAY reference (e.g. void) a StatementRef
+  // whose target the LRS has never seen — "the LRS SHOULD NOT reject the
+  // request on the grounds of the Object of that voiding Statement not
+  // being present" — so this insert must be conditional on the ancestor
+  // already existing, or it 500s on the FK violation instead of silently
+  // skipping the relationship row (descendant_id is always safe: it's the
+  // statement we just inserted in this same call).
   text: `INSERT INTO statement_to_statement (id, ancestor_id, descendant_id)
-         VALUES (gen_random_uuid(), $1, $2)
-         ON CONFLICT DO NOTHING`,
+         SELECT gen_random_uuid(), $1, $2
+         WHERE EXISTS (SELECT 1 FROM xapi_statement WHERE statement_id = $1)`,
 } as const satisfies Query;
 
 export interface InsertStatementResult {
@@ -130,15 +147,35 @@ export async function insertStatement(
   const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? '';
   const now = new Date();
   const storedIso = now.toISOString();
+  // xapi_statement.id is the pagination-key SQUUID (hand-rolled, v4-nibble —
+  // see src/helpers/squuid.ts); statement.id (the xAPI id, statement_id
+  // column) is generated as a UUIDv7 in statement-validator.ts when absent.
+  // Both sort correctly against lrsql's own SQUUID-layout ids; see the plan
+  // header "Verified upstream facts" — do not conflate the two id schemes.
   const id = squuid(now.getTime());
 
   const payload = buildPayload(statement, storedIso, authority);
+  // registration/timestamp are explicit columns per lrsql's shape (registration
+  // UUID, timestamp TIMESTAMPTZ, both nullable with no DB-side default);
+  // timestamp defaulting to "now" already happened in statement-validator.ts
+  // when the client omitted it, so the baked payload's timestamp is
+  // authoritative here.
+  const registration =
+    ((statement.context as Record<string, unknown> | undefined)?.registration as string | undefined) ?? null;
+  const timestamp = (payload.timestamp as string | undefined) ?? null;
 
   const result = await client.query({
     ...INSERT_XAPI_STATEMENT,
-    values: [id, statementId, verbIri, JSON.stringify(payload)],
+    values: [id, statementId, registration, verbIri, JSON.stringify(payload), timestamp, storedIso],
   });
 
+  // Gate ALL dependent inserts (actor/activity junctions, statement_to_statement,
+  // and — via the `inserted` flag returned to callers — attachments in
+  // routes/statements.ts) on the statement row itself having inserted. lrsql's
+  // junction tables carry no unique constraints and get plain INSERTs with no
+  // dedup, so re-POSTing an existing statementId (ON CONFLICT (statement_id)
+  // DO NOTHING above => rowCount 0) must short-circuit here or duplicate
+  // junction/attachment rows would accumulate on every re-POST.
   const inserted = (result.rowCount ?? 0) > 0;
   if (!inserted) return { inserted: false, id, statementId };
 
@@ -335,6 +372,13 @@ export async function queryStatements(
       throw new HttpError(400, 'agent parameter is not valid JSON');
     }
 
+    // lrsql parity (query.sql postgres-actors-join): group members are now
+    // written under the group's positional usage (extractActors), not a
+    // dedicated 'Member' usage. So a plain `agent` filter (usage = 'Actor')
+    // already matches both the top-level actor AND any actor-position group
+    // member — no extra join/condition needed. `related_agents=true` drops
+    // the usage filter entirely and matches ANY row for this IFI, including
+    // Sub*/Team/Instructor/Authority positions.
     if (params.related_agents) {
       directContentConds.push(
         `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.actor_ifi = $${paramIndex})`,

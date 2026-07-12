@@ -37,6 +37,12 @@ describe('validateStatement', () => {
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.statement.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      // Auto-generated statement.id is produced by the uuidv7 package (not the
+      // hand-rolled squuid()), so it must carry the UUIDv7 version nibble —
+      // distinct from xapi_statement.id (the row PK), which stays a v4-nibble
+      // squuid(). See statements.ts insertStatement / statement-decomposition
+      // plan header "Verified upstream facts".
+      expect(result.statement.id![14]).toBe('7');
     }
   });
 
