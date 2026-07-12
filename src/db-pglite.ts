@@ -13,7 +13,6 @@ import { access, mkdir, constants } from 'node:fs/promises';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import type { QueryConfig, QueryResult, QueryResultRow } from 'pg';
 import type { LrsConfig } from './config.ts';
 import type { DbClient, DbPool } from './db.ts';
@@ -147,7 +146,6 @@ export async function createPgliteBackend(config: LrsConfig): Promise<PgliteBack
 
   const db = await PGlite.create({
     dataDir: config.pgliteDataDir,
-    extensions: { pgcrypto },
   });
 
   await applyMigrations(db);

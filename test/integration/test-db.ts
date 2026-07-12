@@ -45,9 +45,9 @@ export function testConnectionString(config: TestDbConfig = defaultTestDbConfig)
   return `postgresql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
 }
 
-/** Apply the lrsql schema DDL to the test database. */
+/** Apply the lrsql schema DDL (the committed migration — single source of truth). */
 export async function applyLrsqlSchema(pool: pg.Pool): Promise<void> {
-  const ddl = readFileSync(join(import.meta.dirname, 'lrsql-schema.sql'), 'utf8');
+  const ddl = readFileSync(join(import.meta.dirname, '../../db/migrations/committed/000001-lrsql-schema.sql'), 'utf8');
   await pool.query(ddl);
 }
 
@@ -65,7 +65,9 @@ const TRUNCATE_SQL = `
     agent_profile_document,
     credential_to_scope,
     lrs_credential,
-    admin_account
+    admin_account,
+    reaction,
+    blocked_jwt
   CASCADE
 `;
 
