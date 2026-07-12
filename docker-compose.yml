@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: xapi_lrs
     ports:
       - '${PGPORT:-5434}:5432'
-    volumes:
-      - ./db/migrations/committed/000001-lrsql-schema.sql:/docker-entrypoint-initdb.d/000001-lrsql-schema.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U xapi_lrs']
       interval: 2s
@@ -37,7 +35,12 @@ services:
       CORS_ENABLED: 'false'
       CORS_ORIGIN: http://xapi-lrs
       NODE_ENV: production
-      # AUTO_MIGRATE: "true"  # run graphile-migrate at startup (opt-in)
+      # The postgres service no longer pre-loads the schema via
+      # docker-entrypoint-initdb.d (removed so `node dist/migrate.js` / the
+      # migrate-gate CI job are what create the schema, and so lrsql-takeover
+      # provisioning order isn't inverted). AUTO_MIGRATE runs graphile-migrate
+      # at startup so this quick-start still boots against an empty database.
+      AUTO_MIGRATE: 'true'
     ports:
       - '${LRS_PORT:-8081}:8081'
       - '${LRS_ADMIN_PORT:-8091}:8091'

@@ -13,6 +13,7 @@ A production-ready, xAPI 1.0.3 conformant Learning Record Store built on [Hono](
 - OpenTelemetry metrics (Prometheus exporter)
 - PostgreSQL with pg_notify for event-driven architecture
 - **PGlite mode**: run with an embedded in-process database — no PostgreSQL required
+- **lrsql-compatible schema (v0.9.5)**: the bundled schema is catalog-parity with [yetanalytics/lrsql](https://github.com/yetanalytics/lrsql) v0.9.5's Postgres shape (CI-enforced — see [Taking over an lrsql database](#taking-over-an-lrsql-database)), so xapi-lrs can take over a live lrsql database in place
 
 ## Quick Start
 
@@ -31,6 +32,21 @@ pnpm db:migrate
 # Start in development mode
 pnpm dev
 ```
+
+### Full stack via Docker Compose
+
+```bash
+pnpm docker-compose:up    # docker compose up -d (postgres + xapi-lrs)
+```
+
+The `postgres` service starts with an empty database — it no longer bundles the
+schema via `docker-entrypoint-initdb.d`. The `xapi-lrs` service instead runs
+with `AUTO_MIGRATE=true`, so it applies the schema itself on first boot (and is
+a no-op on subsequent restarts). This is also how you'd point the compose
+stack at a pre-existing (e.g. lrsql-provisioned) database: swap the `postgres`
+service's connection details for the target database's and the same
+`AUTO_MIGRATE` boot path performs the takeover — see
+[Taking over an lrsql database](#taking-over-an-lrsql-database) below.
 
 ### With PGlite (no PostgreSQL required)
 
@@ -55,6 +71,19 @@ The schema is applied automatically on first start. The admin account is bootstr
 > - `AUTO_MIGRATE` and `pnpm db:migrate` are ignored in PGlite mode (migrations are applied directly from committed SQL files).
 
 The LRS will be available at `http://localhost:8081` and the admin server at `http://localhost:8091`.
+
+## Taking over an lrsql database
+
+Because xapi-lrs's bundled schema is catalog-parity with [yetanalytics/lrsql](https://github.com/yetanalytics/lrsql) v0.9.5's Postgres shape, xapi-lrs can be pointed at a live lrsql database and take it over in place — statements, actors, documents, and credentials carry over unmodified.
+
+1. **Point xapi-lrs at the same database.** Set `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` (or `DATABASE_URL`) to the existing lrsql Postgres instance — no dump/restore needed.
+2. **Run migrations against it.** `node dist/migrate.js` (or `pnpm db:migrate`, or boot with `AUTO_MIGRATE=true`). Against an already-lrsql-shaped database this is a no-op except for adding xapi-lrs's SSE `NOTIFY` trigger (`trg_xapi_statement_stored`) — the rest of the schema is already identical.
+3. **Bootstrap an admin account via env vars.** lrsql admin accounts do **not** port: lrsql hashes passwords with a buddy `bcrypt+sha512$...` format that xapi-lrs's bcrypt-based `passhash` check does not (and cannot securely) verify. Existing lrsql admin logins will fail cleanly (401, not a 500) after takeover. Set `LRS_ADMIN_USER` / `LRS_ADMIN_PASSWORD` to bootstrap a fresh xapi-lrs admin account on startup (see [Configuration](#configuration)).
+4. **API credentials DO port.** Existing lrsql `api_key`/`secret_key` pairs and their scopes are read as-is (`lrs_credential` / `credential_to_scope`) — statement traffic authenticated with pre-existing lrsql credentials keeps working immediately after the migration runs, with no re-issuing of keys required.
+
+A startup schema probe runs before the server accepts traffic and fails fast if the connected database's shape doesn't match what this release expects (empty database, legacy pre-0.6 xapi-lrs schema, or anything else unrecognized), rather than surfacing later as an opaque runtime 500 (see [`src/db-probe.ts`](src/db-probe.ts)).
+
+> **Breaking change: pre-0.6 xapi-lrs databases are not upgradable.** v0.6.0 rewrote the bundled schema to match lrsql v0.9.5's shape byte-for-byte (composite-key credential scopes, `Sub*`/positional group-member usages, explicit `timestamp`/`stored`/`registration` columns, a new scope vocabulary). Databases created by xapi-lrs pre-0.6 — PGlite data directories or Postgres databases provisioned by the old `000001` migration — use an incompatible shape and cannot be migrated forward; the startup probe detects this and refuses to boot rather than serve against a mismatched schema. Drop and re-provision: for Postgres, drop and recreate the database (or `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`) and re-run migrations; for PGlite, delete the `PGLITE_DATA_DIR` directory.
 
 ## Configuration
 
@@ -101,21 +130,21 @@ On SIGTERM/SIGINT the server flips `/readyz` to 503, aborts long-lived SSE strea
 
 ## Scripts
 
-| Script                  | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `pnpm dev`              | Start with hot reload (tsx watch)           |
-| `pnpm build`            | Compile TypeScript to `dist/`               |
-| `pnpm start`            | Run compiled output                         |
-| `pnpm test`             | Run unit tests                              |
-| `pnpm test:integration` | Run integration tests (requires PostgreSQL) |
-| `pnpm test:conformance` | Run ADL conformance suite                   |
-| `pnpm typecheck`        | Type-check without emitting                 |
-| `pnpm lint`             | Lint with oxlint                            |
-| `pnpm fmt`              | Format with oxfmt                           |
-| `pnpm db:migrate`       | Run database migrations                     |
-| `pnpm docker:build`     | Build Docker image                          |
-| `pnpm docker:up`        | Build and start full stack (postgres + lrs) |
-| `pnpm docker:down`      | Stop the stack                              |
+| Script                     | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `pnpm dev`                 | Start with hot reload (tsx watch)           |
+| `pnpm build`               | Compile TypeScript to `dist/`               |
+| `pnpm start`               | Run compiled output                         |
+| `pnpm test`                | Run unit tests                              |
+| `pnpm test:integration`    | Run integration tests (requires PostgreSQL) |
+| `pnpm test:conformance`    | Run ADL conformance suite                   |
+| `pnpm typecheck`           | Type-check without emitting                 |
+| `pnpm lint`                | Lint with oxlint                            |
+| `pnpm fmt`                 | Format with oxfmt                           |
+| `pnpm db:migrate`          | Run database migrations                     |
+| `pnpm docker:build`        | Build Docker image                          |
+| `pnpm docker-compose:up`   | Start full stack (postgres + lrs)           |
+| `pnpm docker-compose:down` | Stop the stack                              |
 
 ## Architecture
 

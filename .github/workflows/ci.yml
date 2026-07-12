@@ -40,11 +40,15 @@ jobs:
       - run: pnpm test
 
   integration-tests:
-    name: Integration Tests (${{ matrix.driver }})
+    name: Integration Tests (${{ matrix.driver }}${{ matrix.schema-source == 'lrsql' && ', lrsql takeover' || '' }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         driver: [pg, pglite]
+        schema-source: [migration]
+        include:
+          - driver: pglite
+            schema-source: lrsql
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
@@ -65,6 +69,7 @@ jobs:
       - run: pnpm test:integration
         env:
           DATABASE_DRIVER: ${{ matrix.driver }}
+          SCHEMA_SOURCE: ${{ matrix.schema-source }}
       - name: Postgres logs
         if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres
@@ -73,12 +78,13 @@ jobs:
         run: docker compose down
 
   conformance-tests:
-    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }})
+    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }}, ${{ matrix.schema-source }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         driver: [pg, pglite]
         xapi-version: ['1.0.3']
+        schema-source: [migration, lrsql]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
@@ -100,6 +106,7 @@ jobs:
         env:
           DATABASE_DRIVER: ${{ matrix.driver }}
           CONFORMANCE_XAPI_VERSION: ${{ matrix.xapi-version }}
+          SCHEMA_SOURCE: ${{ matrix.schema-source }}
       - name: Postgres logs
         if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres
@@ -107,10 +114,58 @@ jobs:
         if: always() && matrix.driver == 'pg'
         run: docker compose down
 
+  migrate-gate:
+    name: Migrate Gate (fresh pg)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Start Postgres
+        # postgres ONLY — a bare `up -d --wait` would also start the xapi-lrs
+        # container, stealing ports 8081/8091 from the compiled-artifact
+        # server this gate exists to test.
+        run: docker compose up -d --wait postgres
+      - name: Load test env
+        run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
+      - uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Copy admin vendor assets into dist
+        # tsc only compiles src/**/*.ts; src/admin/assets.ts reads
+        # dist/admin/vendor/* eagerly at import time (same as the Dockerfile's
+        # own `COPY src/admin/vendor/ dist/admin/vendor/` step) — without this,
+        # `node dist/server.js` throws ENOENT before it can even listen.
+        run: cp -r src/admin/vendor dist/admin/vendor
+      - name: Run migrations against empty database (compiled artifact)
+        run: node dist/migrate.js
+      - name: Boot server and smoke an authenticated request
+        # /xapi/about is unauthenticated (src/app.ts skips auth for it); the
+        # spec requires an AUTHENTICATED smoke, so bootstrap a known credential
+        # and hit /xapi/statements with it.
+        run: |
+          LRS_ADMIN_USER=admin LRS_ADMIN_PASSWORD=admin-ci-password \
+          LRS_API_KEY_DEFAULT=ci-key LRS_API_SECRET_DEFAULT=ci-secret \
+          node dist/server.js &
+          SERVER_PID=$!
+          ok=""
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8091/healthz && ok=1 && break || sleep 1
+          done
+          [ -n "$ok" ] || { echo "server never became healthy"; exit 1; }
+          curl -sf -u ci-key:ci-secret -H 'X-Experience-API-Version: 1.0.3' \
+            'http://localhost:8081/xapi/statements?limit=1'
+          kill $SERVER_PID
+      - name: Cleanup
+        if: always()
+        run: docker compose down
+
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [lint-typecheck, unit-tests, integration-tests, conformance-tests]
+    needs: [lint-typecheck, unit-tests, integration-tests, conformance-tests, migrate-gate]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
