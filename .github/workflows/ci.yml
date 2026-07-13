@@ -53,7 +53,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
         if: matrix.driver == 'pg'
-        run: docker compose up -d --wait
+        # postgres ONLY — a bare `up -d --wait` also starts the xapi-lrs
+        # container (now booting via AUTO_MIGRATE), making these jobs
+        # incidentally depend on its startup; the tests provision the schema
+        # themselves via global-setup.
+        run: docker compose up -d --wait postgres
       - name: Load test env
         if: matrix.driver == 'pg'
         run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
@@ -78,7 +82,7 @@ jobs:
         run: docker compose down
 
   conformance-tests:
-    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }}, ${{ matrix.schema-source }})
+    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }}${{ matrix.schema-source == 'lrsql' && ', lrsql takeover' || '' }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -89,7 +93,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
         if: matrix.driver == 'pg'
-        run: docker compose up -d --wait
+        # postgres ONLY — a bare `up -d --wait` also starts the xapi-lrs
+        # container (now booting via AUTO_MIGRATE), making these jobs
+        # incidentally depend on its startup; the tests provision the schema
+        # themselves via global-setup.
+        run: docker compose up -d --wait postgres
       - name: Load test env
         if: matrix.driver == 'pg'
         run: grep -v '^\s*#' .env.test | grep -v '^\s*$' >> "$GITHUB_ENV"
@@ -133,12 +141,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Copy admin vendor assets into dist
-        # tsc only compiles src/**/*.ts; src/admin/assets.ts reads
-        # dist/admin/vendor/* eagerly at import time (same as the Dockerfile's
-        # own `COPY src/admin/vendor/ dist/admin/vendor/` step) — without this,
-        # `node dist/server.js` throws ENOENT before it can even listen.
-        run: cp -r src/admin/vendor dist/admin/vendor
       - name: Run migrations against empty database (compiled artifact)
         run: node dist/migrate.js
       - name: Boot server and smoke an authenticated request
@@ -150,6 +152,7 @@ jobs:
           LRS_API_KEY_DEFAULT=ci-key LRS_API_SECRET_DEFAULT=ci-secret \
           node dist/server.js &
           SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           ok=""
           for i in $(seq 1 30); do
             curl -sf http://localhost:8091/healthz && ok=1 && break || sleep 1

@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && cp -r src/admin/vendor dist/admin/vendor",
     "dev": "tsx watch src/server.ts",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
