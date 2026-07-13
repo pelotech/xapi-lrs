@@ -65,6 +65,15 @@ export function createStatementsApp() {
       validated.push(result.statement as unknown as Record<string, unknown>);
     }
 
+    // Reject batches carrying duplicate statement ids (no partial write: runs
+    // before any insert). Covers both identical-content dupes (which would
+    // otherwise silently succeed via ON CONFLICT DO NOTHING) and conflicting-
+    // content dupes.
+    const batchIds = validated.map((s) => s.id);
+    if (new Set(batchIds).size !== batchIds.length) {
+      throw new HttpError(400, 'Batch contains duplicate statement ids');
+    }
+
     // Validate multipart attachment data
     if (attachmentParts) {
       await validateAttachmentParts(validated, attachmentParts, deps);
