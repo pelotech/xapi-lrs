@@ -54,6 +54,10 @@ export function createStatementsApp() {
     // Validate ALL statements first (batch atomicity)
     const validated: Record<string, unknown>[] = [];
     for (const raw of rawArray) {
+      // The negotiation middleware always sets xapiVersion for /xapi routes; the
+      // ?? only satisfies the optional type. Keep the fallback '1.0.3' (fails
+      // CLOSED — a missing version rejects 2.0 features rather than accepting
+      // them). Do NOT "simplify" this default to '2.0.0'.
       const result = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
       if (!result.valid) {
         throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
@@ -131,6 +135,9 @@ export function createStatementsApp() {
     const raw = (c.var.parsedBody ?? {}) as Record<string, unknown>;
     if (!raw.id) raw.id = statementId;
 
+    // Fallback '1.0.3' fails CLOSED (rejects 2.0 features when version is
+    // somehow unset); the negotiation middleware guarantees xapiVersion here, so
+    // the ?? is only forced by the optional type. Do NOT default to '2.0.0'.
     const validationResult = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
     if (!validationResult.valid) {
       throw new HttpError(400, validationResult.errors.map((e) => `${e.path}: ${e.message}`).join('; '));

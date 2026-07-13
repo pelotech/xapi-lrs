@@ -461,9 +461,6 @@ function buildStatementInputSchema(version: XapiVersion) {
 const statementInputSchema10 = buildStatementInputSchema('1.0.3');
 const statementInputSchema20 = buildStatementInputSchema('2.0.0');
 
-/** The 1.0.x statement input schema (default; also used by single-arg callers). */
-export const statementInputSchema = statementInputSchema10;
-
 /** Select the statement input schema for a negotiated version. */
 export function statementSchemaFor(version: XapiVersion) {
   return version === '2.0.0' ? statementInputSchema20 : statementInputSchema10;
