@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 import { isValidIRI } from './validation-helpers.ts';
-import type { XapiVersion } from './versions.ts';
+import { type XapiVersion, isV2 } from './versions.ts';
 
 // ============================================================================
 // Primitive schemas
@@ -282,7 +282,7 @@ const contextBaseShape = {
 
 /** Build the context schema for a given version (2.0 permits contextAgents/contextGroups). */
 function buildContextSchema(version: XapiVersion) {
-  if (version === '2.0.0') {
+  if (isV2(version)) {
     return z
       .object({
         ...contextBaseShape,
@@ -388,7 +388,7 @@ const authoritySchema = z.union([
  * accepts 1.0.x (a 2.0 request may carry a 1.0.x-authored statement, stored as
  * received) — but NOT any other 1.x/0.x/3.x. */
 function buildVersionField(version: XapiVersion) {
-  if (version === '2.0.0') {
+  if (isV2(version)) {
     return z
       .string()
       .regex(/^(1\.0|2\.0)(\.\d+)?$/, {
@@ -463,5 +463,5 @@ const statementInputSchema20 = buildStatementInputSchema('2.0.0');
 
 /** Select the statement input schema for a negotiated version. */
 export function statementSchemaFor(version: XapiVersion) {
-  return version === '2.0.0' ? statementInputSchema20 : statementInputSchema10;
+  return isV2(version) ? statementInputSchema20 : statementInputSchema10;
 }

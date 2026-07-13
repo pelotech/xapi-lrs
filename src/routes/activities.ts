@@ -22,6 +22,7 @@ import {
   deleteAllStateDocuments,
 } from '../repositories/activity-state.ts';
 import { getActivityDefinition } from '../repositories/statements.ts';
+import { isV2 } from '../xapi/versions.ts';
 import {
   getActivityRoute,
   putStateRoute,
@@ -79,7 +80,7 @@ export function createActivitiesApp() {
       const existingEtag = existing ? computeEtag(existing.contents) : undefined;
       // xAPI 2.0 requires State-resource concurrency; 1.0.3 excludes State.
       // Gate on an existing doc so a new-doc PUT without a precondition stays 204.
-      const requireConcurrency = c.var.xapiVersion === '2.0.0' && existingEtag !== undefined;
+      const requireConcurrency = isV2(c.var.xapiVersion ?? '1.0.3') && existingEtag !== undefined;
       checkConcurrencyHeaders(concurrencyHeaders(c), existingEtag, requireConcurrency);
       await upsertStateDocument(client, {
         stateId,
