@@ -152,3 +152,35 @@ describe('xAPI version negotiation middleware', () => {
     });
   });
 });
+
+describe('alternate request syntax gating (xAPI §1.3, removed in 2.0)', () => {
+  // POST /xapi/statements?method=GET with a form-encoded body carrying the
+  // xAPI version. The alternate-syntax middleware runs before auth, so these
+  // stay DB-free: a 1.0.x request is rewritten to a GET (then 401s at auth
+  // with the negotiated version echoed), while a 2.0.x request must NOT be
+  // rewritten (the form-body version never becomes a real header, so the
+  // version middleware rejects the still-a-POST request with a 400).
+  const altReq = (version: string): Request =>
+    req('/xapi/statements?method=GET', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ 'X-Experience-API-Version': version }).toString(),
+    });
+
+  it('1.0.3 effective version IS rewritten to a GET (echoes 1.0.3, 401 at auth)', async () => {
+    const res = await buildApp().fetch(altReq('1.0.3'));
+    // Rewrite happened: the body version became the request header, the GET
+    // negotiated 1.0.3, and the credential-less request 401s at auth.
+    expect(res.headers.get('X-Experience-API-Version')).toBe('1.0.3');
+    expect(res.status).toBe(401);
+  });
+
+  it('2.0.0 effective version is NOT rewritten (stays a POST → 400 for missing header)', async () => {
+    const res = await buildApp().fetch(altReq('2.0.0'));
+    // Not rewritten: the form-body version is not promoted to a real header,
+    // so the still-a-POST request has no version header and is rejected 400.
+    // (Before the gate it would rewrite to a GET and 401 at auth instead.)
+    expect(res.status).toBe(400);
+    expect(res.headers.get('X-Experience-API-Version')).toBe('2.0.0');
+  });
+});

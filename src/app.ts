@@ -229,6 +229,18 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
       formData[k] = v;
     }
 
+    // Alternate request syntax was removed in xAPI 2.0. Gate on the request's
+    // effective version (form-body field if present, else the header) and only
+    // rewrite for 1.0.x. For 2.0.x, fall through — the version middleware and
+    // normal POST handling apply (a POST with ?method= is just a POST in 2.0).
+    const bodyVersion = formData['X-Experience-API-Version'];
+    const headerVersion = c.req.header('x-experience-api-version');
+    const effective = bodyVersion ?? headerVersion;
+    if (effective !== undefined && !/^1\.0(\.\d+)?$/.test(effective)) {
+      // Not 1.0.x: do not rewrite. Continue to the next middleware as a POST.
+      return next();
+    }
+
     // Build new URL without ?method=
     const url = new URL(c.req.url);
     url.searchParams.delete('method');
