@@ -84,6 +84,9 @@ const SPEC_SECTIONS_2_0_0: SpecSection[] = [
   { match: '(Data 4.0)', label: 'Special Data Types and Rules' },
   { match: '(4.2.7)', label: 'Additional Requirements for Data Types' },
   { match: '(Communication 1.1)', label: 'HEAD Request Implementation' },
+  // Confirmed genuinely absent in the executed post-negotiation run (2026-07-13,
+  // suite 5bc232d): the section ships as an empty describe() and emits no
+  // `suite start`. All 33 other mapped sections ran. Keep mayBeAbsent.
   { match: '(Communication 1.2)', label: 'Headers', mayBeAbsent: true },
   // The v2_0 battery titles this section '(4.1.4) Concurrency'; it has no
   // '(Communication 3.1)' ref:
@@ -142,9 +145,10 @@ export const PENDING_ALLOWLIST: Record<XapiVersion, PendingAllowlistEntry[]> = {
 export const TOTAL_FLOOR: Record<XapiVersion, number> = {
   // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d), floor = 95%
   '1.0.3': 1296,
-  // 2.0.0 battery registered total: 1435 on 2026-07-10 (suite 5bc232d), floor = 95%.
-  // The 2.0 run currently aborts at bootstrap (the server rejects 2.0 version
-  // headers), but tests register before execution, so the count still holds.
-  // See docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
+  // 2.0.0 battery total: 1435 on 2026-07-10 (suite 5bc232d), floor = 95%.
+  // Post-negotiation the battery executes fully: observed executed total 1435
+  // (1425 passing, 10 failing, 0 pending) on 2026-07-13 — executed == registered
+  // (no pending), confirming the floor against a real run.
+  // See docs/superpowers/plans/2026-07-12-xapi-2.0-negotiation-baseline.md.
   '2.0.0': 1363,
 };
