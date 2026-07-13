@@ -8,6 +8,7 @@
 
 import { z } from 'zod';
 import { isValidIRI } from './validation-helpers.ts';
+import type { XapiVersion } from './versions.ts';
 
 // ============================================================================
 // Primitive schemas
@@ -238,19 +239,60 @@ const contextActivitiesSchema = z
   })
   .strict();
 
-const contextSchema = z
+// ----------------------------------------------------------------------------
+// Context (version-parameterized — see buildStatementInputSchema below)
+//
+// The 2.0 context adds contextAgents/contextGroups; the 1.0 context is exactly
+// today's fields. Both stay .strict(). Because contextSchema is nested three
+// levels deep (contextSchema → subStatementSchema → objectSchema →
+// statementInputSchema) and the top-level `version` regex also differs by
+// version, the whole dependent chain is rebuilt per version by the factory.
+// ----------------------------------------------------------------------------
+
+/** xAPI 2.0 context agent: { objectType: 'contextAgent', agent, relevantTypes? } */
+const contextAgentSchema = z
   .object({
-    registration: z.string().uuid().optional(),
-    instructor: actorSchema.optional(),
-    team: groupSchema.optional(),
-    contextActivities: contextActivitiesSchema.optional(),
-    revision: z.string().optional(),
-    platform: z.string().optional(),
-    language: languageTag.optional(),
-    statement: statementRefSchema.optional(),
-    extensions: extensions.optional(),
+    objectType: z.literal('contextAgent'),
+    agent: agentSchema,
+    relevantTypes: z.array(iri).min(1).optional(),
   })
   .strict();
+
+/** xAPI 2.0 context group: { objectType: 'contextGroup', group, relevantTypes? } */
+const contextGroupSchema = z
+  .object({
+    objectType: z.literal('contextGroup'),
+    group: groupSchema,
+    relevantTypes: z.array(iri).min(1).optional(),
+  })
+  .strict();
+
+/** Fields shared by the 1.0 and 2.0 context objects. */
+const contextBaseShape = {
+  registration: z.string().uuid().optional(),
+  instructor: actorSchema.optional(),
+  team: groupSchema.optional(),
+  contextActivities: contextActivitiesSchema.optional(),
+  revision: z.string().optional(),
+  platform: z.string().optional(),
+  language: languageTag.optional(),
+  statement: statementRefSchema.optional(),
+  extensions: extensions.optional(),
+} as const;
+
+/** Build the context schema for a given version (2.0 permits contextAgents/contextGroups). */
+function buildContextSchema(version: XapiVersion) {
+  if (version === '2.0.0') {
+    return z
+      .object({
+        ...contextBaseShape,
+        contextAgents: z.array(contextAgentSchema).optional(),
+        contextGroups: z.array(contextGroupSchema).optional(),
+      })
+      .strict();
+  }
+  return z.object({ ...contextBaseShape }).strict();
+}
 
 // ============================================================================
 // Attachment
@@ -318,28 +360,10 @@ function checkContextActivityOnly(
   }
 }
 
-const subStatementSchema = z
-  .object({
-    objectType: z.literal('SubStatement'),
-    actor: actorSchema,
-    verb: verbSchema,
-    object: subStatementObjectSchema,
-    result: resultSchema.optional(),
-    context: contextSchema.optional(),
-    timestamp: timestamp.optional(),
-    attachments: z.array(attachmentSchema).optional(),
-  })
-  .strict()
-  .superRefine(checkContextActivityOnly);
-
-// Full object schema (includes SubStatement)
-const objectSchema = z.union([
-  activitySchema,
-  statementRefSchema,
-  subStatementSchema,
-  agentObjectSchema,
-  groupObjectSchema,
-]);
+// SubStatement, the full object schema, and the top-level statement schema all
+// embed contextSchema (directly or via the object union), so they are built by
+// buildStatementInputSchema below — one function per version. See the CRITICAL
+// note there about re-attaching checkContextActivityOnly.
 
 // ============================================================================
 // Authority
@@ -357,27 +381,90 @@ const authoritySchema = z.union([
 ]);
 
 // ============================================================================
-// Statement (top-level)
+// Statement (top-level) — version-parameterized factory
 // ============================================================================
 
-export const statementInputSchema = z
-  .object({
-    id: z.string().uuid().optional(),
-    actor: actorSchema,
-    verb: verbSchema,
-    object: objectSchema,
-    result: resultSchema.optional(),
-    context: contextSchema.optional(),
-    timestamp: timestamp.optional(),
-    stored: z.unknown().optional(),
-    authority: authoritySchema.optional(),
-    version: z
+/** The `version` property regex per version. 1.0 accepts only 1.0.x; 2.0 also
+ * accepts 1.0.x (a 2.0 request may carry a 1.0.x-authored statement, stored as
+ * received) — but NOT any other 1.x/0.x/3.x. */
+function buildVersionField(version: XapiVersion) {
+  if (version === '2.0.0') {
+    return z
       .string()
-      .regex(/^1\.0(\.\d+)?$/, {
-        message: 'version must match 1.0.x (e.g. "1.0", "1.0.0", "1.0.3")',
+      .regex(/^(1\.0|2\.0)(\.\d+)?$/, {
+        message: 'version must match 1.0.x or 2.0.x (e.g. "1.0.3", "2.0", "2.0.0")',
       })
-      .optional(),
-    attachments: z.array(attachmentSchema).optional(),
-  })
-  .strict()
-  .superRefine(checkContextActivityOnly);
+      .optional();
+  }
+  return z
+    .string()
+    .regex(/^1\.0(\.\d+)?$/, {
+      message: 'version must match 1.0.x (e.g. "1.0", "1.0.0", "1.0.3")',
+    })
+    .optional();
+}
+
+/**
+ * Build the full statement input schema for a version. contextSchema is nested
+ * three levels deep, so this rebuilds the ENTIRE dependent chain per version:
+ * contextSchema → subStatementSchema → objectSchema → statementInputSchema.
+ *
+ * CRITICAL: both subStatementSchema and statementInputSchema carry
+ * .superRefine(checkContextActivityOnly) (the revision/platform-only-on-Activity
+ * rule). Both rebuilt schemas MUST re-attach it, or the 1.0 behavior silently
+ * regresses.
+ */
+function buildStatementInputSchema(version: XapiVersion) {
+  const contextSchema = buildContextSchema(version);
+
+  const subStatementSchema = z
+    .object({
+      objectType: z.literal('SubStatement'),
+      actor: actorSchema,
+      verb: verbSchema,
+      object: subStatementObjectSchema,
+      result: resultSchema.optional(),
+      context: contextSchema.optional(),
+      timestamp: timestamp.optional(),
+      attachments: z.array(attachmentSchema).optional(),
+    })
+    .strict()
+    .superRefine(checkContextActivityOnly);
+
+  const objectSchema = z.union([
+    activitySchema,
+    statementRefSchema,
+    subStatementSchema,
+    agentObjectSchema,
+    groupObjectSchema,
+  ]);
+
+  return z
+    .object({
+      id: z.string().uuid().optional(),
+      actor: actorSchema,
+      verb: verbSchema,
+      object: objectSchema,
+      result: resultSchema.optional(),
+      context: contextSchema.optional(),
+      timestamp: timestamp.optional(),
+      stored: z.unknown().optional(),
+      authority: authoritySchema.optional(),
+      version: buildVersionField(version),
+      attachments: z.array(attachmentSchema).optional(),
+    })
+    .strict()
+    .superRefine(checkContextActivityOnly);
+}
+
+// Memoize both variants at module load.
+const statementInputSchema10 = buildStatementInputSchema('1.0.3');
+const statementInputSchema20 = buildStatementInputSchema('2.0.0');
+
+/** The 1.0.x statement input schema (default; also used by single-arg callers). */
+export const statementInputSchema = statementInputSchema10;
+
+/** Select the statement input schema for a negotiated version. */
+export function statementSchemaFor(version: XapiVersion) {
+  return version === '2.0.0' ? statementInputSchema20 : statementInputSchema10;
+}

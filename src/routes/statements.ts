@@ -54,7 +54,7 @@ export function createStatementsApp() {
     // Validate ALL statements first (batch atomicity)
     const validated: Record<string, unknown>[] = [];
     for (const raw of rawArray) {
-      const result = validateStatement(raw);
+      const result = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
       if (!result.valid) {
         throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
       }
@@ -131,7 +131,7 @@ export function createStatementsApp() {
     const raw = (c.var.parsedBody ?? {}) as Record<string, unknown>;
     if (!raw.id) raw.id = statementId;
 
-    const validationResult = validateStatement(raw);
+    const validationResult = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
     if (!validationResult.valid) {
       throw new HttpError(400, validationResult.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
     }
