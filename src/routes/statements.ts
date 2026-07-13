@@ -295,11 +295,14 @@ export function createStatementsApp() {
           assertStatementBelongsToAgent(row.payload, auth);
         }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
+        const headers = { 'Last-Modified': row.stored.toUTCString() };
         if (attachments) {
           const parts = await collectAttachmentParts(client, stmt);
-          return buildMultipartResponse(stmt, parts);
+          const res = await buildMultipartResponse(stmt, parts);
+          res.headers.set('Last-Modified', headers['Last-Modified']);
+          return res;
         }
-        return c.json(stmt, 200);
+        return c.json(stmt, 200, headers);
       }
 
       const { rows, hasMore } = await queryStatements(client, {
