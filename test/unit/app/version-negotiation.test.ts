@@ -17,7 +17,7 @@ import type { DbPool } from '../../../src/db.ts';
 import { createMetrics } from '../../../src/metrics.ts';
 import type { Listener } from '../../../src/sse/pg-listener.ts';
 
-// A pool that throws if ever queried — proves these paths are genuinely DB-free.
+// Pool throws if queried: these paths must not touch the DB.
 const stubPool = {
   connect: () => {
     throw new Error('unit test pool.connect() should never be called');
@@ -120,12 +120,12 @@ describe('xAPI version negotiation middleware', () => {
       expect(res.headers.get('X-Experience-API-Version')).toBe('2.0.0');
     });
 
-    it('unsupported 3.0.0 header → 400, version header present and 1.0/2.0', async () => {
+    it('unsupported 3.0.0 header → 400, echoes latest supported 2.0.0', async () => {
       const res = await buildApp().fetch(req('/xapi/about', { headers: { 'X-Experience-API-Version': '3.0.0' } }));
       expect(res.status).toBe(400);
-      const echoed = res.headers.get('X-Experience-API-Version');
-      expect(echoed).not.toBeNull();
-      expect(echoed).toMatch(/^(1\.0|2\.0)/);
+      // Pin the exact value: the rejection path must echo the latest supported
+      // version, NOT the retired 1.0.3 default this test exists to guard against.
+      expect(res.headers.get('X-Experience-API-Version')).toBe('2.0.0');
     });
   });
 
@@ -139,16 +139,16 @@ describe('xAPI version negotiation middleware', () => {
       expect(res.status).toBe(401);
     });
 
-    it('no version header → 400', async () => {
+    it('no version header → 400, echoes latest supported 2.0.0', async () => {
       const res = await buildApp().fetch(req('/xapi/statements'));
       expect(res.status).toBe(400);
-      expect(res.headers.get('X-Experience-API-Version')).not.toBeNull();
+      expect(res.headers.get('X-Experience-API-Version')).toBe('2.0.0');
     });
 
-    it('unsupported 0.9 header → 400', async () => {
+    it('unsupported 0.9 header → 400, echoes latest supported 2.0.0', async () => {
       const res = await buildApp().fetch(req('/xapi/statements', { headers: { 'X-Experience-API-Version': '0.9' } }));
       expect(res.status).toBe(400);
-      expect(res.headers.get('X-Experience-API-Version')).not.toBeNull();
+      expect(res.headers.get('X-Experience-API-Version')).toBe('2.0.0');
     });
   });
 });
