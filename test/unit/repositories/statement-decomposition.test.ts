@@ -220,6 +220,116 @@ describe('extractActors', () => {
     expect(subTeamActors.map((a) => a.ifi)).toEqual(['mbox::mailto:subteam@b.com', 'mbox::mailto:subtm1@b.com']);
   });
 
+  it('extracts context.contextAgents agent as usage ContextAgent', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+      context: {
+        contextAgents: [
+          {
+            objectType: 'contextAgent',
+            agent: { objectType: 'Agent', mbox: 'mailto:ca@b.com' },
+            relevantTypes: ['http://example.com/t'],
+          },
+        ],
+      },
+    });
+    const ctxAgents = actors.filter((a) => a.usage === 'ContextAgent');
+    expect(ctxAgents).toHaveLength(1);
+    expect(ctxAgents[0]).toMatchObject({ ifi: 'mbox::mailto:ca@b.com', type: 'Agent', usage: 'ContextAgent' });
+  });
+
+  it('extracts context.contextGroups group + members, all usage ContextGroup', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+      context: {
+        contextGroups: [
+          {
+            objectType: 'contextGroup',
+            group: {
+              objectType: 'Group',
+              mbox: 'mailto:cg@b.com',
+              member: [{ mbox: 'mailto:cgm1@b.com' }, { mbox: 'mailto:cgm2@b.com' }],
+            },
+          },
+        ],
+      },
+    });
+    const ctxGroups = actors.filter((a) => a.usage === 'ContextGroup');
+    expect(ctxGroups).toHaveLength(3);
+    expect(ctxGroups[0]).toMatchObject({ ifi: 'mbox::mailto:cg@b.com', type: 'Group', usage: 'ContextGroup' });
+    expect(ctxGroups.map((a) => a.ifi)).toEqual([
+      'mbox::mailto:cg@b.com',
+      'mbox::mailto:cgm1@b.com',
+      'mbox::mailto:cgm2@b.com',
+    ]);
+  });
+
+  it('anonymous contextGroup gets no self row, only member rows', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+      context: {
+        contextGroups: [
+          {
+            objectType: 'contextGroup',
+            group: { objectType: 'Group', member: [{ mbox: 'mailto:acgm1@b.com' }] },
+          },
+        ],
+      },
+    });
+    const ctxGroups = actors.filter((a) => a.usage === 'ContextGroup');
+    expect(ctxGroups).toHaveLength(1);
+    expect(ctxGroups[0]).toMatchObject({ ifi: 'mbox::mailto:acgm1@b.com', type: 'Agent', usage: 'ContextGroup' });
+  });
+
+  it('extracts SubStatement contextAgents/contextGroups as SubContextAgent/SubContextGroup', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: {
+        objectType: 'SubStatement',
+        actor: { mbox: 'mailto:sub@b.com' },
+        verb: { id: 'http://example.com/v' },
+        object: { id: 'http://example.com/sub-act' },
+        context: {
+          contextAgents: [{ objectType: 'contextAgent', agent: { objectType: 'Agent', mbox: 'mailto:sca@b.com' } }],
+          contextGroups: [
+            {
+              objectType: 'contextGroup',
+              group: {
+                objectType: 'Group',
+                mbox: 'mailto:scg@b.com',
+                member: [{ mbox: 'mailto:scgm1@b.com' }],
+              },
+            },
+          ],
+        },
+      },
+    });
+    const subCtxAgent = actors.find((a) => a.ifi === 'mbox::mailto:sca@b.com');
+    expect(subCtxAgent).toMatchObject({ usage: 'SubContextAgent' });
+    const subCtxGroups = actors.filter((a) => a.usage === 'SubContextGroup');
+    expect(subCtxGroups.map((a) => a.ifi)).toEqual(['mbox::mailto:scg@b.com', 'mbox::mailto:scgm1@b.com']);
+  });
+
+  it('keeps a contextAgent whose IFI matches the actor IFI (dedup is per usage)', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:same@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+      context: {
+        contextAgents: [{ objectType: 'contextAgent', agent: { objectType: 'Agent', mbox: 'mailto:same@b.com' } }],
+      },
+    });
+    expect(actors.find((a) => a.usage === 'Actor' && a.ifi === 'mbox::mailto:same@b.com')).toBeDefined();
+    expect(actors.find((a) => a.usage === 'ContextAgent' && a.ifi === 'mbox::mailto:same@b.com')).toBeDefined();
+  });
+
   it('silently skips agents without valid IFI', () => {
     const actors = extractActors({
       actor: { name: 'No IFI' },
