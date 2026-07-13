@@ -18,6 +18,8 @@ export type HonoEnv = {
     rawBody: Buffer;
     /** Multipart attachment parts (set by multipart-parse middleware) */
     attachmentParts: Map<string, MultipartAttachmentPart> | undefined;
+    /** Negotiated xAPI version for this request ('1.0.3' | '2.0.0'), set by the version middleware */
+    xapiVersion: '1.0.3' | '2.0.0';
     /** Unique request identifier for tracing */
     requestId: string;
     /** Per-request child logger with requestId bound */

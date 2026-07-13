@@ -281,31 +281,47 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   });
 
   // --------------------------------------------------------------------------
-  // xAPI Version Header Validation (§3.2)
+  // xAPI Version Negotiation (§3.3)
+  // Accept 1.0.x and 2.0.x. Store the negotiated version in context and echo
+  // the negotiated major's latest patch in the response header. /about and
+  // /stream keep the header optional.
   // --------------------------------------------------------------------------
+
+  const negotiate = (version: string | undefined): '1.0.3' | '2.0.0' | null => {
+    if (version === undefined) return null;
+    if (/^1\.0(\.\d+)?$/.test(version)) return '1.0.3';
+    if (/^2\.0(\.\d+)?$/.test(version)) return '2.0.0';
+    return null; // unsupported
+  };
 
   app.use('/xapi/*', async (c, next) => {
     const version = c.req.header('x-experience-api-version');
     const path = c.req.path;
+    const negotiated = negotiate(version);
 
-    // /about and /stream: version header is optional but must be 1.0.x if present
+    // /about and /stream: header optional; if present it must be supported.
     if (path === '/xapi/about' || path === '/xapi/stream') {
-      if (version && !version.startsWith('1.0')) {
+      if (version !== undefined && negotiated === null) {
+        c.header('X-Experience-API-Version', '2.0.0');
         return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
       }
-      c.header('X-Experience-API-Version', '1.0.3');
+      const resolved = negotiated ?? '2.0.0'; // absent → latest supported
+      c.set('xapiVersion', resolved);
+      c.header('X-Experience-API-Version', resolved);
       return next();
     }
 
-    // All other xAPI routes: version header is required
-    c.header('X-Experience-API-Version', '1.0.3');
-
-    if (!version) {
+    // All other xAPI routes: header required and must be supported.
+    if (version === undefined) {
+      c.header('X-Experience-API-Version', '2.0.0');
       return c.json({ error: 'X-Experience-API-Version header is required' }, 400);
     }
-    if (!version.startsWith('1.0')) {
+    if (negotiated === null) {
+      c.header('X-Experience-API-Version', '2.0.0');
       return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
     }
+    c.set('xapiVersion', negotiated);
+    c.header('X-Experience-API-Version', negotiated);
     return next();
   });
 
