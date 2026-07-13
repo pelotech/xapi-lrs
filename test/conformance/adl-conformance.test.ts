@@ -9,10 +9,11 @@
  *   - a total test count below the recorded floor fails
  * Guards are skipped when CONFORMANCE_GREP filters the run.
  *
- * The 2.0 battery bootstraps and executes all sections; four sections are
- * still red pending Phase 2B (contextAgents/contextGroups, the 2.0.x version
- * property, Last-Modified headers, State-resource ETag concurrency). See
- * docs/superpowers/plans/2026-07-12-xapi-2.0-negotiation-baseline.md.
+ * The 2.0 battery bootstraps and executes all sections and is now fully green
+ * (Phase 2B closed the last four red sections: contextAgents/contextGroups,
+ * the 2.0.x version property, Last-Modified headers, and State-resource ETag
+ * concurrency). See
+ * docs/superpowers/plans/2026-07-13-xapi-2.0-phase2b-result.md.
  *
  * Usage:
  *   pnpm test:conformance          # 1.0.3 battery

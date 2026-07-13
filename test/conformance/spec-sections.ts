@@ -146,9 +146,10 @@ export const TOTAL_FLOOR: Record<XapiVersion, number> = {
   // 1.0.3 battery observed total: 1365 on 2026-07-10 (suite 5bc232d), floor = 95%
   '1.0.3': 1296,
   // 2.0.0 battery total: 1435 on 2026-07-10 (suite 5bc232d), floor = 95%.
-  // Post-negotiation the battery executes fully: observed executed total 1435
-  // (1425 passing, 10 failing, 0 pending) on 2026-07-13 — executed == registered
-  // (no pending), confirming the floor against a real run.
-  // See docs/superpowers/plans/2026-07-12-xapi-2.0-negotiation-baseline.md.
+  // Phase 2B closed all 10 failures: the battery is now fully green —
+  // observed executed total 1435 (1435 passing, 0 failing, 0 pending) on
+  // 2026-07-13, on both the migration and lrsql-takeover schemas. Executed ==
+  // registered (no pending), confirming the floor against a real run.
+  // See docs/superpowers/plans/2026-07-13-xapi-2.0-phase2b-result.md.
   '2.0.0': 1363,
 };
