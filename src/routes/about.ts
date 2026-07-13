@@ -28,7 +28,7 @@ export function createAboutApp() {
   const app = new OpenAPIHono<HonoEnv>();
 
   app.openapi(aboutRoute, (c) => {
-    return c.json({ version: ['1.0.3'] }, 200);
+    return c.json({ version: ['1.0.3', '2.0.0'] }, 200);
   });
 
   return app;
