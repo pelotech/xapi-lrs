@@ -88,6 +88,7 @@ const SEED_ACTORS: Array<{ ifi: string; type: 'Agent' | 'Group'; name?: string }
   { ifi: ifi('mailto:main@example.com'), type: 'Agent', name: 'Main Actor' },
   { ifi: ifi('mailto:subactor@example.com'), type: 'Agent', name: 'Sub Actor' },
   { ifi: ifi('mailto:subobject@example.com'), type: 'Agent', name: 'Sub Object' },
+  { ifi: ifi('mailto:voidee@example.com'), type: 'Agent', name: 'Voidee' },
 ];
 
 interface SeedStatement {
@@ -97,11 +98,24 @@ interface SeedStatement {
   payload: Record<string, unknown>;
   timestamp: string;
   stored: string;
+  isVoided: boolean;
   // Explicit statement_to_actor rows in lrsql's decomposition shape.
   actorRows: Array<{ ifi: string; type: 'Agent' | 'Group'; usage: string }>;
   // Explicit statement_to_activity rows.
   activityRows: Array<{ iri: string; usage: string }>;
 }
+
+// Statement-ref (void) pair, seeded in lrsql's on-disk shape:
+//   T = a statement lrsql already marked voided (is_voided = true),
+//   V = the voiding statement referencing T (verb `voided`, StatementRef → T),
+//   plus the lrsql-direction statement_to_statement row (ancestor = V, the
+//   referencer; descendant = T, the target). T has no descendants of its own,
+//   so the single direct row suffices (no transitive rows to copy).
+const ST = randomUUID(); // voided target
+const SV = randomUUID(); // voiding statement (references ST)
+const VOID_TARGET_VERB = 'http://example.com/verbs/void-target';
+const VOIDED_VERB = 'http://adlnet.gov/expapi/verbs/voided';
+const ACT_VOID = 'http://example.com/activities/act-void';
 
 function buildSeedStatements(): SeedStatement[] {
   const authority = { objectType: 'Agent', account: { homePage: 'http://lrsql', name: 'lrsql' } };
@@ -118,6 +132,7 @@ function buildSeedStatements(): SeedStatement[] {
     verbIri: 'http://example.com/verbs/experienced',
     timestamp: ts(1),
     stored: ts(1),
+    isVoided: false,
     payload: {
       id: SA,
       actor: alice,
@@ -162,6 +177,7 @@ function buildSeedStatements(): SeedStatement[] {
     verbIri: 'http://example.com/verbs/attempted',
     timestamp: ts(2),
     stored: ts(2),
+    isVoided: false,
     payload: {
       id: SB,
       actor: {
@@ -196,6 +212,7 @@ function buildSeedStatements(): SeedStatement[] {
     verbIri: 'http://example.com/verbs/attempted',
     timestamp: ts(3),
     stored: ts(3),
+    isVoided: false,
     payload: {
       id: SC,
       actor: {
@@ -227,6 +244,7 @@ function buildSeedStatements(): SeedStatement[] {
     verbIri: 'http://example.com/verbs/planned',
     timestamp: ts(4),
     stored: ts(4),
+    isVoided: false,
     payload: {
       id: SD,
       actor: { objectType: 'Agent', mbox: 'mailto:main@example.com', name: 'Main Actor' },
@@ -250,7 +268,54 @@ function buildSeedStatements(): SeedStatement[] {
     activityRows: [],
   };
 
-  return [stmtA, stmtB, stmtC, stmtD];
+  const voidee = { objectType: 'Agent', mbox: 'mailto:voidee@example.com', name: 'Voidee' };
+
+  // T: a statement lrsql has already marked voided (is_voided = true).
+  const stmtT: SeedStatement = {
+    statementId: ST,
+    registration: null,
+    verbIri: VOID_TARGET_VERB,
+    timestamp: ts(5),
+    stored: ts(5),
+    isVoided: true,
+    payload: {
+      id: ST,
+      actor: voidee,
+      verb: { id: VOID_TARGET_VERB, display: { 'en-US': 'targeted-for-voiding' } },
+      object: { objectType: 'Activity', id: ACT_VOID },
+      authority,
+      stored: ts(5),
+      timestamp: ts(5),
+      version: '1.0.0',
+    },
+    actorRows: [{ ifi: ifi('mailto:voidee@example.com'), type: 'Agent', usage: 'Actor' }],
+    activityRows: [{ iri: ACT_VOID, usage: 'Object' }],
+  };
+
+  // V: the voiding statement referencing T (StatementRef → T). Its s2s row is
+  // seeded separately in seedLrsqlDatabase (ancestor = V, descendant = T).
+  const stmtV: SeedStatement = {
+    statementId: SV,
+    registration: null,
+    verbIri: VOIDED_VERB,
+    timestamp: ts(6),
+    stored: ts(6),
+    isVoided: false,
+    payload: {
+      id: SV,
+      actor: voidee,
+      verb: { id: VOIDED_VERB, display: { 'en-US': 'voided' } },
+      object: { objectType: 'StatementRef', id: ST },
+      authority,
+      stored: ts(6),
+      timestamp: ts(6),
+      version: '1.0.0',
+    },
+    actorRows: [{ ifi: ifi('mailto:voidee@example.com'), type: 'Agent', usage: 'Actor' }],
+    activityRows: [],
+  };
+
+  return [stmtA, stmtB, stmtC, stmtD, stmtT, stmtV];
 }
 
 async function seedLrsqlDatabase(db: PGlite): Promise<void> {
@@ -291,7 +356,7 @@ async function seedLrsqlDatabase(db: PGlite): Promise<void> {
       JSON.stringify(a.name ? { name: a.name } : {}),
     ]);
   }
-  for (const iriVal of [ACT_1, ACT_2, ACT_3]) {
+  for (const iriVal of [ACT_1, ACT_2, ACT_3, ACT_VOID]) {
     await db.query(`INSERT INTO activity (id, activity_iri, payload) VALUES ($1, $2, $3)`, [
       randomUUID(),
       iriVal,
@@ -308,8 +373,8 @@ async function seedLrsqlDatabase(db: PGlite): Promise<void> {
     await db.query(
       `INSERT INTO xapi_statement
          (id, statement_id, registration, verb_iri, is_voided, payload, timestamp, stored)
-       VALUES ($1, $2, $3, $4, false, $5, $6, $7)`,
-      [rowId, s.statementId, s.registration, s.verbIri, JSON.stringify(s.payload), s.timestamp, s.stored],
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [rowId, s.statementId, s.registration, s.verbIri, s.isVoided, JSON.stringify(s.payload), s.timestamp, s.stored],
     );
     for (const r of s.actorRows) {
       await db.query(
@@ -326,6 +391,15 @@ async function seedLrsqlDatabase(db: PGlite): Promise<void> {
       );
     }
   }
+
+  // lrsql-authored statement_to_statement row for the void pair: ancestor = the
+  // referencing (voiding) statement V, descendant = the voided target T (lrsql
+  // direction). T has no descendants, so no transitive rows.
+  await db.query(`INSERT INTO statement_to_statement (id, ancestor_id, descendant_id) VALUES ($1, $2, $3)`, [
+    randomUUID(),
+    SV,
+    ST,
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +581,36 @@ describe('lrsql takeover (end to end)', () => {
     expect(teamRes.status).toBe(200);
     const teamIds = ((await teamRes.json()) as { statements: Array<{ id: string }> }).statements.map((s) => s.id);
     expect(teamIds).toContain(SA);
+  });
+
+  test('reads lrsql-authored statement_to_statement (void) rows correctly', async () => {
+    // T was seeded as voided (is_voided = true) with V referencing it via an
+    // lrsql-direction s2s row (ancestor = V, descendant = T). Both facets of
+    // the read path must honor those pre-existing rows.
+
+    // 1. A voided statement is retrievable only by voidedStatementId.
+    const byVoided = await fetch(`${server.apiUrl}/xapi/statements?voidedStatementId=${ST}`, {
+      headers: { ...V, Authorization: `Basic ${SEEDED_AUTH}` },
+    });
+    expect(byVoided.status).toBe(200);
+    expect(((await byVoided.json()) as { id: string }).id).toBe(ST);
+
+    // A plain statementId lookup of a voided statement must 404 (it's voided).
+    const byPlain = await fetch(`${server.apiUrl}/xapi/statements?statementId=${ST}`, {
+      headers: { ...V, Authorization: `Basic ${SEEDED_AUTH}` },
+    });
+    expect(byPlain.status).toBe(404);
+
+    // 2. A content query matching the voided target T surfaces the referencing
+    //    statement V (via the seeded s2s row) and excludes voided T itself —
+    //    proving we traverse lrsql-written ancestor/descendant rows correctly.
+    const byVerb = await fetch(`${server.apiUrl}/xapi/statements?verb=${encodeURIComponent(VOID_TARGET_VERB)}`, {
+      headers: { ...V, Authorization: `Basic ${SEEDED_AUTH}` },
+    });
+    expect(byVerb.status).toBe(200);
+    const surfaced = ((await byVerb.json()) as { statements: Array<{ id: string }> }).statements.map((s) => s.id);
+    expect(surfaced).toContain(SV);
+    expect(surfaced).not.toContain(ST);
   });
 
   test('lrsql admin passhashes fail auth cleanly (401, not 500); a fresh admin still works', async () => {

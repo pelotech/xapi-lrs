@@ -160,7 +160,7 @@ jobs:
           [ -n "$ok" ] || { echo "server never became healthy"; exit 1; }
           curl -sf -u ci-key:ci-secret -H 'X-Experience-API-Version: 1.0.3' \
             'http://localhost:8081/xapi/statements?limit=1'
-          kill $SERVER_PID
+          # server is torn down by the trap on EXIT
       - name: Cleanup
         if: always()
         run: docker compose down
