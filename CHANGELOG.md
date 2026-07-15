@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/pelotech/xapi-lrs/compare/v0.5.1...v0.5.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* reject -00:00 timestamp offsets; run official ADL suite for xAPI 1.0.3 and 2.0 ([#71](https://github.com/pelotech/xapi-lrs/issues/71)) ([497839a](https://github.com/pelotech/xapi-lrs/commit/497839ac83e96de78b015fff908e5928f907889f))
+
 ## [0.5.1](https://github.com/pelotech/xapi-lrs/compare/v0.5.0...v0.5.1) (2026-05-14)
 
 
