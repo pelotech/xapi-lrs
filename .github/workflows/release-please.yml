@@ -64,7 +64,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,pattern={{version}},value=${{ needs.release-please.outputs.tag_name }}
+            type=raw,value=${{ needs.release-please.outputs.tag_name }}
       - name: Build and push Docker image tag
         id: build
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
@@ -113,7 +113,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,pattern={{version}},value=${{ needs.release-please.outputs.tag_name }}
+            type=raw,value=${{ needs.release-please.outputs.tag_name }}
       - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
