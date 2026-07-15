@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/pelotech/xapi-lrs/compare/v0.7.0...0.7.1) (2026-07-15)
+
+
+### Chores
+
+* publish release version and image tags without the v prefix ([#79](https://github.com/pelotech/xapi-lrs/issues/79)) ([ec47d37](https://github.com/pelotech/xapi-lrs/commit/ec47d3725e697bc00d8fed53c787a388d7f9a582))
+
 ## [0.7.0](https://github.com/pelotech/xapi-lrs/compare/v0.6.0...v0.7.0) (2026-07-15)
 
 
