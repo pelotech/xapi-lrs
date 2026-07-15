@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
-      contents: write # upload SBOMs to the GitHub release
+      contents: read
       id-token: write # OIDC for keyless cosign + attestations
       attestations: write # actions/attest-build-provenance, actions/attest-sbom
     steps:
@@ -178,13 +178,13 @@ jobs:
           subject-digest: ${{ steps.digest.outputs.digest }}
           sbom-path: ${{ steps.sbom.outputs.spdx }}
           push-to-registry: true
-      - name: Upload SBOMs to GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
-          SPDX: ${{ steps.sbom.outputs.spdx }}
-          CDX: ${{ steps.sbom.outputs.cdx }}
-        run: gh release upload "$TAG" "$SPDX" "$CDX" --repo "${{ github.repository }}"
+      - name: Attest SBOM (CycloneDX)
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.cdx }}
+          push-to-registry: true
 
   # ----------------------------------------------------------------------------
   # Dev path: builds per-arch on every non-release main push, merges into a
