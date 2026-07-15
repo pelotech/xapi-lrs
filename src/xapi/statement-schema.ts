@@ -19,6 +19,13 @@ const mboxIri = z.string().regex(/^mailto:[^@]+@.+/, {
 });
 const sha1hex = z.string().regex(/^[0-9a-f]{40}$/i, { message: 'mbox_sha1sum must be a 40-character hex string' });
 const languageTag = z.string().regex(/^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$/);
+// ISO 8601 forbids the -00:00 offset (xAPI 1.0.3 Data 4.5; xAPI 2.0 keeps this rule)
+const timestamp = z
+  .string()
+  .datetime({ offset: true })
+  .refine((value) => !value.endsWith('-00:00'), {
+    message: 'timestamp must not use the -00:00 offset (use Z or +00:00)',
+  });
 const languageMap = z.record(languageTag, z.string());
 const extensions = z.record(iri, z.unknown());
 
@@ -319,7 +326,7 @@ const subStatementSchema = z
     object: subStatementObjectSchema,
     result: resultSchema.optional(),
     context: contextSchema.optional(),
-    timestamp: z.string().datetime({ offset: true }).optional(),
+    timestamp: timestamp.optional(),
     attachments: z.array(attachmentSchema).optional(),
   })
   .strict()
@@ -361,7 +368,7 @@ export const statementInputSchema = z
     object: objectSchema,
     result: resultSchema.optional(),
     context: contextSchema.optional(),
-    timestamp: z.string().datetime({ offset: true }).optional(),
+    timestamp: timestamp.optional(),
     stored: z.unknown().optional(),
     authority: authoritySchema.optional(),
     version: z

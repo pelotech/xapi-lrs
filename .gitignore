@@ -8,3 +8,4 @@ test-results/
 *.tgz
 *.tsbuildinfo
 .DS_Store
+.worktrees/

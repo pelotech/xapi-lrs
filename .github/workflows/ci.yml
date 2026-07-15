@@ -73,11 +73,12 @@ jobs:
         run: docker compose down
 
   conformance-tests:
-    name: Conformance Tests (${{ matrix.driver }})
+    name: Conformance Tests (${{ matrix.driver }}, xAPI ${{ matrix.xapi-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         driver: [pg, pglite]
+        xapi-version: ['1.0.3']
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Start Postgres
@@ -98,6 +99,7 @@ jobs:
       - run: pnpm test:conformance
         env:
           DATABASE_DRIVER: ${{ matrix.driver }}
+          CONFORMANCE_XAPI_VERSION: ${{ matrix.xapi-version }}
       - name: Postgres logs
         if: failure() && matrix.driver == 'pg'
         run: docker compose logs postgres

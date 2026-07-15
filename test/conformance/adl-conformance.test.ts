@@ -1,13 +1,21 @@
 /**
- * ADL xAPI 1.0.3 Conformance Test — Per-Section Vitest Wrapper
+ * ADL xAPI Conformance Test — Per-Section Vitest Wrapper
  *
- * Runs the full ADL suite once, then reports results as 33 individual
- * Vitest tests (one per xAPI spec section). Each failing requirement
- * is reported via expect.soft() for granular diagnostics.
+ * Runs one full ADL battery (selected by CONFORMANCE_XAPI_VERSION, default
+ * 1.0.3), then reports results as one Vitest test per spec section, plus
+ * three guards against silent coverage loss:
+ *   - a section expected by our map but missing from the log fails
+ *   - a pending/cancelled test outside the allowlist fails
+ *   - a total test count below the recorded floor fails
+ * Guards are skipped when CONFORMANCE_GREP filters the run.
+ *
+ * The 2.0 battery currently fails at bootstrap (all sections "not reported"
+ * plus a pending-guard mismatch); see
+ * docs/superpowers/plans/2026-07-09-xapi-2.0-red-baseline.md.
  *
  * Usage:
- *   pnpm test:conformance
- *   pnpm test:conformance -- --grep "Communication 2.1"
+ *   pnpm test:conformance          # 1.0.3 battery
+ *   pnpm test:conformance:2.0     # 2.0 battery
  *   CONFORMANCE_GREP="XAPI-00139" pnpm test:conformance
  */
 
@@ -18,70 +26,52 @@ import {
   type ConformanceSuiteResult,
   type CleanLogNode,
 } from './run-adl-suite.ts';
+import { parseXapiVersion, PENDING_ALLOWLIST, SPEC_SECTIONS, TOTAL_FLOOR } from './spec-sections.ts';
 
-/** ADL v1_0_3 spec sections — one per test file, matched by parenthetical ref in suite title. */
-const SPEC_SECTIONS = [
-  { ref: 'Data 2.2', label: 'Formatting Requirements' },
-  { ref: 'Data 2.3', label: 'Statement Lifecycle' },
-  { ref: 'Data 2.4.1', label: 'ID Property' },
-  { ref: 'Data 2.4.2', label: 'Actor Property' },
-  { ref: 'Data 2.4.3', label: 'Verb Property' },
-  { ref: 'Data 2.4.4', label: 'Object Property' },
-  { ref: 'Data 2.4.5', label: 'Result Property' },
-  { ref: 'Data 2.4.6', label: 'Context Property' },
-  { ref: 'Data 2.4.7', label: 'Timestamp Property' },
-  { ref: 'Data 2.4.8', label: 'Stored Property' },
-  { ref: 'Data 2.4.9', label: 'Authority Property' },
-  { ref: 'Data 2.4.10', label: 'Version Property' },
-  { ref: 'Data 2.4.11', label: 'Attachments Property' },
-  { ref: 'Data 2.5', label: 'Retrieval of Statements' },
-  { ref: 'Data 2.6', label: 'Signed Statements' },
-  { ref: 'Data 4.0', label: 'Special Data Types and Rules' },
-  { ref: 'Communication 1.1', label: 'HEAD Request Implementation' },
-  { ref: 'Communication 1.2', label: 'Headers' },
-  { ref: 'Communication 1.3', label: 'Alternate Request Syntax' },
-  { ref: 'Communication 1.4', label: 'Encoding' },
-  { ref: 'Communication 1.5', label: 'Content Types' },
-  { ref: 'Communication 2.1', label: 'Statement Resource' },
-  { ref: 'Communication 2.2', label: 'Document Resources' },
-  { ref: 'Communication 2.3', label: 'State Resource' },
-  { ref: 'Communication 2.4', label: 'Agents Resource' },
-  { ref: 'Communication 2.5', label: 'Activities Resource' },
-  { ref: 'Communication 2.6', label: 'Agent Profile Resource' },
-  { ref: 'Communication 2.7', label: 'Activity Profile Resource' },
-  { ref: 'Communication 2.8', label: 'About Resource' },
-  { ref: 'Communication 3.1', label: 'Concurrency' },
-  { ref: 'Communication 3.2', label: 'Error Codes' },
-  { ref: 'Communication 3.3', label: 'Versioning' },
-  { ref: 'Communication 4.0', label: 'Authentication' },
-] as const;
+const XAPI_VERSION = parseXapiVersion(process.env.CONFORMANCE_XAPI_VERSION);
+const GREP = process.env.CONFORMANCE_GREP;
+const sections = SPEC_SECTIONS[XAPI_VERSION];
 
 let result: ConformanceSuiteResult;
 
-function findSection(ref: string): CleanLogNode | undefined {
-  return result.log?.tests.find((t) => t.title.includes(`(${ref})`));
+function findSections(match: string): CleanLogNode[] {
+  return result.log?.tests.filter((t) => t.title.includes(match)) ?? [];
 }
 
-describe('ADL Conformance', () => {
+describe(`ADL Conformance (xAPI ${XAPI_VERSION})`, () => {
   beforeAll(async () => {
+    if (GREP) console.warn('CONFORMANCE_GREP set; coverage guards are disabled for this run');
     result = await runConformanceSuite({
-      timeout: 300_000,
-      grep: process.env.CONFORMANCE_GREP,
+      xapiVersion: XAPI_VERSION,
+      timeout: 600_000,
+      grep: GREP,
       onSectionStart: (title) => console.log(`  ▸ ${title}`),
     });
     expect(result.state).toBe('finished');
-    expect(result.total).toBeGreaterThan(0);
-  }, 360_000);
+    expect(result.total, 'suite ran zero tests (empty grep match or battery failed to load)').toBeGreaterThan(0);
+  }, 660_000);
 
-  it.each(SPEC_SECTIONS)('$ref — $label', ({ ref }) => {
-    const section = findSection(ref);
-    if (!section) {
-      // Some ADL sections have an empty describe() with no tests (e.g., Headers).
-      // Skip rather than fail — the section simply has no requirements to check.
-      return;
+  it.each(sections)('$label — $match', ({ match, mayBeAbsent }) => {
+    const matched = findSections(match);
+    if (matched.length === 0) {
+      // Under a grep filter, unmatched sections didn't run.
+      if (GREP || mayBeAbsent) return;
+      return expect.fail(
+        `Expected suite section matching "${match}" was not reported. ` +
+          'Either the battery changed shape (update spec-sections.ts) or the run lost coverage.',
+      );
+    }
+    if (matched.length > 1) {
+      // Two suites matching one entry means the battery changed shape and the
+      // map needs updating; the extra suite must not pass unexamined.
+      return expect.fail(
+        `Map entry "${match}" matched ${matched.length} suite sections: ` +
+          `${matched.map((s) => `"${s.title}"`).join(', ')}. ` +
+          'Each entry must match exactly one top-level suite — update spec-sections.ts.',
+      );
     }
 
-    const leaves = collectLeafTests(section);
+    const leaves = matched.flatMap(collectLeafTests);
     for (const leaf of leaves) {
       if (leaf.status === 'failed') {
         const req = leaf.requirement ? `[${leaf.requirement}] ` : '';
@@ -93,10 +83,36 @@ describe('ADL Conformance', () => {
     expect(failures).toHaveLength(0);
   });
 
+  it.skipIf(Boolean(GREP))('maps every reported suite section exactly once', () => {
+    for (const suite of result.log?.tests ?? []) {
+      const matches = sections.filter((s) => suite.title.includes(s.match));
+      expect(
+        matches.map((m) => m.label),
+        `Suite section "${suite.title}" must match exactly one spec-sections.ts entry`,
+      ).toHaveLength(1);
+    }
+  });
+
+  it.skipIf(Boolean(GREP))('has no pending tests outside the allowlist', () => {
+    expect(result.pendingTests.length, 'clean-log pending tree disagrees with runner summary counters').toBe(
+      result.pending,
+    );
+    const allowed = new Set(PENDING_ALLOWLIST[XAPI_VERSION].map((a) => `${a.suite} :: ${a.title}`));
+    const unexpected = result.pendingTests.filter((p) => !allowed.has(`${p.suite} :: ${p.title}`));
+    for (const p of unexpected) {
+      expect.soft(p, `Pending test not in allowlist: [${p.suite}] ${p.title}`).toBeUndefined();
+    }
+    expect(unexpected).toHaveLength(0);
+  });
+
+  it.skipIf(Boolean(GREP))('ran at least the expected number of tests', () => {
+    expect(result.total).toBeGreaterThanOrEqual(TOTAL_FLOOR[XAPI_VERSION]);
+  });
+
   it('summary', () => {
     console.log(
-      `\nADL Conformance: ${result.passing}/${result.total} passing, ` +
-        `${result.failing} failing (${(result.duration / 1000).toFixed(1)}s)`,
+      `\nADL Conformance (xAPI ${XAPI_VERSION}): ${result.passing}/${result.total} passing, ` +
+        `${result.failing} failing, ${result.pending} pending (${(result.duration / 1000).toFixed(1)}s)`,
     );
   });
 });
