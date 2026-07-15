@@ -67,6 +67,13 @@ export function schemaSource(): 'migration' | 'lrsql' {
  * Provision the test database according to `SCHEMA_SOURCE`. For `lrsql`, runs
  * the vendored upstream DDL (as lrsql itself would) before the committed
  * migration, so the schema the tests run against is a taken-over lrsql database.
+ *
+ * Assumes an EMPTY database — it does not DROP/reset first. CI runs each
+ * conformance/integration cell against its own fresh Postgres container, so
+ * this holds there. Locally, running two `SCHEMA_SOURCE` variants against the
+ * same Postgres without dropping the schema between them will collide (e.g.
+ * duplicate-column errors); reset the DB (`DROP SCHEMA public CASCADE`) between
+ * variant runs.
  */
 export async function provisionSchema(pool: pg.Pool): Promise<void> {
   if (schemaSource() === 'lrsql') {

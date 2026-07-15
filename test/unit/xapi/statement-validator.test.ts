@@ -176,4 +176,214 @@ describe('validateStatement', () => {
       expect(stmt.authority).toBeUndefined();
     }
   });
+
+  it('accepts a plain statement with no version arg (defaults to 1.0.3)', () => {
+    const result = validateStatement(VALID_STMT);
+    expect(result.valid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Version-aware validation (xAPI 2.0 context agents/groups + version property)
+// ---------------------------------------------------------------------------
+
+describe('validateStatement — xAPI 2.0 context agents/groups', () => {
+  const stmtWithContextAgents = {
+    ...VALID_STMT,
+    context: {
+      contextAgents: [
+        {
+          objectType: 'contextAgent',
+          agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' },
+          relevantTypes: ['http://example.com/t'],
+        },
+      ],
+    },
+  };
+
+  const stmtWithContextGroups = {
+    ...VALID_STMT,
+    context: {
+      contextGroups: [
+        {
+          objectType: 'contextGroup',
+          group: {
+            objectType: 'Group',
+            mbox: 'mailto:g@example.com',
+            member: [{ mbox: 'mailto:m1@example.com' }],
+          },
+          relevantTypes: ['http://example.com/t'],
+        },
+      ],
+    },
+  };
+
+  it('accepts contextAgents under 2.0.0', () => {
+    const result = validateStatement(stmtWithContextAgents, '2.0.0');
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects contextAgents under 1.0.3', () => {
+    const result = validateStatement(stmtWithContextAgents, '1.0.3');
+    expect(result.valid).toBe(false);
+  });
+
+  it('accepts contextGroups under 2.0.0', () => {
+    const result = validateStatement(stmtWithContextGroups, '2.0.0');
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects contextGroups under 1.0.3', () => {
+    const result = validateStatement(stmtWithContextGroups, '1.0.3');
+    expect(result.valid).toBe(false);
+  });
+
+  it('accepts contextAgent without relevantTypes (optional) under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        context: {
+          contextAgents: [{ objectType: 'contextAgent', agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' } }],
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects empty relevantTypes under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        context: {
+          contextAgents: [
+            {
+              objectType: 'contextAgent',
+              agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' },
+              relevantTypes: [],
+            },
+          ],
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects non-IRI relevantTypes under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        context: {
+          contextAgents: [
+            {
+              objectType: 'contextAgent',
+              agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' },
+              relevantTypes: ['not-an-iri'],
+            },
+          ],
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects wrong objectType on a context agent under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        context: {
+          contextAgents: [{ objectType: 'wrong', agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' } }],
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects a bad agent object on a context agent under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        context: {
+          contextAgents: [{ objectType: 'contextAgent', agent: { objectType: 'Agent', name: 'no ifi' } }],
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(false);
+  });
+
+  it('accepts substatement contextAgents under 2.0.0', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        object: {
+          objectType: 'SubStatement',
+          actor: { mbox: 'mailto:sub@example.com' },
+          verb: { id: 'http://example.com/verbs/did' },
+          object: { id: 'http://example.com/activities/sub' },
+          context: {
+            contextAgents: [
+              { objectType: 'contextAgent', agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' } },
+            ],
+          },
+        },
+      },
+      '2.0.0',
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects substatement contextAgents under 1.0.3', () => {
+    const result = validateStatement(
+      {
+        ...VALID_STMT,
+        object: {
+          objectType: 'SubStatement',
+          actor: { mbox: 'mailto:sub@example.com' },
+          verb: { id: 'http://example.com/verbs/did' },
+          object: { id: 'http://example.com/activities/sub' },
+          context: {
+            contextAgents: [
+              { objectType: 'contextAgent', agent: { objectType: 'Agent', mbox: 'mailto:a@example.com' } },
+            ],
+          },
+        },
+      },
+      '1.0.3',
+    );
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe('validateStatement — version property', () => {
+  it('accepts version 2.0.0 under 2.0.0', () => {
+    const result = validateStatement({ ...VALID_STMT, version: '2.0.0' }, '2.0.0');
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects version 2.0.0 under 1.0.3', () => {
+    const result = validateStatement({ ...VALID_STMT, version: '2.0.0' }, '1.0.3');
+    expect(result.valid).toBe(false);
+  });
+
+  it('accepts version 1.0.3 under both versions (2.0 request may carry a 1.0 statement)', () => {
+    expect(validateStatement({ ...VALID_STMT, version: '1.0.3' }, '2.0.0').valid).toBe(true);
+    expect(validateStatement({ ...VALID_STMT, version: '1.0.3' }, '1.0.3').valid).toBe(true);
+  });
+
+  it('rejects version 3.0.0 under both versions', () => {
+    expect(validateStatement({ ...VALID_STMT, version: '3.0.0' }, '2.0.0').valid).toBe(false);
+    expect(validateStatement({ ...VALID_STMT, version: '3.0.0' }, '1.0.3').valid).toBe(false);
+  });
+
+  it('still rejects version 1.1.0 under 2.0.0 (widened regex is not any-1.x)', () => {
+    expect(validateStatement({ ...VALID_STMT, version: '1.1.0' }, '2.0.0').valid).toBe(false);
+  });
+
+  it('still rejects version 0.9.9 under 2.0.0', () => {
+    expect(validateStatement({ ...VALID_STMT, version: '0.9.9' }, '2.0.0').valid).toBe(false);
+  });
 });

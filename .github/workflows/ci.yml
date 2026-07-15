@@ -87,7 +87,7 @@ jobs:
     strategy:
       matrix:
         driver: [pg, pglite]
-        xapi-version: ['1.0.3']
+        xapi-version: ['1.0.3', '2.0.0']
         schema-source: [migration, lrsql]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6

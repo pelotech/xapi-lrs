@@ -28,6 +28,8 @@ import { createStatementsApp } from './routes/statements.ts';
 import type { Listener } from './sse/pg-listener.ts';
 import { createSseRoute } from './sse/sse-producer.ts';
 import { parseMultipartMixed, extractBoundary } from './xapi/multipart.ts';
+import { LATEST_PATCH, LATEST_VERSION } from './xapi/versions.ts';
+import type { XapiVersion } from './xapi/versions.ts';
 
 // ============================================================================
 // xAPI Alternate Request Syntax (§1.3) — header fields allowed in form body
@@ -229,6 +231,23 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
       formData[k] = v;
     }
 
+    // Alternate request syntax was removed in xAPI 2.0. Gate on the request's
+    // effective version (form-body field if present, else the header) and only
+    // rewrite for 1.0.x. For 2.0.x, fall through — the version middleware and
+    // normal POST handling apply (a POST with ?method= is just a POST in 2.0).
+    //
+    // The exact-case `X-Experience-API-Version` key here is intentionally
+    // coupled to the exact-case ALTERNATE_HEADER_FIELDS rewrite loop below: a
+    // lowercase (or otherwise mis-cased) form field is not recognized by either,
+    // so it fails closed — the request falls through as a plain POST rather than
+    // smuggling alt-syntax (or a version) past the gate.
+    const bodyVersion = formData['X-Experience-API-Version'];
+    const headerVersion = c.req.header('x-experience-api-version');
+    const effective = bodyVersion ?? headerVersion;
+    if (effective !== undefined && !/^1\.0(\.\d+)?$/.test(effective)) {
+      return next();
+    }
+
     // Build new URL without ?method=
     const url = new URL(c.req.url);
     url.searchParams.delete('method');
@@ -281,31 +300,47 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
   });
 
   // --------------------------------------------------------------------------
-  // xAPI Version Header Validation (§3.2)
+  // xAPI Version Negotiation (§3.3)
+  // Accept 1.0.x and 2.0.x. Store the negotiated version in context and echo
+  // the negotiated major's latest patch in the response header. /about and
+  // /stream keep the header optional.
   // --------------------------------------------------------------------------
+
+  const negotiate = (version: string | undefined): XapiVersion | null => {
+    if (version === undefined) return null;
+    if (/^1\.0(\.\d+)?$/.test(version)) return LATEST_PATCH['1.0'];
+    if (/^2\.0(\.\d+)?$/.test(version)) return LATEST_PATCH['2.0'];
+    return null; // unsupported
+  };
 
   app.use('/xapi/*', async (c, next) => {
     const version = c.req.header('x-experience-api-version');
     const path = c.req.path;
+    const negotiated = negotiate(version);
 
-    // /about and /stream: version header is optional but must be 1.0.x if present
+    // /about and /stream: header optional; if present it must be supported.
     if (path === '/xapi/about' || path === '/xapi/stream') {
-      if (version && !version.startsWith('1.0')) {
+      if (version !== undefined && negotiated === null) {
+        c.header('X-Experience-API-Version', LATEST_VERSION);
         return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
       }
-      c.header('X-Experience-API-Version', '1.0.3');
+      const resolved = negotiated ?? LATEST_VERSION; // absent → latest supported
+      c.set('xapiVersion', resolved);
+      c.header('X-Experience-API-Version', resolved);
       return next();
     }
 
-    // All other xAPI routes: version header is required
-    c.header('X-Experience-API-Version', '1.0.3');
-
-    if (!version) {
+    // All other xAPI routes: header required and must be supported.
+    if (version === undefined) {
+      c.header('X-Experience-API-Version', LATEST_VERSION);
       return c.json({ error: 'X-Experience-API-Version header is required' }, 400);
     }
-    if (!version.startsWith('1.0')) {
+    if (negotiated === null) {
+      c.header('X-Experience-API-Version', LATEST_VERSION);
       return c.json({ error: `Unsupported xAPI version: ${version}` }, 400);
     }
+    c.set('xapiVersion', negotiated);
+    c.header('X-Experience-API-Version', negotiated);
     return next();
   });
 

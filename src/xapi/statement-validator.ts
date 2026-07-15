@@ -8,18 +8,19 @@
 import { uuidv7 } from 'uuidv7';
 import type { ZodIssue } from 'zod';
 import type { XAPIValidatedStatement } from '../xapi-types/index.ts';
-import { statementInputSchema } from './statement-schema.ts';
+import { statementSchemaFor } from './statement-schema.ts';
 import type { ValidationError, ValidationResult } from './validation-helpers.ts';
+import type { XapiVersion } from './versions.ts';
 
 export type { ValidationError, ValidationResult };
 
-export function validateStatement(input: unknown): ValidationResult {
+export function validateStatement(input: unknown, version: XapiVersion = '1.0.3'): ValidationResult {
   // Pre-check for better error message on non-objects
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return { valid: false, errors: [{ path: '', message: 'Statement must be a JSON object' }] };
   }
 
-  const result = statementInputSchema.safeParse(input);
+  const result = statementSchemaFor(version).safeParse(input);
   if (!result.success) {
     return {
       valid: false,

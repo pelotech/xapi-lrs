@@ -1,10 +1,10 @@
 # xapi-lrs
 
-A production-ready, xAPI 1.0.3 conformant Learning Record Store built on [Hono](https://hono.dev) + PostgreSQL (or [PGlite](https://pglite.dev) for zero-dependency local use).
+A production-ready, xAPI 1.0.3 **and 2.0** conformant Learning Record Store built on [Hono](https://hono.dev) + PostgreSQL (or [PGlite](https://pglite.dev) for zero-dependency local use).
 
 ## Features
 
-- Full xAPI 1.0.3 compliance (statements, documents, agents, activities)
+- Full xAPI 1.0.3 and 2.0 compliance (statements, documents, agents, activities), verified in CI against the official ADL conformance suite. Version is negotiated per request via the `X-Experience-API-Version` header.
 - Statement validation per xAPI Data spec sections 2.2-2.6 and 4.0
 - Multipart/mixed attachment support
 - Server-Sent Events (SSE) for real-time statement streaming

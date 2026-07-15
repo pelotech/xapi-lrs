@@ -54,11 +54,24 @@ export function createStatementsApp() {
     // Validate ALL statements first (batch atomicity)
     const validated: Record<string, unknown>[] = [];
     for (const raw of rawArray) {
-      const result = validateStatement(raw);
+      // The negotiation middleware always sets xapiVersion for /xapi routes; the
+      // ?? only satisfies the optional type. Keep the fallback '1.0.3' (fails
+      // CLOSED — a missing version rejects 2.0 features rather than accepting
+      // them). Do NOT "simplify" this default to '2.0.0'.
+      const result = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
       if (!result.valid) {
         throw new HttpError(400, result.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
       }
       validated.push(result.statement as unknown as Record<string, unknown>);
+    }
+
+    // Reject batches carrying duplicate statement ids (no partial write: runs
+    // before any insert). Covers both identical-content dupes (which would
+    // otherwise silently succeed via ON CONFLICT DO NOTHING) and conflicting-
+    // content dupes.
+    const batchIds = validated.map((s) => s.id);
+    if (new Set(batchIds).size !== batchIds.length) {
+      throw new HttpError(400, 'Batch contains duplicate statement ids');
     }
 
     // Validate multipart attachment data
@@ -131,7 +144,10 @@ export function createStatementsApp() {
     const raw = (c.var.parsedBody ?? {}) as Record<string, unknown>;
     if (!raw.id) raw.id = statementId;
 
-    const validationResult = validateStatement(raw);
+    // Fallback '1.0.3' fails CLOSED (rejects 2.0 features when version is
+    // somehow unset); the negotiation middleware guarantees xapiVersion here, so
+    // the ?? is only forced by the optional type. Do NOT default to '2.0.0'.
+    const validationResult = validateStatement(raw, c.var.xapiVersion ?? '1.0.3');
     if (!validationResult.valid) {
       throw new HttpError(400, validationResult.errors.map((e) => `${e.path}: ${e.message}`).join('; '));
     }
@@ -288,11 +304,14 @@ export function createStatementsApp() {
           assertStatementBelongsToAgent(row.payload, auth);
         }
         const stmt = formatStatement(enrichStatement(row), effectiveFormat, acceptLanguage);
+        const headers = { 'Last-Modified': row.stored.toUTCString() };
         if (attachments) {
           const parts = await collectAttachmentParts(client, stmt);
-          return buildMultipartResponse(stmt, parts);
+          const res = await buildMultipartResponse(stmt, parts);
+          res.headers.set('Last-Modified', headers['Last-Modified']);
+          return res;
         }
-        return c.json(stmt, 200);
+        return c.json(stmt, 200, headers);
       }
 
       const { rows, hasMore } = await queryStatements(client, {
