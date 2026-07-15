@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/pelotech/xapi-lrs/compare/v0.5.2...v0.6.0) (2026-07-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* adopt lrsql v0.9.5 schema and support lrsql takeover ([#72](https://github.com/pelotech/xapi-lrs/issues/72))
+
+### Features
+
+* adopt lrsql v0.9.5 schema and support lrsql takeover ([#72](https://github.com/pelotech/xapi-lrs/issues/72)) ([882384e](https://github.com/pelotech/xapi-lrs/commit/882384edaa462167b7acc7c6bd367c309e841ad2))
+* xAPI 2.0 server conformance ([#73](https://github.com/pelotech/xapi-lrs/issues/73)) ([c4ca9af](https://github.com/pelotech/xapi-lrs/commit/c4ca9af1435278bf20fa68915caf5f8443473e27))
+
 ## [0.5.2](https://github.com/pelotech/xapi-lrs/compare/v0.5.1...v0.5.2) (2026-07-15)
 
 
