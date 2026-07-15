@@ -78,7 +78,7 @@ Because xapi-lrs's bundled schema is catalog-parity with [yetanalytics/lrsql](ht
 
 1. **Point xapi-lrs at the same database.** Set `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` (or `DATABASE_URL`) to the existing lrsql Postgres instance — no dump/restore needed.
 2. **Run migrations against it.** `node dist/migrate.js` (or `pnpm db:migrate`, or boot with `AUTO_MIGRATE=true`). Against an already-lrsql-shaped database this is a no-op except for adding xapi-lrs's SSE `NOTIFY` trigger (`trg_xapi_statement_stored`) — the rest of the schema is already identical.
-3. **Bootstrap an admin account via env vars.** lrsql admin accounts do **not** port: lrsql hashes passwords with a buddy `bcrypt+sha512$...` format that xapi-lrs's bcrypt-based `passhash` check does not (and cannot securely) verify. Existing lrsql admin logins will fail cleanly (401, not a 500) after takeover. Set `LRS_ADMIN_USER` / `LRS_ADMIN_PASSWORD` to bootstrap a fresh xapi-lrs admin account on startup (see [Configuration](#configuration)).
+3. **Bootstrap an admin account via env vars.** lrsql admin accounts do **not** port: lrsql hashes passwords with a buddy `bcrypt+sha512$...` format that xapi-lrs's bcrypt-based `passhash` check does not (and cannot securely) verify. Existing lrsql admin logins will fail cleanly (401, not a 500) after takeover. Set `XAPI_LRS_ADMIN_USER` / `XAPI_LRS_ADMIN_PASSWORD` to bootstrap a fresh xapi-lrs admin account on startup (see [Configuration](#configuration)).
 4. **API credentials DO port.** Existing lrsql `api_key`/`secret_key` pairs and their scopes are read as-is (`lrs_credential` / `credential_to_scope`) — statement traffic authenticated with pre-existing lrsql credentials keeps working immediately after the migration runs, with no re-issuing of keys required.
 
 A startup schema probe runs before the server accepts traffic and fails fast if the connected database's shape doesn't match what this release expects (empty database, legacy pre-0.6 xapi-lrs schema, or anything else unrecognized), rather than surfacing later as an opaque runtime 500 (see [`src/db-probe.ts`](src/db-probe.ts)).
@@ -89,36 +89,38 @@ A startup schema probe runs before the server accepts traffic and fails fast if 
 
 All configuration is via environment variables. See `.env.test` for defaults.
 
-| Variable                            | Default     | Description                                           |
-| ----------------------------------- | ----------- | ----------------------------------------------------- |
-| `LRS_PORT` / `PORT`                 | `8081`      | xAPI HTTP port                                        |
-| `LRS_ADMIN_PORT` / `ADMIN_PORT`     | `8091`      | Admin/health/metrics port                             |
-| `DATABASE_DRIVER`                   | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`        |
-| `PGLITE_DATA_DIR`                   | (none)      | PGlite data directory; omit for in-memory             |
-| `PGHOST`.                           | `localhost` | PostgreSQL host                                       |
-| `PGPORT`                            | `5432`      | PostgreSQL port                                       |
-| `PGDATABASE`                        | `xapi_lrs`  | PostgreSQL database                                   |
-| `PGUSER`                            | `xapi_lrs`  | PostgreSQL user                                       |
-| `PGPASSWORD`                        | (empty)     | PostgreSQL password                                   |
-| `DATABASE_URL`                      | (none)      | Full connection string (overrides PG\* vars)          |
-| `JWT_ISSUER`                        | (none)      | JWT issuer for token validation                       |
-| `JWT_AUDIENCE`.                     | (none)      | JWT audience for token validation                     |
-| `JWKS_URI`.                         | (none)      | JWKS endpoint URI                                     |
-| `OIDC_DISCOVERY_URL`                | (none)      | OIDC discovery URL (auto-discovers JWKS)              |
-| `LRS_ADMIN_USER`                    | (none)      | Bootstrap admin username                              |
-| `LRS_ADMIN_PASSWORD`                | (none)      | Bootstrap admin password                              |
-| `ADMIN_SESSION_SECRET`              | (random)    | Session secret (required in production)               |
-| `LOG_LEVEL`                         | `info`      | Log level (silent/fatal/error/warn/info/debug/trace)  |
-| `CORS_ORIGIN`                       | `*`         | CORS allowed origin                                   |
-| `LRSQL_STMT_GET_DEFAULT`.           | `50`        | Default `GET /statements` page size when no `limit`   |
-| `LRSQL_STMT_GET_MAX`.               | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
-| `SHUTDOWN_TIMEOUT_MS`               | `30000`     | Hard deadline for graceful shutdown before exit       |
-| `PG_STATEMENT_TIMEOUT_MS`           | `30000`     | Per-statement DB query timeout (`0` disables)         |
-| `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS` | `60000`     | Idle-in-transaction connection timeout (`0` disables) |
+| Variable                                                 | Default     | Description                                           |
+| -------------------------------------------------------- | ----------- | ----------------------------------------------------- |
+| `XAPI_LRS_PORT` / `PORT`                                 | `8081`      | xAPI HTTP port                                        |
+| `XAPI_LRS_ADMIN_PORT` / `ADMIN_PORT`                     | `8091`      | Admin/health/metrics port                             |
+| `DATABASE_DRIVER`                                        | `pg`        | Database driver: `pg` (PostgreSQL) or `pglite`        |
+| `PGLITE_DATA_DIR`                                        | (none)      | PGlite data directory; omit for in-memory             |
+| `PGHOST`.                                                | `localhost` | PostgreSQL host                                       |
+| `PGPORT`                                                 | `5432`      | PostgreSQL port                                       |
+| `PGDATABASE`                                             | `xapi_lrs`  | PostgreSQL database                                   |
+| `PGUSER`                                                 | `xapi_lrs`  | PostgreSQL user                                       |
+| `PGPASSWORD`                                             | (empty)     | PostgreSQL password                                   |
+| `DATABASE_URL`                                           | (none)      | Full connection string (overrides PG\* vars)          |
+| `XAPI_LRS_JWT_ISSUER` / `JWT_ISSUER`                     | (none)      | JWT issuer for token validation                       |
+| `XAPI_LRS_JWT_AUDIENCE` / `JWT_AUDIENCE`                 | (none)      | JWT audience for token validation                     |
+| `XAPI_LRS_JWKS_URI` / `JWKS_URI`                         | (none)      | JWKS endpoint URI                                     |
+| `XAPI_LRS_OIDC_DISCOVERY_URL` / `OIDC_DISCOVERY_URL`     | (none)      | OIDC discovery URL (auto-discovers JWKS)              |
+| `XAPI_LRS_ADMIN_USER`                                    | (none)      | Bootstrap admin username                              |
+| `XAPI_LRS_ADMIN_PASSWORD`                                | (none)      | Bootstrap admin password                              |
+| `XAPI_LRS_ADMIN_SESSION_SECRET` / `ADMIN_SESSION_SECRET` | (random)    | Session secret (required in production)               |
+| `XAPI_LRS_LOG_LEVEL` / `LOG_LEVEL`                       | `info`      | Log level (silent/fatal/error/warn/info/debug/trace)  |
+| `XAPI_LRS_CORS_ORIGIN` / `CORS_ORIGIN`                   | `*`         | CORS allowed origin                                   |
+| `XAPI_LRS_STMT_GET_DEFAULT`                              | `50`        | Default `GET /statements` page size when no `limit`   |
+| `XAPI_LRS_STMT_GET_MAX`                                  | `50`        | Hard cap on `GET /statements` `limit` (silent clamp)  |
+| `SHUTDOWN_TIMEOUT_MS`                                    | `30000`     | Hard deadline for graceful shutdown before exit       |
+| `PG_STATEMENT_TIMEOUT_MS`                                | `30000`     | Per-statement DB query timeout (`0` disables)         |
+| `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS`                      | `60000`     | Idle-in-transaction connection timeout (`0` disables) |
+
+> **Deprecated aliases.** Two earlier prefixes are still accepted and log a startup warning: the `LRS_*` names shipped in 0.6.0 (e.g. `LRS_ADMIN_USER`, `LRS_PORT`) and lrsql's own `LRSQL_*` names (e.g. `LRSQL_ADMIN_USER_DEFAULT`, `LRSQL_STMT_GET_MAX`, `LRSQL_ALLOW_ALL_ORIGINS`, `LRSQL_LOG_LEVEL`). Each maps to its `XAPI_LRS_*` or standard equivalent above, which takes precedence when both are set. Prefer the canonical names; the aliases will be removed in a future release.
 
 ### Health checks
 
-On the admin port (`LRS_ADMIN_PORT`, default `8091`):
+On the admin port (`XAPI_LRS_ADMIN_PORT`, default `8091`):
 
 | Path       | Purpose                        | Returns 503 when                                                  |
 | ---------- | ------------------------------ | ----------------------------------------------------------------- |

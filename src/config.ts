@@ -121,17 +121,64 @@ function normalizeLrsqlLogLevel(level: string): string {
   }
 }
 
+// Deprecated env var → canonical replacement, plus any additional non-deprecated
+// names that also override the legacy one (so setting a bare fallback such as
+// JWT_ISSUER suppresses the warning). A warning fires when the legacy var is set
+// and none of its replacements are. Two legacy tiers feed the canonical
+// XAPI_LRS_* prefix (or a standard name where one exists): lrsql's own LRSQL_*
+// names (migration convenience) and the LRS_* prefix shipped in 0.6.0.
+const DEPRECATED_ALIASES: ReadonlyArray<readonly [legacy: string, canonical: string, ...alsoSuppress: string[]]> = [
+  ['LRSQL_DB_NAME', 'PGDATABASE'],
+  ['LRSQL_OIDC_ISSUER', 'XAPI_LRS_JWT_ISSUER', 'JWT_ISSUER'],
+  ['LRSQL_OIDC_AUDIENCE', 'XAPI_LRS_JWT_AUDIENCE', 'JWT_AUDIENCE'],
+  ['LRSQL_ADMIN_USER_DEFAULT', 'XAPI_LRS_ADMIN_USER'],
+  ['LRSQL_ADMIN_PASS_DEFAULT', 'XAPI_LRS_ADMIN_PASSWORD'],
+  ['LRSQL_API_KEY_DEFAULT', 'XAPI_LRS_API_KEY_DEFAULT'],
+  ['LRSQL_API_SECRET_DEFAULT', 'XAPI_LRS_API_SECRET_DEFAULT'],
+  ['LRSQL_STMT_GET_DEFAULT', 'XAPI_LRS_STMT_GET_DEFAULT'],
+  ['LRSQL_STMT_GET_MAX', 'XAPI_LRS_STMT_GET_MAX'],
+  ['LRS_PORT', 'XAPI_LRS_PORT'],
+  ['LRS_ADMIN_PORT', 'XAPI_LRS_ADMIN_PORT'],
+  ['LRS_ADMIN_USER', 'XAPI_LRS_ADMIN_USER'],
+  ['LRS_ADMIN_PASSWORD', 'XAPI_LRS_ADMIN_PASSWORD'],
+  ['LRS_API_KEY_DEFAULT', 'XAPI_LRS_API_KEY_DEFAULT'],
+  ['LRS_API_SECRET_DEFAULT', 'XAPI_LRS_API_SECRET_DEFAULT'],
+  ['LRS_STMT_GET_DEFAULT', 'XAPI_LRS_STMT_GET_DEFAULT'],
+  ['LRS_STMT_GET_MAX', 'XAPI_LRS_STMT_GET_MAX'],
+];
+
 export function loadConfig(env: Record<string, string | undefined> = process.env): LrsConfig {
+  const deprecations: string[] = [];
+  for (const [legacy, canonical, ...alsoSuppress] of DEPRECATED_ALIASES) {
+    const overridden = env[canonical] !== undefined || alsoSuppress.some((name) => env[name] !== undefined);
+    if (env[legacy] !== undefined && !overridden) {
+      deprecations.push(
+        `${legacy} is deprecated; set ${canonical} instead. ${legacy} will be removed in a future release.`,
+      );
+    }
+  }
+
   // LRSQL_ALLOW_ALL_ORIGINS=true is equivalent to CORS_ORIGIN=* + CORS_ENABLED=true
   const lrsqlAllowAll = env.LRSQL_ALLOW_ALL_ORIGINS === 'true';
+  if (env.LRSQL_ALLOW_ALL_ORIGINS !== undefined) {
+    deprecations.push(
+      'LRSQL_ALLOW_ALL_ORIGINS is deprecated; set XAPI_LRS_CORS_ENABLED=true with XAPI_LRS_CORS_ORIGIN=* instead. ' +
+        'LRSQL_ALLOW_ALL_ORIGINS will be removed in a future release.',
+    );
+  }
 
   const lrsqlLogLevel = env.LRSQL_LOG_LEVEL ? normalizeLrsqlLogLevel(env.LRSQL_LOG_LEVEL) : undefined;
+  if (env.LRSQL_LOG_LEVEL !== undefined && env.XAPI_LRS_LOG_LEVEL === undefined && env.LOG_LEVEL === undefined) {
+    deprecations.push(
+      'LRSQL_LOG_LEVEL is deprecated; set XAPI_LRS_LOG_LEVEL instead. LRSQL_LOG_LEVEL will be removed in a future release.',
+    );
+  }
 
   const config = configSchema.parse({
     databaseDriver: env.DATABASE_DRIVER,
     pgliteDataDir: env.PGLITE_DATA_DIR,
-    port: env.LRS_PORT ?? env.PORT,
-    adminPort: env.LRS_ADMIN_PORT ?? env.ADMIN_PORT,
+    port: env.XAPI_LRS_PORT ?? env.LRS_PORT ?? env.PORT,
+    adminPort: env.XAPI_LRS_ADMIN_PORT ?? env.LRS_ADMIN_PORT ?? env.ADMIN_PORT,
     databaseUrl: env.DATABASE_URL,
     pgHost: env.TEST_DB_HOST ?? env.PGHOST,
     pgPort: env.TEST_DB_PORT ?? env.PGPORT,
@@ -141,33 +188,37 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     pgPoolSize: env.PG_POOL_SIZE,
     dbConnectRetries: env.DB_CONNECT_RETRIES,
     dbConnectRetryDelayMs: env.DB_CONNECT_RETRY_DELAY_MS,
-    jwtIssuer: env.JWT_ISSUER ?? env.LRSQL_OIDC_ISSUER,
-    jwtAudience: env.JWT_AUDIENCE ?? env.LRSQL_OIDC_AUDIENCE,
-    oidcDiscoveryUrl: env.OIDC_DISCOVERY_URL,
-    adminUser: env.LRS_ADMIN_USER ?? env.LRSQL_ADMIN_USER_DEFAULT,
-    adminPassword: env.LRS_ADMIN_PASSWORD ?? env.LRSQL_ADMIN_PASS_DEFAULT,
-    adminSessionSecret: env.ADMIN_SESSION_SECRET,
-    apiKeyDefault: env.LRS_API_KEY_DEFAULT ?? env.LRSQL_API_KEY_DEFAULT,
-    apiSecretDefault: env.LRS_API_SECRET_DEFAULT ?? env.LRSQL_API_SECRET_DEFAULT,
+    jwtIssuer: env.XAPI_LRS_JWT_ISSUER ?? env.JWT_ISSUER ?? env.LRSQL_OIDC_ISSUER,
+    jwtAudience: env.XAPI_LRS_JWT_AUDIENCE ?? env.JWT_AUDIENCE ?? env.LRSQL_OIDC_AUDIENCE,
+    oidcDiscoveryUrl: env.XAPI_LRS_OIDC_DISCOVERY_URL ?? env.OIDC_DISCOVERY_URL,
+    adminUser: env.XAPI_LRS_ADMIN_USER ?? env.LRS_ADMIN_USER ?? env.LRSQL_ADMIN_USER_DEFAULT,
+    adminPassword: env.XAPI_LRS_ADMIN_PASSWORD ?? env.LRS_ADMIN_PASSWORD ?? env.LRSQL_ADMIN_PASS_DEFAULT,
+    adminSessionSecret: env.XAPI_LRS_ADMIN_SESSION_SECRET ?? env.ADMIN_SESSION_SECRET,
+    apiKeyDefault: env.XAPI_LRS_API_KEY_DEFAULT ?? env.LRS_API_KEY_DEFAULT ?? env.LRSQL_API_KEY_DEFAULT,
+    apiSecretDefault: env.XAPI_LRS_API_SECRET_DEFAULT ?? env.LRS_API_SECRET_DEFAULT ?? env.LRSQL_API_SECRET_DEFAULT,
     autoMigrate: env.AUTO_MIGRATE,
-    jwksUri: env.JWKS_URI,
-    corsEnabled: env.CORS_ENABLED ?? (lrsqlAllowAll ? 'true' : undefined),
-    corsOrigin: env.CORS_ORIGIN ?? (lrsqlAllowAll ? '*' : undefined),
-    maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
+    jwksUri: env.XAPI_LRS_JWKS_URI ?? env.JWKS_URI,
+    corsEnabled: env.XAPI_LRS_CORS_ENABLED ?? env.CORS_ENABLED ?? (lrsqlAllowAll ? 'true' : undefined),
+    corsOrigin: env.XAPI_LRS_CORS_ORIGIN ?? env.CORS_ORIGIN ?? (lrsqlAllowAll ? '*' : undefined),
+    maxRequestBodyBytes: env.XAPI_LRS_MAX_REQUEST_BODY_BYTES ?? env.MAX_REQUEST_BODY_BYTES,
     sseMaxConnectionsGlobal: env.SSE_MAX_CONNECTIONS_GLOBAL,
     sseMaxConnectionsPerIp: env.SSE_MAX_CONNECTIONS_PER_IP,
-    trustedProxyHops: env.TRUSTED_PROXY_HOPS,
+    trustedProxyHops: env.XAPI_LRS_TRUSTED_PROXY_HOPS ?? env.TRUSTED_PROXY_HOPS,
     xapiRateLimitWindow: env.XAPI_RATE_LIMIT_WINDOW,
     xapiRateLimitMax: env.XAPI_RATE_LIMIT_MAX,
-    stmtGetDefault: env.LRSQL_STMT_GET_DEFAULT,
-    stmtGetMax: env.LRSQL_STMT_GET_MAX,
+    stmtGetDefault: env.XAPI_LRS_STMT_GET_DEFAULT ?? env.LRS_STMT_GET_DEFAULT ?? env.LRSQL_STMT_GET_DEFAULT,
+    stmtGetMax: env.XAPI_LRS_STMT_GET_MAX ?? env.LRS_STMT_GET_MAX ?? env.LRSQL_STMT_GET_MAX,
     pgStatementTimeoutMs: env.PG_STATEMENT_TIMEOUT_MS,
     pgIdleInTransactionTimeoutMs: env.PG_IDLE_IN_TRANSACTION_TIMEOUT_MS,
     shutdownTimeoutMs: env.SHUTDOWN_TIMEOUT_MS,
     xapiVerifySignatures: env.XAPI_VERIFY_SIGNATURES,
-    logLevel: env.LOG_LEVEL ?? lrsqlLogLevel,
+    logLevel: env.XAPI_LRS_LOG_LEVEL ?? env.LOG_LEVEL ?? lrsqlLogLevel,
     nodeEnv: env.NODE_ENV,
   });
+
+  for (const msg of deprecations) {
+    console.warn(`WARNING: ${msg}`);
+  }
 
   if (!config.xapiVerifySignatures) {
     console.warn(

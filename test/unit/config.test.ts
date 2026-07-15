@@ -1,5 +1,13 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadConfig } from '../../src/config.ts';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -21,28 +29,106 @@ describe('loadConfig defaults', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Native env vars
+// Canonical XAPI_LRS_ env vars
 // ---------------------------------------------------------------------------
 
-describe('loadConfig native vars', () => {
-  test('LRS_PORT overrides PORT', () => {
-    expect(loadConfig({ LRS_PORT: '9000', PORT: '7000' }).port).toBe(9000);
+describe('loadConfig canonical XAPI_LRS_ vars', () => {
+  test('XAPI_LRS_PORT overrides PORT', () => {
+    expect(loadConfig({ XAPI_LRS_PORT: '9000', PORT: '7000' }).port).toBe(9000);
   });
 
-  test('PORT is used when LRS_PORT absent', () => {
+  test('PORT is used when XAPI_LRS_PORT absent', () => {
     expect(loadConfig({ PORT: '7000' }).port).toBe(7000);
   });
 
-  test('LRS_ADMIN_USER / LRS_ADMIN_PASSWORD', () => {
+  test('XAPI_LRS_ADMIN_USER / XAPI_LRS_ADMIN_PASSWORD', () => {
+    const c = loadConfig({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_ADMIN_PASSWORD: 'secret' });
+    expect(c.adminUser).toBe('alice');
+    expect(c.adminPassword).toBe('secret');
+  });
+
+  test('XAPI_LRS_API_KEY_DEFAULT / XAPI_LRS_API_SECRET_DEFAULT', () => {
+    const c = loadConfig({ XAPI_LRS_API_KEY_DEFAULT: 'k', XAPI_LRS_API_SECRET_DEFAULT: 's' });
+    expect(c.apiKeyDefault).toBe('k');
+    expect(c.apiSecretDefault).toBe('s');
+  });
+
+  test('XAPI_LRS_ takes precedence over deprecated LRS_ and LRSQL_', () => {
+    const c = loadConfig({
+      XAPI_LRS_ADMIN_USER: 'canonical',
+      LRS_ADMIN_USER: 'legacy',
+      LRSQL_ADMIN_USER_DEFAULT: 'lrsql',
+    });
+    expect(c.adminUser).toBe('canonical');
+  });
+
+  test('XAPI_LRS_JWT_ISSUER / XAPI_LRS_JWT_AUDIENCE override the bare JWT_ names', () => {
+    const c = loadConfig({
+      XAPI_LRS_JWT_ISSUER: 'x-iss',
+      JWT_ISSUER: 'iss',
+      XAPI_LRS_JWT_AUDIENCE: 'x-aud',
+      JWT_AUDIENCE: 'aud',
+    });
+    expect(c.jwtIssuer).toBe('x-iss');
+    expect(c.jwtAudience).toBe('x-aud');
+  });
+
+  test('bare JWT_ISSUER / JWT_AUDIENCE remain accepted fallbacks', () => {
+    const c = loadConfig({ JWT_ISSUER: 'iss', JWT_AUDIENCE: 'aud' });
+    expect(c.jwtIssuer).toBe('iss');
+    expect(c.jwtAudience).toBe('aud');
+  });
+
+  test('XAPI_LRS_JWKS_URI / XAPI_LRS_OIDC_DISCOVERY_URL override the bare names', () => {
+    const c = loadConfig({
+      XAPI_LRS_JWKS_URI: 'x-jwks',
+      JWKS_URI: 'jwks',
+      XAPI_LRS_OIDC_DISCOVERY_URL: 'x-oidc',
+      OIDC_DISCOVERY_URL: 'oidc',
+    });
+    expect(c.jwksUri).toBe('x-jwks');
+    expect(c.oidcDiscoveryUrl).toBe('x-oidc');
+  });
+
+  test('XAPI_LRS_LOG_LEVEL overrides LOG_LEVEL', () => {
+    expect(loadConfig({ XAPI_LRS_LOG_LEVEL: 'debug', LOG_LEVEL: 'info' }).logLevel).toBe('debug');
+  });
+
+  test('XAPI_LRS_CORS_ENABLED / XAPI_LRS_CORS_ORIGIN override the bare names', () => {
+    const c = loadConfig({
+      XAPI_LRS_CORS_ENABLED: 'false',
+      CORS_ENABLED: 'true',
+      XAPI_LRS_CORS_ORIGIN: 'https://x',
+      CORS_ORIGIN: 'https://y',
+    });
+    expect(c.corsEnabled).toBe(false);
+    expect(c.corsOrigin).toBe('https://x');
+  });
+
+  test('XAPI_LRS_ADMIN_SESSION_SECRET overrides ADMIN_SESSION_SECRET', () => {
+    const c = loadConfig({ XAPI_LRS_ADMIN_SESSION_SECRET: 'x-secret', ADMIN_SESSION_SECRET: 'secret' });
+    expect(c.adminSessionSecret).toBe('x-secret');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deprecated LRS_ aliases (shipped in 0.6.0, superseded by XAPI_LRS_)
+// ---------------------------------------------------------------------------
+
+describe('loadConfig deprecated LRS_ aliases', () => {
+  test('LRS_PORT still overrides PORT', () => {
+    expect(loadConfig({ LRS_PORT: '9000', PORT: '7000' }).port).toBe(9000);
+  });
+
+  test('LRS_ADMIN_USER / LRS_ADMIN_PASSWORD still honored', () => {
     const c = loadConfig({ LRS_ADMIN_USER: 'alice', LRS_ADMIN_PASSWORD: 'secret' });
     expect(c.adminUser).toBe('alice');
     expect(c.adminPassword).toBe('secret');
   });
 
-  test('LRS_API_KEY_DEFAULT / LRS_API_SECRET_DEFAULT', () => {
-    const c = loadConfig({ LRS_API_KEY_DEFAULT: 'k', LRS_API_SECRET_DEFAULT: 's' });
-    expect(c.apiKeyDefault).toBe('k');
-    expect(c.apiSecretDefault).toBe('s');
+  test('LRS_ takes precedence over LRSQL_', () => {
+    const c = loadConfig({ LRS_ADMIN_USER: 'legacy', LRSQL_ADMIN_USER_DEFAULT: 'lrsql' });
+    expect(c.adminUser).toBe('legacy');
   });
 });
 
@@ -59,7 +145,7 @@ describe('loadConfig LRSQL admin credentials', () => {
     expect(loadConfig({ LRSQL_ADMIN_PASS_DEFAULT: 'lrsql-pass' }).adminPassword).toBe('lrsql-pass');
   });
 
-  test('native LRS_ADMIN_USER takes precedence over LRSQL_ADMIN_USER_DEFAULT', () => {
+  test('LRS_ADMIN_USER takes precedence over LRSQL_ADMIN_USER_DEFAULT', () => {
     const c = loadConfig({ LRS_ADMIN_USER: 'native', LRSQL_ADMIN_USER_DEFAULT: 'lrsql' });
     expect(c.adminUser).toBe('native');
   });
@@ -78,7 +164,7 @@ describe('loadConfig LRSQL API credentials', () => {
     expect(loadConfig({ LRSQL_API_SECRET_DEFAULT: 'my_secret' }).apiSecretDefault).toBe('my_secret');
   });
 
-  test('native LRS_API_KEY_DEFAULT takes precedence over LRSQL_API_KEY_DEFAULT', () => {
+  test('LRS_API_KEY_DEFAULT takes precedence over LRSQL_API_KEY_DEFAULT', () => {
     const c = loadConfig({ LRS_API_KEY_DEFAULT: 'native', LRSQL_API_KEY_DEFAULT: 'lrsql' });
     expect(c.apiKeyDefault).toBe('native');
   });
@@ -175,5 +261,120 @@ describe('loadConfig LRSQL log level normalization', () => {
 
   test('native LOG_LEVEL takes precedence over LRSQL_LOG_LEVEL', () => {
     expect(loadConfig({ LOG_LEVEL: 'warn', LRSQL_LOG_LEVEL: 'DEBUG' }).logLevel).toBe('warn');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Statement GET limits — native names
+// ---------------------------------------------------------------------------
+
+describe('loadConfig statement GET limits', () => {
+  test('defaults to 50/50 when unset', () => {
+    const c = loadConfig({});
+    expect(c.stmtGetDefault).toBe(50);
+    expect(c.stmtGetMax).toBe(50);
+  });
+
+  test('LRS_STMT_GET_DEFAULT / LRS_STMT_GET_MAX map to stmtGetDefault/stmtGetMax', () => {
+    const c = loadConfig({ LRS_STMT_GET_DEFAULT: '25', LRS_STMT_GET_MAX: '200' });
+    expect(c.stmtGetDefault).toBe(25);
+    expect(c.stmtGetMax).toBe(200);
+  });
+
+  test('LRS_STMT_GET_* takes precedence over LRSQL_STMT_GET_*', () => {
+    const c = loadConfig({
+      LRS_STMT_GET_DEFAULT: '10',
+      LRSQL_STMT_GET_DEFAULT: '20',
+      LRS_STMT_GET_MAX: '100',
+      LRSQL_STMT_GET_MAX: '200',
+    });
+    expect(c.stmtGetDefault).toBe(10);
+    expect(c.stmtGetMax).toBe(100);
+  });
+
+  test('LRSQL_STMT_GET_* still honored for compatibility', () => {
+    const c = loadConfig({ LRSQL_STMT_GET_DEFAULT: '20', LRSQL_STMT_GET_MAX: '200' });
+    expect(c.stmtGetDefault).toBe(20);
+    expect(c.stmtGetMax).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deprecation warnings
+// ---------------------------------------------------------------------------
+
+describe('loadConfig deprecation warnings', () => {
+  const matchDeprecation = (legacy: string) => expect.stringContaining(`${legacy} is deprecated`);
+
+  test.each([
+    ['LRSQL_DB_NAME', 'mydb'],
+    ['LRSQL_OIDC_ISSUER', 'https://idp'],
+    ['LRSQL_OIDC_AUDIENCE', 'aud'],
+    ['LRSQL_ADMIN_USER_DEFAULT', 'u'],
+    ['LRSQL_ADMIN_PASS_DEFAULT', 'p'],
+    ['LRSQL_API_KEY_DEFAULT', 'k'],
+    ['LRSQL_API_SECRET_DEFAULT', 's'],
+    ['LRSQL_STMT_GET_DEFAULT', '25'],
+    ['LRSQL_STMT_GET_MAX', '100'],
+    ['LRSQL_LOG_LEVEL', 'DEBUG'],
+    ['LRSQL_ALLOW_ALL_ORIGINS', 'true'],
+    ['LRS_PORT', '9000'],
+    ['LRS_ADMIN_PORT', '9091'],
+    ['LRS_ADMIN_USER', 'u'],
+    ['LRS_ADMIN_PASSWORD', 'p'],
+    ['LRS_API_KEY_DEFAULT', 'k'],
+    ['LRS_API_SECRET_DEFAULT', 's'],
+    ['LRS_STMT_GET_DEFAULT', '25'],
+    ['LRS_STMT_GET_MAX', '100'],
+  ])('warns when %s is used', (legacy, value) => {
+    loadConfig({ [legacy]: value });
+    expect(warnSpy).toHaveBeenCalledWith(matchDeprecation(legacy));
+  });
+
+  test('does not warn when the canonical XAPI_LRS_ var is used', () => {
+    loadConfig({ XAPI_LRS_ADMIN_USER: 'alice', XAPI_LRS_PORT: '9000' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRS_ADMIN_USER'));
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRS_PORT'));
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRSQL_ADMIN_USER_DEFAULT'));
+  });
+
+  test('LRS_ alias does not warn when the canonical XAPI_LRS_ var is also set', () => {
+    loadConfig({ XAPI_LRS_PORT: '9000', LRS_PORT: '8000' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRS_PORT'));
+  });
+
+  test('does not warn when native equivalent is also set (legacy unused)', () => {
+    loadConfig({ JWT_ISSUER: 'native', LRSQL_OIDC_ISSUER: 'legacy' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRSQL_OIDC_ISSUER'));
+  });
+
+  test('canonical XAPI_LRS_JWT_ISSUER suppresses the LRSQL_OIDC_ISSUER warning', () => {
+    loadConfig({ XAPI_LRS_JWT_ISSUER: 'canonical', LRSQL_OIDC_ISSUER: 'legacy' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRSQL_OIDC_ISSUER'));
+  });
+
+  test('canonical XAPI_LRS_LOG_LEVEL suppresses the LRSQL_LOG_LEVEL warning', () => {
+    loadConfig({ XAPI_LRS_LOG_LEVEL: 'debug', LRSQL_LOG_LEVEL: 'DEBUG' });
+    expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation('LRSQL_LOG_LEVEL'));
+  });
+
+  test('does not warn when neither legacy nor native is set', () => {
+    loadConfig({});
+    for (const legacy of [
+      'LRSQL_DB_NAME',
+      'LRSQL_OIDC_ISSUER',
+      'LRSQL_ADMIN_USER_DEFAULT',
+      'LRSQL_API_KEY_DEFAULT',
+      'LRSQL_STMT_GET_DEFAULT',
+      'LRSQL_LOG_LEVEL',
+      'LRSQL_ALLOW_ALL_ORIGINS',
+    ]) {
+      expect(warnSpy).not.toHaveBeenCalledWith(matchDeprecation(legacy));
+    }
+  });
+
+  test('LRSQL_ALLOW_ALL_ORIGINS warns even when value is "false"', () => {
+    loadConfig({ LRSQL_ALLOW_ALL_ORIGINS: 'false' });
+    expect(warnSpy).toHaveBeenCalledWith(matchDeprecation('LRSQL_ALLOW_ALL_ORIGINS'));
   });
 });
