@@ -5,6 +5,7 @@
  */
 
 import type { Server } from 'node:http';
+import type { PGlite } from '@electric-sql/pglite';
 import { serve } from '@hono/node-server';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { Hono } from 'hono';
@@ -42,10 +43,18 @@ export interface LrsTestServerHandle {
 
 export interface LrsTestServerOptions {
   xapiVerifySignatures?: boolean;
+  /**
+   * Pre-created PGlite instance to back the server with, instead of letting
+   * the backend create its own. Used by the takeover suite to hand the server
+   * a "live lrsql database" (upstream DDL + seed data) whose committed-migration
+   * pass then performs the takeover. Forces the PGlite driver regardless of
+   * DATABASE_DRIVER.
+   */
+  pgliteInstance?: PGlite;
 }
 
 export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<LrsTestServerHandle> {
-  const isPglite = process.env['DATABASE_DRIVER'] === 'pglite';
+  const isPglite = process.env['DATABASE_DRIVER'] === 'pglite' || opts?.pgliteInstance != null;
   const jwksServer: JwksServerHandle = await startJwksServer();
 
   const config: LrsConfig = {
@@ -100,7 +109,21 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
   if (isPglite) {
     const { createPgliteBackend } = await import('../../src/db-pglite.ts');
     const { LocalListener } = await import('../../src/sse/local-listener.ts');
-    const backend = await createPgliteBackend(config);
+
+    // SCHEMA_SOURCE=lrsql: provision the instance the way an operator taking
+    // over a live lrsql database would — apply lrsql's own upstream DDL first,
+    // then let createPgliteBackend run the committed migration on top (the
+    // takeover). An explicitly injected instance (takeover suite) is passed
+    // through as-is; it has already been provisioned by the caller.
+    let instance = opts?.pgliteInstance;
+    if (!instance && process.env['SCHEMA_SOURCE'] === 'lrsql') {
+      const { PGlite } = await import('@electric-sql/pglite');
+      const { applyUpstreamLrsqlDdl } = await import('../fixtures/lrsql/apply-upstream-ddl.ts');
+      instance = await PGlite.create();
+      await applyUpstreamLrsqlDdl(instance);
+    }
+
+    const backend = await createPgliteBackend(config, instance);
     pool = backend.pool;
     pgListener = new LocalListener(backend.db);
   } else {

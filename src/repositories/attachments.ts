@@ -11,9 +11,13 @@ type Query = Omit<QueryConfig, 'values'>;
 
 const INSERT_ATTACHMENT = {
   name: 'insert_attachment',
+  // lrsql's attachment table has no unique constraint on
+  // (statement_id, attachment_sha) — a bare ON CONFLICT here would error
+  // (no matching constraint/index) rather than silently no-op. Re-POST
+  // duplicate prevention is handled by the caller: routes/statements.ts
+  // only calls insertAttachment when insertStatement reported `inserted`.
   text: `INSERT INTO attachment (id, statement_id, attachment_sha, content_type, content_length, contents)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
-         ON CONFLICT (statement_id, attachment_sha) DO NOTHING`,
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)`,
 } as const satisfies Query;
 
 const SELECT_ATTACHMENTS_BY_STATEMENT = {

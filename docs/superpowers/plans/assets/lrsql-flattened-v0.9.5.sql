@@ -1,7 +1,3 @@
---! Previous: -
---! Hash: sha1:90f30def316e08443b64cd49cf1ae8c80d298007
---! Message: lrsql-schema
-
 /*
  * Flattened lrsql v0.9.5 PostgreSQL schema (end-state after all in-file
  * migrations in src/db/postgres/lrsql/postgres/sql/ddl.sql have run).
@@ -351,25 +347,3 @@ CREATE TABLE IF NOT EXISTS blocked_jwt (
 CREATE INDEX IF NOT EXISTS blocked_jwt_evict_time_idx ON blocked_jwt(evict_time);
 -- Catch-up.
 ALTER TABLE IF EXISTS blocked_jwt ADD COLUMN IF NOT EXISTS one_time_id UUID UNIQUE;
-
-/* ---------------------------------------------------------------------- */
-/* xapi-lrs addition on top of lrsql's schema: pg_notify trigger for SSE  */
-/* statement streaming. Documented parity exception — see                 */
-/* test/integration/schema-parity.test.ts.                                */
-/* ---------------------------------------------------------------------- */
-
-CREATE OR REPLACE FUNCTION notify_xapi_statement_stored()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  PERFORM pg_notify('xapi_statement_stored', json_build_object(
-    'statement_id', NEW.statement_id,
-    'id', NEW.id
-  )::text);
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_xapi_statement_stored ON xapi_statement;
-CREATE TRIGGER trg_xapi_statement_stored
-  AFTER INSERT ON xapi_statement
-  FOR EACH ROW EXECUTE FUNCTION notify_xapi_statement_stored();

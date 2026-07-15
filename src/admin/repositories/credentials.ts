@@ -1,51 +1,55 @@
 /**
  * Admin credential management queries.
+ *
+ * Scope rows key by the composite (api_key, secret_key) pair, per lrsql's
+ * `credential_fk` — `lrs_credential.id` remains the admin-API handle but is
+ * not part of that foreign key.
  */
 
 import type { QueryConfig } from 'pg';
-import type { DbPool } from '../../db.ts';
-import { poolQuery } from '../../db.ts';
+import type { DbClient, DbPool } from '../../db.ts';
+import { poolQuery, withClient } from '../../db.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
 
 const LIST_CREDENTIALS = {
   name: 'admin_list_credentials',
-  text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
+  text: `SELECT c.id, c.api_key, c.label, a.username AS account_name, a.id AS account_id,
                 COALESCE(json_agg(s.scope::text ORDER BY s.scope::text) FILTER (WHERE s.scope IS NOT NULL), '[]') AS scopes
          FROM lrs_credential c
          JOIN admin_account a ON a.id = c.account_id
-         LEFT JOIN credential_to_scope s ON s.credential_id = c.id
-         GROUP BY c.id, c.api_key, a.username, a.id
+         LEFT JOIN credential_to_scope s ON s.api_key = c.api_key AND s.secret_key = c.secret_key
+         GROUP BY c.id, c.api_key, c.label, a.username, a.id
          ORDER BY c.api_key`,
 } as const satisfies Query;
 
 const LIST_CREDENTIALS_BY_API_KEY = {
   name: 'admin_list_credentials_by_api_key',
-  text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
+  text: `SELECT c.id, c.api_key, c.label, a.username AS account_name, a.id AS account_id,
                 COALESCE(json_agg(s.scope::text ORDER BY s.scope::text) FILTER (WHERE s.scope IS NOT NULL), '[]') AS scopes
          FROM lrs_credential c
          JOIN admin_account a ON a.id = c.account_id
-         LEFT JOIN credential_to_scope s ON s.credential_id = c.id
+         LEFT JOIN credential_to_scope s ON s.api_key = c.api_key AND s.secret_key = c.secret_key
          WHERE c.api_key = $1
-         GROUP BY c.id, c.api_key, a.username, a.id
+         GROUP BY c.id, c.api_key, c.label, a.username, a.id
          ORDER BY c.api_key`,
 } as const satisfies Query;
 
 const GET_CREDENTIAL = {
   name: 'admin_get_credential',
-  text: `SELECT c.id, c.api_key, a.username AS account_name, a.id AS account_id,
+  text: `SELECT c.id, c.api_key, c.label, a.username AS account_name, a.id AS account_id,
                 COALESCE(json_agg(s.scope::text ORDER BY s.scope::text) FILTER (WHERE s.scope IS NOT NULL), '[]') AS scopes
          FROM lrs_credential c
          JOIN admin_account a ON a.id = c.account_id
-         LEFT JOIN credential_to_scope s ON s.credential_id = c.id
+         LEFT JOIN credential_to_scope s ON s.api_key = c.api_key AND s.secret_key = c.secret_key
          WHERE c.id = $1
-         GROUP BY c.id, c.api_key, a.username, a.id`,
+         GROUP BY c.id, c.api_key, c.label, a.username, a.id`,
 } as const satisfies Query;
 
 const CREATE_CREDENTIAL = {
   name: 'admin_create_credential',
-  text: 'INSERT INTO lrs_credential (id, api_key, secret_key, account_id) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id',
+  text: 'INSERT INTO lrs_credential (id, api_key, secret_key, account_id, label) VALUES (gen_random_uuid(), $1, $2, $3, $4) RETURNING id',
 } as const satisfies Query;
 
 const DELETE_CREDENTIAL = {
@@ -53,24 +57,35 @@ const DELETE_CREDENTIAL = {
   text: 'DELETE FROM lrs_credential WHERE id = $1',
 } as const satisfies Query;
 
-const ROTATE_SECRET = {
-  name: 'admin_rotate_secret',
+const GET_CREDENTIAL_KEYS_FOR_UPDATE = {
+  name: 'admin_get_credential_keys_for_update',
+  text: 'SELECT api_key, secret_key FROM lrs_credential WHERE id = $1 FOR UPDATE',
+} as const satisfies Query;
+
+const GET_CREDENTIAL_SCOPES_BY_KEYS = {
+  name: 'admin_get_credential_scopes_by_keys',
+  text: 'SELECT scope FROM credential_to_scope WHERE api_key = $1 AND secret_key = $2',
+} as const satisfies Query;
+
+const UPDATE_SECRET_KEY = {
+  name: 'admin_update_secret_key',
   text: 'UPDATE lrs_credential SET secret_key = $1 WHERE id = $2',
 } as const satisfies Query;
 
 const DELETE_CREDENTIAL_SCOPES = {
   name: 'admin_delete_credential_scopes',
-  text: 'DELETE FROM credential_to_scope WHERE credential_id = $1',
+  text: 'DELETE FROM credential_to_scope WHERE api_key = $1 AND secret_key = $2',
 } as const satisfies Query;
 
 const INSERT_CREDENTIAL_SCOPE = {
   name: 'admin_insert_credential_scope',
-  text: 'INSERT INTO credential_to_scope (id, credential_id, scope) VALUES (gen_random_uuid(), $1, $2::scope_enum) ON CONFLICT DO NOTHING',
+  text: 'INSERT INTO credential_to_scope (id, api_key, secret_key, scope) VALUES (gen_random_uuid(), $1, $2, $3::scope_enum)',
 } as const satisfies Query;
 
 export interface CredentialRow {
   id: string;
   api_key: string;
+  label: string | null;
   account_name: string;
   account_id: string;
   scopes: string[];
@@ -110,10 +125,11 @@ export async function createCredential(
   apiKey: string,
   secretKey: string,
   accountId: string,
+  label: string | null = null,
 ): Promise<string> {
   const result = await poolQuery<{ id: string }>(pool, metrics, {
     ...CREATE_CREDENTIAL,
-    values: [apiKey, secretKey, accountId],
+    values: [apiKey, secretKey, accountId, label],
   });
   return result.rows[0].id;
 }
@@ -123,14 +139,44 @@ export async function deleteCredential(pool: DbPool, metrics: LrsMetrics, creden
   return (result.rowCount ?? 0) > 0;
 }
 
+/**
+ * Rotate a credential's secret key.
+ *
+ * `credential_to_scope` rows are FK'd on (api_key, secret_key) with
+ * ON DELETE CASCADE but no ON UPDATE action, so updating `secret_key`
+ * in place while scope rows reference the old pair violates `credential_fk`.
+ * Do this transactionally: lock the credential row, snapshot its scopes,
+ * drop them, rotate the secret, then re-insert the scopes under the new pair.
+ */
 export async function rotateSecret(
   pool: DbPool,
   metrics: LrsMetrics,
   credentialId: string,
   newSecret: string,
 ): Promise<boolean> {
-  const result = await poolQuery(pool, metrics, { ...ROTATE_SECRET, values: [newSecret, credentialId] });
-  return (result.rowCount ?? 0) > 0;
+  return withClient(pool, metrics, async (client: DbClient) => {
+    const keysResult = await client.query<{ api_key: string; secret_key: string }>({
+      ...GET_CREDENTIAL_KEYS_FOR_UPDATE,
+      values: [credentialId],
+    });
+    const keys = keysResult.rows[0];
+    if (!keys) return false;
+
+    const scopesResult = await client.query<{ scope: string | null }>({
+      ...GET_CREDENTIAL_SCOPES_BY_KEYS,
+      values: [keys.api_key, keys.secret_key],
+    });
+
+    await client.query({ ...DELETE_CREDENTIAL_SCOPES, values: [keys.api_key, keys.secret_key] });
+    await client.query({ ...UPDATE_SECRET_KEY, values: [newSecret, credentialId] });
+
+    for (const row of scopesResult.rows) {
+      if (row.scope === null) continue;
+      await client.query({ ...INSERT_CREDENTIAL_SCOPE, values: [keys.api_key, newSecret, row.scope] });
+    }
+
+    return true;
+  });
 }
 
 export async function ensureDefaultCredential(
@@ -151,21 +197,31 @@ export async function ensureDefaultCredential(
   }
 }
 
+/**
+ * Replace a credential's scopes.
+ *
+ * Runs inside a transaction with the lrs_credential row locked FOR UPDATE:
+ * a concurrent rotateSecret would otherwise change (api_key, secret_key)
+ * after we read it, making every scope insert violate `credential_fk`.
+ */
 export async function setCredentialScopes(
   pool: DbPool,
   metrics: LrsMetrics,
   credentialId: string,
   scopes: string[],
 ): Promise<boolean> {
-  const exists = await poolQuery<{ exists: boolean }>(pool, metrics, {
-    name: 'admin_credential_exists',
-    text: 'SELECT EXISTS(SELECT 1 FROM lrs_credential WHERE id = $1) AS exists',
-    values: [credentialId],
+  return withClient(pool, metrics, async (client: DbClient) => {
+    const keysResult = await client.query<{ api_key: string; secret_key: string }>({
+      ...GET_CREDENTIAL_KEYS_FOR_UPDATE,
+      values: [credentialId],
+    });
+    const keys = keysResult.rows[0];
+    if (!keys) return false;
+
+    await client.query({ ...DELETE_CREDENTIAL_SCOPES, values: [keys.api_key, keys.secret_key] });
+    for (const scope of scopes) {
+      await client.query({ ...INSERT_CREDENTIAL_SCOPE, values: [keys.api_key, keys.secret_key, scope] });
+    }
+    return true;
   });
-  if (!exists.rows[0].exists) return false;
-  await poolQuery(pool, metrics, { ...DELETE_CREDENTIAL_SCOPES, values: [credentialId] });
-  for (const scope of scopes) {
-    await poolQuery(pool, metrics, { ...INSERT_CREDENTIAL_SCOPE, values: [credentialId, scope] });
-  }
-  return true;
 }

@@ -12,10 +12,13 @@ const ALL_SCOPES = [
   'statements/read/mine',
   'all/read',
   'all',
-  'define',
-  'profile',
   'state',
   'state/read',
+  'define',
+  'activities_profile',
+  'activities_profile/read',
+  'agents_profile',
+  'agents_profile/read',
 ] as const;
 
 export function credentialsPage(

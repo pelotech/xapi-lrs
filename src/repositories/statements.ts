@@ -52,8 +52,8 @@ export interface StatementQueryParams {
 
 const INSERT_XAPI_STATEMENT = {
   name: 'insert_xapi_statement',
-  text: `INSERT INTO xapi_statement (id, statement_id, verb_iri, is_voided, payload)
-         VALUES ($1, $2, $3, false, $4)
+  text: `INSERT INTO xapi_statement (id, statement_id, registration, verb_iri, is_voided, payload, timestamp, stored)
+         VALUES ($1, $2, $3, $4, false, $5, $6, $7)
          ON CONFLICT (statement_id) DO NOTHING`,
 } as const satisfies Query;
 
@@ -75,11 +75,17 @@ const BATCH_UPSERT_ACTORS = {
              FROM unique_actors ua
            ON CONFLICT (actor_ifi, actor_type) DO NOTHING
          )
+         -- lrsql has no unique constraint on statement_to_actor and does no
+         -- junction dedup (plain INSERTs, insert.sql:43-51); a bare
+         -- ON CONFLICT here can never fire and would read as protection it
+         -- isn't. Duplicate-row prevention across re-POSTs is handled by the
+         -- statement-insert gating above (this query never runs when the
+         -- statement row itself didn't insert), and within-statement
+         -- duplicates are deduped by extractActors before this query runs.
          INSERT INTO statement_to_actor (id, statement_id, usage, actor_ifi, actor_type)
          SELECT gen_random_uuid(), $3::uuid, u.usage::actor_usage_enum, u.ifi, u.atype::actor_type_enum
            FROM UNNEST($1::text[], $2::text[], $4::text[])
-             AS u(ifi, atype, usage)
-         ON CONFLICT DO NOTHING`,
+             AS u(ifi, atype, usage)`,
 } as const satisfies Query;
 
 /**
@@ -101,18 +107,44 @@ const BATCH_UPSERT_ACTIVITIES = {
            ON CONFLICT (activity_iri)
            DO UPDATE SET payload = EXCLUDED.payload
          )
+         -- No unique constraint on statement_to_activity either; see the
+         -- comment on the statement_to_actor insert above — the bare
+         -- ON CONFLICT DO NOTHING removed here could never fire.
          INSERT INTO statement_to_activity (id, statement_id, usage, activity_iri)
          SELECT gen_random_uuid(), $3::uuid, u.usage::activity_usage_enum, u.iri
            FROM UNNEST($1::text[], $4::text[])
-             AS u(iri, usage)
-         ON CONFLICT DO NOTHING`,
+             AS u(iri, usage)`,
 } as const satisfies Query;
 
 const INSERT_STATEMENT_TO_STATEMENT = {
   name: 'insert_statement_to_statement',
+  // lrsql v0.9.5 semantics (ops/command/statement.clj + query.sql
+  // stmt-ref-subquery): ancestor_id = the NEW referencing statement ($1),
+  // descendant_id = the referenced target. lrsql also inserts TRANSITIVE
+  // links — the referencer additionally links to each of the target's own
+  // descendants — so the second UNION branch copies (target -> d) rows as
+  // (referencer -> d). UNION (not UNION ALL) dedupes the direct link
+  // against a hypothetical target self-link.
+  //
+  // Both columns carry NOT NULL FKs to xapi_statement(statement_id)
+  // (lrsql's ancestor_fk/descendant_fk), but per xAPI Data 2.3.2 a
+  // Statement MAY reference (e.g. void) a StatementRef target the LRS has
+  // never seen — "the LRS SHOULD NOT reject the request on the grounds of
+  // the Object of that voiding Statement not being present" — so the
+  // direct link is gated on the DESCENDANT (target, $2) existing, or this
+  // would 500 on the FK violation instead of silently skipping the row.
+  // (ancestor_id is always safe: it's the statement we just inserted in
+  // this same call; transitive descendants exist by FK on the copied rows.)
   text: `INSERT INTO statement_to_statement (id, ancestor_id, descendant_id)
-         VALUES (gen_random_uuid(), $1, $2)
-         ON CONFLICT DO NOTHING`,
+         SELECT gen_random_uuid(), $1, d.descendant_id
+         FROM (
+           SELECT $2::uuid AS descendant_id
+            WHERE EXISTS (SELECT 1 FROM xapi_statement WHERE statement_id = $2)
+           UNION
+           SELECT sts.descendant_id
+             FROM statement_to_statement sts
+            WHERE sts.ancestor_id = $2
+         ) AS d`,
 } as const satisfies Query;
 
 export interface InsertStatementResult {
@@ -130,15 +162,35 @@ export async function insertStatement(
   const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? '';
   const now = new Date();
   const storedIso = now.toISOString();
+  // xapi_statement.id is the pagination-key SQUUID (hand-rolled, v4-nibble —
+  // see src/helpers/squuid.ts); statement.id (the xAPI id, statement_id
+  // column) is generated as a UUIDv7 in statement-validator.ts when absent.
+  // Both sort correctly against lrsql's own SQUUID-layout ids; see the plan
+  // header "Verified upstream facts" — do not conflate the two id schemes.
   const id = squuid(now.getTime());
 
   const payload = buildPayload(statement, storedIso, authority);
+  // registration/timestamp are explicit columns per lrsql's shape (registration
+  // UUID, timestamp TIMESTAMPTZ, both nullable with no DB-side default);
+  // timestamp defaulting to "now" already happened in statement-validator.ts
+  // when the client omitted it, so the baked payload's timestamp is
+  // authoritative here.
+  const registration =
+    ((statement.context as Record<string, unknown> | undefined)?.registration as string | undefined) ?? null;
+  const timestamp = (payload.timestamp as string | undefined) ?? null;
 
   const result = await client.query({
     ...INSERT_XAPI_STATEMENT,
-    values: [id, statementId, verbIri, JSON.stringify(payload)],
+    values: [id, statementId, registration, verbIri, JSON.stringify(payload), timestamp, storedIso],
   });
 
+  // Gate ALL dependent inserts (actor/activity junctions, statement_to_statement,
+  // and — via the `inserted` flag returned to callers — attachments in
+  // routes/statements.ts) on the statement row itself having inserted. lrsql's
+  // junction tables carry no unique constraints and get plain INSERTs with no
+  // dedup, so re-POSTing an existing statementId (ON CONFLICT (statement_id)
+  // DO NOTHING above => rowCount 0) must short-circuit here or duplicate
+  // junction/attachment rows would accumulate on every re-POST.
   const inserted = (result.rowCount ?? 0) > 0;
   if (!inserted) return { inserted: false, id, statementId };
 
@@ -169,12 +221,14 @@ export async function insertStatement(
     });
   }
 
-  // StatementRef relationships
+  // StatementRef relationships: ancestor = this (referencing) statement,
+  // descendant = the referenced target (lrsql column semantics; see
+  // INSERT_STATEMENT_TO_STATEMENT).
   const obj = payload.object as Record<string, unknown> | undefined;
   if (obj?.objectType === 'StatementRef' && obj.id) {
     await client.query({
       ...INSERT_STATEMENT_TO_STATEMENT,
-      values: [obj.id as string, statementId],
+      values: [statementId, obj.id as string],
     });
   }
 
@@ -335,6 +389,13 @@ export async function queryStatements(
       throw new HttpError(400, 'agent parameter is not valid JSON');
     }
 
+    // lrsql parity (query.sql postgres-actors-join): group members are now
+    // written under the group's positional usage (extractActors), not a
+    // dedicated 'Member' usage. So a plain `agent` filter (usage = 'Actor')
+    // already matches both the top-level actor AND any actor-position group
+    // member — no extra join/condition needed. `related_agents=true` drops
+    // the usage filter entirely and matches ANY row for this IFI, including
+    // Sub*/Team/Instructor/Authority positions.
     if (params.related_agents) {
       directContentConds.push(
         `EXISTS (SELECT 1 FROM statement_to_actor sta WHERE sta.statement_id = s.statement_id AND sta.actor_ifi = $${paramIndex})`,
@@ -421,11 +482,15 @@ export async function queryStatements(
   let whereClause: string;
   if (voidedContentConds.length > 0) {
     const voidedFilter = voidedContentConds.join(' AND ');
+    // lrsql direction: ancestor_id = the referencing statement (s here),
+    // descendant_id = the referenced/voided target (v). Transitive rows
+    // written at insert time mean s matches for the whole reference chain,
+    // matching lrsql's stmt-ref-subquery behavior.
     const targetingExists = `EXISTS (
       SELECT 1 FROM statement_to_statement sts
-      JOIN xapi_statement v ON v.statement_id = sts.ancestor_id
+      JOIN xapi_statement v ON v.statement_id = sts.descendant_id
         AND v.is_voided = true AND ${voidedFilter}
-      WHERE sts.descendant_id = s.statement_id
+      WHERE sts.ancestor_id = s.statement_id
     )`;
     const targetingWhere = ['s.is_voided = false', ...timeConds, targetingExists].join(' AND ');
     whereClause = `(${directWhere}) OR (${targetingWhere})`;

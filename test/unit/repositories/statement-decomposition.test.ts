@@ -8,6 +8,17 @@ import {
 
 // ---------------------------------------------------------------------------
 // extractActors
+//
+// lrsql semantics (verified against yetanalytics/lrsql v0.9.5 source,
+// input/actor.clj:36-44, input/statement.clj:49-54,94-112):
+//   - Group members are written with the group's OWN positional usage (no
+//     'Member' usage exists in actor_usage_enum) — a member of the top-level
+//     actor gets usage 'Actor', a member of context.team gets 'Team', etc.
+//   - Identified groups get their own row (actor_type Group) in addition to
+//     member rows; anonymous groups (no IFI) get no row for themselves —
+//     only member rows.
+//   - SubStatement positions use the Sub*-prefixed usages: SubActor,
+//     SubObject, SubInstructor, SubTeam.
 // ---------------------------------------------------------------------------
 
 describe('extractActors', () => {
@@ -20,7 +31,7 @@ describe('extractActors', () => {
     expect(actors).toEqual([{ ifi: 'mbox::mailto:a@b.com', type: 'Agent', usage: 'Actor', payload: {} }]);
   });
 
-  it('extracts Group actor with members', () => {
+  it('extracts identified Group actor with members, all usage Actor', () => {
     const actors = extractActors({
       actor: {
         objectType: 'Group',
@@ -39,13 +50,27 @@ describe('extractActors', () => {
     expect(actors[1]).toMatchObject({
       ifi: 'mbox::mailto:m1@b.com',
       type: 'Agent',
-      usage: 'Member',
+      usage: 'Actor',
     });
     expect(actors[2]).toMatchObject({
       ifi: 'mbox::mailto:m2@b.com',
       type: 'Agent',
-      usage: 'Member',
+      usage: 'Actor',
     });
+  });
+
+  it('anonymous Group actor gets no self row, only member rows', () => {
+    const actors = extractActors({
+      actor: {
+        objectType: 'Group',
+        member: [{ mbox: 'mailto:m1@b.com' }, { mbox: 'mailto:m2@b.com' }],
+      },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+    });
+    expect(actors).toHaveLength(2);
+    expect(actors.every((a) => a.usage === 'Actor' && a.type === 'Agent')).toBe(true);
+    expect(actors.map((a) => a.ifi)).toEqual(['mbox::mailto:m1@b.com', 'mbox::mailto:m2@b.com']);
   });
 
   it('extracts object Agent with usage Object', () => {
@@ -57,6 +82,21 @@ describe('extractActors', () => {
     const objectActors = actors.filter((a) => a.usage === 'Object');
     expect(objectActors).toHaveLength(1);
     expect(objectActors[0].ifi).toBe('mbox::mailto:obj@b.com');
+  });
+
+  it('extracts object Group with members, all usage Object', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: {
+        objectType: 'Group',
+        mbox: 'mailto:objgroup@b.com',
+        member: [{ mbox: 'mailto:om1@b.com' }],
+      },
+    });
+    const objectActors = actors.filter((a) => a.usage === 'Object');
+    expect(objectActors).toHaveLength(2);
+    expect(objectActors.map((a) => a.ifi)).toEqual(['mbox::mailto:objgroup@b.com', 'mbox::mailto:om1@b.com']);
   });
 
   it('extracts authority Agent', () => {
@@ -71,7 +111,7 @@ describe('extractActors', () => {
     expect(authActors[0].ifi).toBe('mbox::mailto:auth@b.com');
   });
 
-  it('extracts authority Group with members', () => {
+  it('extracts authority Group with members, all usage Authority', () => {
     const actors = extractActors({
       actor: { mbox: 'mailto:a@b.com' },
       verb: { id: 'http://example.com/v' },
@@ -84,6 +124,8 @@ describe('extractActors', () => {
     });
     const authActors = actors.filter((a) => a.usage === 'Authority');
     expect(authActors).toHaveLength(2);
+    expect(authActors.every((a) => a.usage === 'Authority')).toBe(true);
+    expect(authActors.map((a) => a.ifi)).toEqual(['mbox::mailto:authgroup@b.com', 'mbox::mailto:am1@b.com']);
   });
 
   it('extracts context.instructor', () => {
@@ -98,7 +140,25 @@ describe('extractActors', () => {
     expect(instructors[0].ifi).toBe('mbox::mailto:instr@b.com');
   });
 
-  it('extracts context.team with members', () => {
+  it('extracts context.instructor Group with members, all usage Instructor', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+      context: {
+        instructor: {
+          objectType: 'Group',
+          mbox: 'mailto:instrgroup@b.com',
+          member: [{ mbox: 'mailto:im1@b.com' }],
+        },
+      },
+    });
+    const instructors = actors.filter((a) => a.usage === 'Instructor');
+    expect(instructors).toHaveLength(2);
+    expect(instructors.map((a) => a.ifi)).toEqual(['mbox::mailto:instrgroup@b.com', 'mbox::mailto:im1@b.com']);
+  });
+
+  it('extracts context.team with members, all usage Team', () => {
     const actors = extractActors({
       actor: { mbox: 'mailto:a@b.com' },
       verb: { id: 'http://example.com/v' },
@@ -112,12 +172,13 @@ describe('extractActors', () => {
       },
     });
     const teamActors = actors.filter((a) => a.usage === 'Team');
-    expect(teamActors).toHaveLength(1);
-    const memberActors = actors.filter((a) => a.usage === 'Member');
-    expect(memberActors).toHaveLength(1);
+    expect(teamActors).toHaveLength(2);
+    expect(teamActors.map((a) => a.ifi)).toEqual(['mbox::mailto:team@b.com', 'mbox::mailto:tm1@b.com']);
+    // 'Member' is not a valid actor_usage_enum value in lrsql — must not appear.
+    expect(actors.some((a) => (a.usage as string) === 'Member')).toBe(false);
   });
 
-  it('extracts SubStatement actor and object', () => {
+  it('extracts SubStatement actor as SubActor and object Agent as SubObject', () => {
     const actors = extractActors({
       actor: { mbox: 'mailto:a@b.com' },
       verb: { id: 'http://example.com/v' },
@@ -128,9 +189,35 @@ describe('extractActors', () => {
         object: { objectType: 'Agent', mbox: 'mailto:subobj@b.com' },
       },
     });
-    const ifis = actors.map((a) => a.ifi);
-    expect(ifis).toContain('mbox::mailto:sub@b.com');
-    expect(ifis).toContain('mbox::mailto:subobj@b.com');
+    const subActor = actors.find((a) => a.ifi === 'mbox::mailto:sub@b.com');
+    expect(subActor).toMatchObject({ usage: 'SubActor' });
+    const subObj = actors.find((a) => a.ifi === 'mbox::mailto:subobj@b.com');
+    expect(subObj).toMatchObject({ usage: 'SubObject' });
+  });
+
+  it('extracts SubStatement context.instructor/team as SubInstructor/SubTeam', () => {
+    const actors = extractActors({
+      actor: { mbox: 'mailto:a@b.com' },
+      verb: { id: 'http://example.com/v' },
+      object: {
+        objectType: 'SubStatement',
+        actor: { mbox: 'mailto:sub@b.com' },
+        verb: { id: 'http://example.com/v' },
+        object: { id: 'http://example.com/sub-act' },
+        context: {
+          instructor: { mbox: 'mailto:subinstr@b.com' },
+          team: {
+            objectType: 'Group',
+            mbox: 'mailto:subteam@b.com',
+            member: [{ mbox: 'mailto:subtm1@b.com' }],
+          },
+        },
+      },
+    });
+    const subInstr = actors.find((a) => a.ifi === 'mbox::mailto:subinstr@b.com');
+    expect(subInstr).toMatchObject({ usage: 'SubInstructor' });
+    const subTeamActors = actors.filter((a) => a.usage === 'SubTeam');
+    expect(subTeamActors.map((a) => a.ifi)).toEqual(['mbox::mailto:subteam@b.com', 'mbox::mailto:subtm1@b.com']);
   });
 
   it('silently skips agents without valid IFI', () => {
@@ -140,6 +227,24 @@ describe('extractActors', () => {
       object: { id: 'http://example.com/a' },
     });
     expect(actors).toHaveLength(0);
+  });
+
+  it('deduplicates output by (usage, actor_ifi, actor_type)', () => {
+    // Same member appears twice in the member list (also happens to match
+    // the top-level actor's IFI) — decomposition output must be deduplicated
+    // so re-decomposition of a single statement is deterministic and the
+    // batch-upsert junction insert doesn't receive duplicate rows.
+    const actors = extractActors({
+      actor: {
+        objectType: 'Group',
+        mbox: 'mailto:group@b.com',
+        member: [{ mbox: 'mailto:m1@b.com' }, { mbox: 'mailto:m1@b.com' }],
+      },
+      verb: { id: 'http://example.com/v' },
+      object: { id: 'http://example.com/a' },
+    });
+    const memberRows = actors.filter((a) => a.ifi === 'mbox::mailto:m1@b.com');
+    expect(memberRows).toHaveLength(1);
   });
 });
 

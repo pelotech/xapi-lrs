@@ -28,9 +28,41 @@ describe('requiredScopes', () => {
     expect(rule!.scopes).toContain('state');
   });
 
-  it('GET /xapi/agents/profile requires profile scope', () => {
+  it('GET /xapi/agents/profile requires agents_profile scope', () => {
     const rule = requiredScopes('/xapi/agents/profile', 'GET');
-    expect(rule!.scopes).toContain('profile');
+    expect(rule!.scopes).toContain('agents_profile');
+    expect(rule!.scopes).toContain('agents_profile/read');
+  });
+
+  it('PUT /xapi/agents/profile requires agents_profile scope', () => {
+    const rule = requiredScopes('/xapi/agents/profile', 'PUT');
+    expect(rule!.scopes).toContain('agents_profile');
+  });
+
+  it('GET /xapi/activities/profile requires activities_profile scope', () => {
+    const rule = requiredScopes('/xapi/activities/profile', 'GET');
+    expect(rule!.scopes).toContain('activities_profile');
+    expect(rule!.scopes).toContain('activities_profile/read');
+  });
+
+  it('PUT /xapi/activities/profile requires activities_profile or define scope', () => {
+    const rule = requiredScopes('/xapi/activities/profile', 'PUT');
+    expect(rule!.scopes).toContain('activities_profile');
+    expect(rule!.scopes).toContain('define');
+  });
+
+  it('GET /xapi/agents requires agents_profile/read scope', () => {
+    const rule = requiredScopes('/xapi/agents', 'GET');
+    expect(rule!.scopes).toContain('agents_profile/read');
+    expect(rule!.scopes).toContain('all/read');
+    expect(rule!.scopes).toContain('all');
+  });
+
+  it('GET /xapi/activities requires activities_profile/read scope', () => {
+    const rule = requiredScopes('/xapi/activities', 'GET');
+    expect(rule!.scopes).toContain('activities_profile/read');
+    expect(rule!.scopes).toContain('all/read');
+    expect(rule!.scopes).toContain('all');
   });
 
   it('returns null for unknown path', () => {
@@ -84,5 +116,33 @@ describe('hasScope', () => {
 
   it('empty granted returns false', () => {
     expect(hasScope([], ['statements/read'])).toBe(false);
+  });
+
+  it('agents_profile scopes do not satisfy /xapi/activities/profile', () => {
+    const read = requiredScopes('/xapi/activities/profile', 'GET')!;
+    const write = requiredScopes('/xapi/activities/profile', 'PUT')!;
+    expect(hasScope(['agents_profile'], read.scopes)).toBe(false);
+    expect(hasScope(['agents_profile/read'], read.scopes)).toBe(false);
+    expect(hasScope(['agents_profile'], write.scopes)).toBe(false);
+    expect(hasScope(['agents_profile/read'], write.scopes)).toBe(false);
+  });
+
+  it('activities_profile scopes do not satisfy /xapi/agents/profile', () => {
+    const read = requiredScopes('/xapi/agents/profile', 'GET')!;
+    const write = requiredScopes('/xapi/agents/profile', 'PUT')!;
+    expect(hasScope(['activities_profile'], read.scopes)).toBe(false);
+    expect(hasScope(['activities_profile/read'], read.scopes)).toBe(false);
+    expect(hasScope(['activities_profile'], write.scopes)).toBe(false);
+    expect(hasScope(['activities_profile/read'], write.scopes)).toBe(false);
+  });
+
+  it('activities_profile/read does not satisfy GET /xapi/agents', () => {
+    const rule = requiredScopes('/xapi/agents', 'GET')!;
+    expect(hasScope(['activities_profile/read'], rule.scopes)).toBe(false);
+  });
+
+  it('agents_profile/read does not satisfy GET /xapi/activities', () => {
+    const rule = requiredScopes('/xapi/activities', 'GET')!;
+    expect(hasScope(['agents_profile/read'], rule.scopes)).toBe(false);
   });
 });

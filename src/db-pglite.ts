@@ -13,7 +13,6 @@ import { access, mkdir, constants } from 'node:fs/promises';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import type { QueryConfig, QueryResult, QueryResultRow } from 'pg';
 import type { LrsConfig } from './config.ts';
 import type { DbClient, DbPool } from './db.ts';
@@ -142,13 +141,29 @@ async function assertDataDirWritable(dataDir: string): Promise<void> {
   }
 }
 
-export async function createPgliteBackend(config: LrsConfig): Promise<PgliteBackend> {
-  if (config.pgliteDataDir) await assertDataDirWritable(config.pgliteDataDir);
-
-  const db = await PGlite.create({
-    dataDir: config.pgliteDataDir,
-    extensions: { pgcrypto },
-  });
+/**
+ * Build the PGlite backend and run the committed migrations against it.
+ *
+ * @param config   LRS config (data dir, etc.).
+ * @param instance Optional pre-created PGlite instance. When supplied, the
+ *   backend adopts it as-is instead of creating its own — the caller owns
+ *   PROVISIONING it (data dir, any pre-applied DDL), but the returned backend
+ *   still owns its lifecycle from here on: pool.end() closes the instance
+ *   unconditionally, injected or not. This is the takeover seam: a test can
+ *   pre-create the instance, apply lrsql's upstream DDL to it, and hand it in;
+ *   the migration pass below then runs the committed migration on top,
+ *   performing exactly the operator takeover of a live lrsql database.
+ */
+export async function createPgliteBackend(config: LrsConfig, instance?: PGlite): Promise<PgliteBackend> {
+  let db: PGlite;
+  if (instance) {
+    db = instance;
+  } else {
+    if (config.pgliteDataDir) await assertDataDirWritable(config.pgliteDataDir);
+    db = await PGlite.create({
+      dataDir: config.pgliteDataDir,
+    });
+  }
 
   await applyMigrations(db);
 

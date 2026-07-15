@@ -24,9 +24,14 @@ export default defineConfig({
           include: ['test/integration/**/*.test.ts'],
           globalSetup: ['test/integration/global-setup.ts'],
           pool: 'forks',
-          maxWorkers: 6,
+          // Files run in parallel. Under the pg driver every worker shares ONE
+          // Postgres database; each file uses unique random credentials and
+          // queries by specific ids, so parallel forks don't collide. The one
+          // exception — bootstrap.test.ts, whose assertions are whole-table and
+          // whose beforeEach TRUNCATEs shared tables — is isolated into its own
+          // schema (see bootstrap.test.ts), so it can't clobber peers.
           fileParallelism: true,
-          sequence: { concurrent: false, groupOrder: 2 },
+          sequence: { groupOrder: 2 },
           testTimeout: 30_000,
           hookTimeout: 30_000,
           retry: 1,

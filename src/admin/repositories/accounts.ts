@@ -5,6 +5,7 @@
 import type { QueryConfig } from 'pg';
 import type { DbPool } from '../../db.ts';
 import { poolQuery } from '../../db.ts';
+import { hashPassword, verifyPassword as verifyHash } from '../../helpers/passwords.ts';
 import type { LrsMetrics } from '../../metrics.ts';
 
 type Query = Omit<QueryConfig, 'values'>;
@@ -28,12 +29,12 @@ const HAS_ANY_ACCOUNT = {
 
 const VERIFY_ACCOUNT_PASSWORD = {
   name: 'admin_verify_password',
-  text: 'SELECT id, username FROM admin_account WHERE username = $1 AND passhash = crypt($2, passhash)',
+  text: 'SELECT id, username, passhash FROM admin_account WHERE username = $1',
 } as const satisfies Query;
 
 const CREATE_ACCOUNT = {
   name: 'admin_create_account',
-  text: "INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, crypt($2, gen_salt('bf'))) RETURNING id",
+  text: 'INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, $2) RETURNING id',
 } as const satisfies Query;
 
 const DELETE_ACCOUNT = {
@@ -43,12 +44,13 @@ const DELETE_ACCOUNT = {
 
 const CHANGE_PASSWORD = {
   name: 'admin_change_password',
-  text: "UPDATE admin_account SET passhash = crypt($2, gen_salt('bf')) WHERE id = $1",
+  text: 'UPDATE admin_account SET passhash = $2 WHERE id = $1',
 } as const satisfies Query;
 
 export interface AccountRow {
   id: string;
   username: string;
+  passhash?: string | null;
   credential_count?: number;
 }
 
@@ -65,9 +67,14 @@ export async function verifyPassword(
 ): Promise<AccountRow | null> {
   const result = await poolQuery<AccountRow>(pool, metrics, {
     ...VERIFY_ACCOUNT_PASSWORD,
-    values: [username, password],
+    values: [username],
   });
-  return result.rows[0] ?? null;
+  const row = result.rows[0];
+  if (!row || !(await verifyHash(password, row.passhash ?? null))) {
+    return null;
+  }
+  const { id, username: rowUsername } = row;
+  return { id, username: rowUsername };
 }
 
 export async function getAccountByUsername(
@@ -88,9 +95,10 @@ export async function createAccount(
   username: string,
   password: string,
 ): Promise<string> {
+  const passhash = await hashPassword(password);
   const result = await poolQuery<{ id: string }>(pool, metrics, {
     ...CREATE_ACCOUNT,
-    values: [username, password],
+    values: [username, passhash],
   });
   return result.rows[0].id;
 }
@@ -105,7 +113,8 @@ export async function changePassword(
   accountId: string,
   newPassword: string,
 ): Promise<void> {
-  await poolQuery(pool, metrics, { ...CHANGE_PASSWORD, values: [accountId, newPassword] });
+  const passhash = await hashPassword(newPassword);
+  await poolQuery(pool, metrics, { ...CHANGE_PASSWORD, values: [accountId, passhash] });
 }
 
 export async function hasAnyAdminAccount(pool: DbPool, metrics: LrsMetrics): Promise<boolean> {

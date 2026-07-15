@@ -46,7 +46,6 @@ COPY package.json ./
 
 COPY --from=prod-deps /app/node_modules node_modules
 COPY --from=build /app/dist dist
-COPY src/admin/vendor/ dist/admin/vendor/
 COPY db/ db/
 
 EXPOSE 8081 8091

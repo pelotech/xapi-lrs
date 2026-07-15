@@ -56,17 +56,20 @@ export interface JwtResult {
   payload: AuthPayloadJWT;
 }
 
-/** Valid xAPI scopes for validation */
+/** Valid xAPI scopes for validation — matches lrsql's scope_enum */
 const VALID_SCOPES = new Set<string>([
   'statements/write',
   'statements/read',
   'statements/read/mine',
   'all/read',
   'all',
-  'define',
-  'profile',
   'state',
   'state/read',
+  'define',
+  'activities_profile',
+  'activities_profile/read',
+  'agents_profile',
+  'agents_profile/read',
 ]);
 
 /**

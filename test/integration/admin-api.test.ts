@@ -4,6 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { DbPool } from '../../src/db.ts';
+import { hashPassword } from '../../src/helpers/passwords.ts';
 import { test, describe, expect } from './fixtures.ts';
 
 // ---------------------------------------------------------------------------
@@ -14,15 +15,15 @@ import { test, describe, expect } from './fixtures.ts';
 const XAPI_HEADERS = { 'X-Experience-API-Version': '1.0.3' } as const;
 
 /**
- * Insert an admin_account with a known password via pgcrypto's crypt().
+ * Insert an admin_account with a known password, hashed app-side with bcryptjs.
  * Returns the Base64-encoded "username:password" string for use as a Basic Auth header value.
  */
 async function createAdminAuth(pool: DbPool, opts: { username?: string; password?: string } = {}): Promise<string> {
   const username = opts.username ?? `admin-${randomUUID().slice(0, 8)}`;
   const password = opts.password ?? randomUUID();
   await pool.query({
-    text: `INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, crypt($2, gen_salt('bf')))`,
-    values: [username, password],
+    text: `INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, $2)`,
+    values: [username, await hashPassword(password)],
   });
   return Buffer.from(`${username}:${password}`).toString('base64');
 }
@@ -52,8 +53,8 @@ describe('Admin API — auth guard', () => {
   test('all endpoints return 401 with wrong password', async ({ server, pool }) => {
     const username = `admin-${randomUUID().slice(0, 8)}`;
     await pool.query({
-      text: `INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, crypt($2, gen_salt('bf')))`,
-      values: [username, 'correct-password'],
+      text: `INSERT INTO admin_account (id, username, passhash) VALUES (gen_random_uuid(), $1, $2)`,
+      values: [username, await hashPassword('correct-password')],
     });
     const wrongAuth = `Basic ${Buffer.from(`${username}:wrong-password`).toString('base64')}`;
 

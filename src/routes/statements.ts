@@ -89,7 +89,13 @@ export function createStatementsApp() {
       }
 
       if (attachmentParts) {
-        for (const stmt of validated) {
+        for (let i = 0; i < validated.length; i++) {
+          // Only insert attachments for statements that actually inserted —
+          // lrsql's attachment table has no unique constraint, so a re-POST
+          // of an existing statementId (results[i].inserted === false) must
+          // not accumulate duplicate attachment rows.
+          if (!results[i].inserted) continue;
+          const stmt = validated[i];
           const stmtId = stmt.id as string;
           const atts = stmt.attachments as Array<Record<string, unknown>> | undefined;
           if (!Array.isArray(atts)) continue;
@@ -157,9 +163,12 @@ export function createStatementsApp() {
         await handleVoiding(client, stmt);
       }
 
-      await insertStatement(client, stmt, authority);
+      const insertResult = await insertStatement(client, stmt, authority);
 
-      if (attachmentParts) {
+      // See the POST handler's comment: only insert attachments when the
+      // statement row itself inserted (lrsql's attachment table has no
+      // unique constraint to absorb duplicates from a concurrent re-PUT).
+      if (attachmentParts && insertResult.inserted) {
         const atts = stmt.attachments as Array<Record<string, unknown>> | undefined;
         if (Array.isArray(atts)) {
           for (const att of atts) {
