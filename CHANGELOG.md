@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/pelotech/xapi-lrs/compare/v0.6.0...v0.7.0) (2026-07-15)
+
+
+### Features
+
+* adopt XAPI_LRS_ env var prefix; deprecate LRSQL_ and LRS_ aliases ([#59](https://github.com/pelotech/xapi-lrs/issues/59)) ([9ec5cd2](https://github.com/pelotech/xapi-lrs/commit/9ec5cd2cc018ef601d92cf8dd01a1bf6ea11fb4d))
+
+
+### Chores
+
+* attest SBOMs to registry instead of uploading to immutable releases ([#76](https://github.com/pelotech/xapi-lrs/issues/76)) ([5e770c4](https://github.com/pelotech/xapi-lrs/commit/5e770c4a53e6471b052cbe91668b4b479d7fd00b))
+
 ## [0.6.0](https://github.com/pelotech/xapi-lrs/compare/v0.5.2...v0.6.0) (2026-07-15)
 
 
