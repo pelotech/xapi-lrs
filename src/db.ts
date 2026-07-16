@@ -4,6 +4,7 @@
  * No RLS, no tenant context, no role switching.
  */
 
+import { context, trace, SpanKind, SpanStatusCode, type Tracer } from '@opentelemetry/api';
 import { Pool } from 'pg';
 import type { QueryConfig, QueryResult, QueryResultRow } from 'pg';
 
@@ -98,26 +99,54 @@ function extractQueryName(arg: unknown): string {
   return 'unknown';
 }
 
+// Set at bootstrap when tracing is enabled (see src/server.ts); default no-op.
+let dbTracer: Tracer = trace.getTracer('xapi-lrs');
+export function setDbTracer(t: Tracer): void {
+  dbTracer = t;
+}
+
+/**
+ * Wrap a query in a CLIENT span — but only inside a traced xAPI request
+ * (there must be an active recording span). Admin-plane queries run the same
+ * seams with no active span and emit nothing.
+ */
+function withDbSpan<T>(queryName: string, run: () => Promise<T>): Promise<T> {
+  if (!trace.getActiveSpan()?.isRecording()) return run();
+  const span = dbTracer.startSpan(`db.query ${queryName}`, {
+    kind: SpanKind.CLIENT,
+    attributes: { 'db.system': 'postgresql', query_name: queryName },
+  });
+  return context.with(trace.setSpan(context.active(), span), () =>
+    run().then(
+      (res) => {
+        span.end();
+        return res;
+      },
+      (err: unknown) => {
+        span.recordException(err as Error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.end();
+        throw err;
+      },
+    ),
+  );
+}
+
 function instrumentQuery(client: DbClient, metrics: LrsMetrics): DbClient {
   const originalQuery = client.query.bind(client);
   client.query = ((...args: unknown[]) => {
     const queryName = extractQueryName(args[0]);
     const end = startTimer(metrics.dbQueryDuration, { query_name: queryName });
-    const result = (originalQuery as Function)(...args);
-    if (result && typeof result.then === 'function') {
-      return result.then(
-        (res: unknown) => {
-          end();
-          return res;
-        },
-        (error: unknown) => {
-          end();
-          throw error;
-        },
-      );
-    }
-    end();
-    return result;
+    return withDbSpan(queryName, () => (originalQuery as Function)(...args)).then(
+      (res: unknown) => {
+        end();
+        return res;
+      },
+      (error: unknown) => {
+        end();
+        throw error;
+      },
+    );
   }) as typeof client.query;
   return client;
 }
@@ -155,7 +184,7 @@ export async function poolQuery<R extends QueryResultRow = QueryResultRow>(
 ): Promise<QueryResult<R>> {
   const end = startTimer(metrics.dbQueryDuration, { query_name: config.name ?? 'unknown' });
   try {
-    return await pool.query<R>(config);
+    return await withDbSpan(config.name ?? 'unknown', () => pool.query<R>(config));
   } finally {
     end();
   }
