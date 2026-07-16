@@ -1,14 +1,9 @@
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
-import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'; // re-exports the base test utilities
+import type { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 import { Hono } from 'hono';
 import { describe, test, expect, beforeEach } from 'vitest';
 import { tracingMiddleware } from '../../../src/middleware/tracing.ts';
-
-function makeTestTracer() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-  return { tracer: provider.getTracer('test'), exporter };
-}
+import { makeTestTracer } from '../helpers/otel-test-tracer.ts';
 
 describe('tracingMiddleware', () => {
   let exporter: InMemorySpanExporter;

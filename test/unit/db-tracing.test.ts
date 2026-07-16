@@ -1,10 +1,11 @@
 import { context, trace, SpanKind } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
-import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'; // re-exports the base test utilities
+import type { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { poolQuery, setDbTracer } from '../../src/db.ts';
 import type { DbPool } from '../../src/db.ts';
 import type { LrsMetrics } from '../../src/metrics.ts';
+import { makeTestTracer } from './helpers/otel-test-tracer.ts';
 
 const metrics = { dbQueryDuration: { record() {} } } as unknown as LrsMetrics;
 const pool = {
@@ -12,12 +13,6 @@ const pool = {
     return { rows: [], rowCount: 0 };
   },
 } as unknown as DbPool;
-
-function makeTestTracer() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-  return { tracer: provider.getTracer('test'), exporter };
-}
 
 describe('db query spans', () => {
   let exporter: InMemorySpanExporter;

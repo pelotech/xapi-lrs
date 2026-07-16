@@ -130,6 +130,19 @@ On the admin port (`XAPI_LRS_ADMIN_PORT`, default `8091`):
 
 On SIGTERM/SIGINT the server flips `/readyz` to 503, aborts long-lived SSE streams, waits for in-flight HTTP requests, stops the pg_notify listener, drains the DB pool, and exits — with a hard `SHUTDOWN_TIMEOUT_MS` deadline as a safety net.
 
+### Tracing
+
+xapi-lrs emits OpenTelemetry traces for the xAPI data plane (request + DB query spans) over OTLP. Tracing is **off unless an OTLP endpoint is configured** — set the standard `OTEL_*` variables:
+
+| Variable                                                             | Purpose                                             |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Enable + target (a collector, or a managed backend) |
+| `OTEL_EXPORTER_OTLP_HEADERS`                                         | Auth headers for a managed backend                  |
+| `OTEL_SERVICE_NAME`                                                  | Service name (default `xapi-lrs`)                   |
+| `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG`                    | Sampling (default `parentbased_always_on`)          |
+
+Point the endpoint at a local **OpenTelemetry Collector** in small environments, or directly at a **managed backend** (with `OTEL_EXPORTER_OTLP_HEADERS`) in production. The default samples every request; for production ingest volume set `OTEL_TRACES_SAMPLER=parentbased_traceidratio` with `OTEL_TRACES_SAMPLER_ARG=0.1` (or `0.01` / lower).
+
 ## Scripts
 
 | Script                     | Description                                 |

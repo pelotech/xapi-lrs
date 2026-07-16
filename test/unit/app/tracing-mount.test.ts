@@ -8,7 +8,6 @@
  */
 
 import { trace } from '@opentelemetry/api';
-import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { describe, expect, test } from 'vitest';
 import { createApp } from '../../../src/app.ts';
 import type { AppDeps } from '../../../src/app.ts';
@@ -17,6 +16,7 @@ import type { LrsConfig } from '../../../src/config.ts';
 import type { DbPool } from '../../../src/db.ts';
 import { createMetrics } from '../../../src/metrics.ts';
 import type { Listener } from '../../../src/sse/pg-listener.ts';
+import { makeTestTracer } from '../helpers/otel-test-tracer.ts';
 
 // Pool throws if queried: these paths must not touch the DB.
 const stubPool = {
@@ -36,12 +36,6 @@ const stubListener: Listener = {
   stop: async () => {},
   isReady: () => false,
 };
-
-function makeTestTracer() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-  return { tracer: provider.getTracer('test'), exporter };
-}
 
 // Copied from `buildApp()` in test/unit/app/version-negotiation.test.ts (the
 // canonical template) with `tracing` added.
