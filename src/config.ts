@@ -147,6 +147,23 @@ const DEPRECATED_ALIASES: ReadonlyArray<readonly [legacy: string, canonical: str
   ['LRS_STMT_GET_MAX', 'XAPI_LRS_STMT_GET_MAX'],
 ];
 
+/**
+ * Pick the first candidate that looks like a numeric port, ignoring
+ * non-numeric values instead of letting them crash config validation.
+ *
+ * Guards the Kubernetes service-link footgun: a Service named `xapi-lrs`
+ * uppercases to `XAPI_LRS_`, so Kubernetes injects `XAPI_LRS_PORT=tcp://<ip>:<port>`
+ * — which collides with our own `XAPI_LRS_PORT` config var. An obviously-non-numeric
+ * value (like that `tcp://…` URL) is skipped so we fall through to the next source
+ * or the default, rather than hard-crashing on `z.coerce.number()` → NaN.
+ */
+function firstNumericPort(...candidates: Array<string | undefined>): string | undefined {
+  for (const candidate of candidates) {
+    if (candidate !== undefined && /^\d+$/.test(candidate.trim())) return candidate;
+  }
+  return undefined;
+}
+
 export function loadConfig(env: Record<string, string | undefined> = process.env): LrsConfig {
   const deprecations: string[] = [];
   for (const [legacy, canonical, ...alsoSuppress] of DEPRECATED_ALIASES) {
@@ -177,8 +194,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const config = configSchema.parse({
     databaseDriver: env.DATABASE_DRIVER,
     pgliteDataDir: env.PGLITE_DATA_DIR,
-    port: env.XAPI_LRS_PORT ?? env.LRS_PORT ?? env.PORT,
-    adminPort: env.XAPI_LRS_ADMIN_PORT ?? env.LRS_ADMIN_PORT ?? env.ADMIN_PORT,
+    port: firstNumericPort(env.XAPI_LRS_PORT, env.LRS_PORT, env.PORT),
+    adminPort: firstNumericPort(env.XAPI_LRS_ADMIN_PORT, env.LRS_ADMIN_PORT, env.ADMIN_PORT),
     databaseUrl: env.DATABASE_URL,
     pgHost: env.TEST_DB_HOST ?? env.PGHOST,
     pgPort: env.TEST_DB_PORT ?? env.PGPORT,

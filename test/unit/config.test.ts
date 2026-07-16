@@ -13,6 +13,33 @@ afterEach(() => {
 // Defaults
 // ---------------------------------------------------------------------------
 
+describe('loadConfig port parsing (Kubernetes service-link robustness)', () => {
+  // A Service named `xapi-lrs` uppercases to `XAPI_LRS_`, so Kubernetes injects
+  // XAPI_LRS_PORT=tcp://<ip>:<port>, colliding with our own config var.
+  test('does not crash on the injected tcp:// value', () => {
+    expect(() => loadConfig({ XAPI_LRS_PORT: 'tcp://10.0.0.1:8081' })).not.toThrow();
+  });
+
+  test('ignores a non-numeric XAPI_LRS_PORT and uses the default', () => {
+    // URL port (9999) differs from the default (8081): proves we ignore the value
+    // entirely rather than parsing a port out of the tcp:// URL.
+    expect(loadConfig({ XAPI_LRS_PORT: 'tcp://10.0.0.1:9999' }).port).toBe(8081);
+  });
+
+  test('falls through to PORT when XAPI_LRS_PORT is the injected tcp:// value', () => {
+    expect(loadConfig({ XAPI_LRS_PORT: 'tcp://10.0.0.1:8081', PORT: '9000' }).port).toBe(9000);
+  });
+
+  test('ignores a non-numeric XAPI_LRS_ADMIN_PORT and uses the default', () => {
+    // URL port (9999) differs from the default (8091), proving the value is ignored.
+    expect(loadConfig({ XAPI_LRS_ADMIN_PORT: 'tcp://10.0.0.1:9999' }).adminPort).toBe(8091);
+  });
+
+  test('a valid numeric XAPI_LRS_PORT still wins over PORT', () => {
+    expect(loadConfig({ XAPI_LRS_PORT: '9000', PORT: '7000' }).port).toBe(9000);
+  });
+});
+
 describe('loadConfig defaults', () => {
   test('uses built-in defaults when env is empty', () => {
     const c = loadConfig({});
