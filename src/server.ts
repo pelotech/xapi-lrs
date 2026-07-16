@@ -22,13 +22,14 @@ import { bootstrapAccounts } from './bootstrap.ts';
 import { loadConfig } from './config.ts';
 import type { LrsConfig } from './config.ts';
 import { probeSchema, SchemaProbeError } from './db-probe.ts';
-import { createPool } from './db.ts';
+import { createPool, setDbTracer } from './db.ts';
 import type { DbPool } from './db.ts';
 import { createLogger } from './logger.ts';
 import { createMetrics } from './metrics.ts';
 import { runMigrations } from './migrate.ts';
 import { PgListener } from './sse/pg-listener.ts';
 import type { Listener } from './sse/pg-listener.ts';
+import { initTracing } from './tracing.ts';
 
 async function initJwt(config: LrsConfig, logger: Logger, jwksCache: JwksCache): Promise<JwtConfig | null> {
   if (!config.jwtIssuer || !config.jwtAudience) return null;
@@ -72,6 +73,11 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config);
   const metrics = createMetrics();
+  const tracing = initTracing();
+  if (tracing.enabled) {
+    setDbTracer(tracing.tracer);
+    logger.info('Tracing enabled (OTLP)');
+  }
 
   logger.info({ port: config.port, adminPort: config.adminPort }, 'Starting LRS service');
 
@@ -169,6 +175,7 @@ async function main(): Promise<void> {
     sessionSecret,
     startedAt,
     shutdownSignal: shutdownController.signal,
+    tracing,
   });
 
   // Log registered routes
@@ -251,6 +258,7 @@ async function main(): Promise<void> {
   //  4. Stop the pg_notify listener (frees its dedicated DB connection).
   //  5. Drain the pool (closes remaining DB connections).
   //  6. Shut down metrics.
+  //  7. Flush and shut down tracing (no-op if disabled).
   // A hard deadline (config.shutdownTimeoutMs) force-exits if any step hangs.
   let shutdownInProgress = false;
   const shutdown = async (signal: string) => {
@@ -275,6 +283,7 @@ async function main(): Promise<void> {
       await listener.stop();
       await pool.end();
       await metrics.shutdown();
+      await tracing.shutdown();
       logger.info('Shutdown complete');
       process.exit(0);
     } catch (err) {

@@ -15,18 +15,21 @@ import type { DbPool } from './db.ts';
 import { HttpError } from './db.ts';
 import type { LrsDeps } from './deps.ts';
 import { resolveClientIp } from './helpers/client-ip.ts';
+import { safeRoutePath } from './helpers/route-path.ts';
 import type { HonoEnv } from './hono-env.ts';
 import type { Logger } from './logger.ts';
 import type { LrsMetrics } from './metrics.ts';
 import { authMiddleware } from './middleware/authentication.ts';
 import { scopeMiddleware } from './middleware/authorization.ts';
 import { rateLimitMiddleware } from './middleware/rate-limit.ts';
+import { tracingMiddleware } from './middleware/tracing.ts';
 import { createAboutApp } from './routes/about.ts';
 import { createActivitiesApp } from './routes/activities.ts';
 import { createAgentsApp } from './routes/agents.ts';
 import { createStatementsApp } from './routes/statements.ts';
 import type { Listener } from './sse/pg-listener.ts';
 import { createSseRoute } from './sse/sse-producer.ts';
+import type { TracingHandle } from './tracing.ts';
 import { parseMultipartMixed, extractBoundary } from './xapi/multipart.ts';
 import { LATEST_PATCH, LATEST_VERSION } from './xapi/versions.ts';
 import type { XapiVersion } from './xapi/versions.ts';
@@ -55,19 +58,6 @@ function parseContentLength(value: string | null | undefined): number | undefine
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-/**
- * Return the matched route pattern (e.g. `/xapi/statements/:statementId`).
- * Falls back to `c.req.path` for unmatched requests (404s, OPTIONS preflight, etc.)
- * where Hono's routePath getter is unavailable.
- */
-function safeRoutePath(c: { req: { routePath: string; path: string } }): string {
-  try {
-    return c.req.routePath || c.req.path;
-  } catch {
-    return c.req.path;
-  }
-}
-
 // ============================================================================
 // App Factory
 // ============================================================================
@@ -83,6 +73,7 @@ export interface AppDeps {
   sessionSecret: string;
   startedAt: Date;
   shutdownSignal: AbortSignal;
+  tracing: TracingHandle;
 }
 
 export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
@@ -343,6 +334,16 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     c.header('X-Experience-API-Version', negotiated);
     return next();
   });
+
+  // --------------------------------------------------------------------------
+  // Tracing (xAPI data plane only, and only when enabled) — mounted after
+  // version negotiation so xapi.version is available, wrapping the rest of
+  // the chain.
+  // --------------------------------------------------------------------------
+
+  if (deps.tracing.enabled) {
+    app.use('/xapi/*', tracingMiddleware(deps.tracing.tracer));
+  }
 
   // --------------------------------------------------------------------------
   // Request body size limit — reject oversized payloads before reading

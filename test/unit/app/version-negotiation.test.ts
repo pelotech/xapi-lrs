@@ -8,6 +8,7 @@
  * protocol layer (status + X-Experience-API-Version header), not persistence.
  */
 
+import { trace } from '@opentelemetry/api';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../../src/app.ts';
 import type { AppDeps } from '../../../src/app.ts';
@@ -85,6 +86,7 @@ function buildApp() {
     sessionSecret: 'test-secret',
     startedAt: new Date(),
     shutdownSignal: new AbortController().signal,
+    tracing: { enabled: false, tracer: trace.getTracer('noop'), shutdown: async () => {} },
   };
 
   return createApp(deps);
