@@ -15,6 +15,7 @@ import type { DbPool } from './db.ts';
 import { HttpError } from './db.ts';
 import type { LrsDeps } from './deps.ts';
 import { resolveClientIp } from './helpers/client-ip.ts';
+import { safeRoutePath } from './helpers/route-path.ts';
 import type { HonoEnv } from './hono-env.ts';
 import type { Logger } from './logger.ts';
 import type { LrsMetrics } from './metrics.ts';
@@ -53,19 +54,6 @@ function parseContentLength(value: string | null | undefined): number | undefine
   if (!value) return undefined;
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? n : undefined;
-}
-
-/**
- * Return the matched route pattern (e.g. `/xapi/statements/:statementId`).
- * Falls back to `c.req.path` for unmatched requests (404s, OPTIONS preflight, etc.)
- * where Hono's routePath getter is unavailable.
- */
-function safeRoutePath(c: { req: { routePath: string; path: string } }): string {
-  try {
-    return c.req.routePath || c.req.path;
-  } catch {
-    return c.req.path;
-  }
 }
 
 // ============================================================================
