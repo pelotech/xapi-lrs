@@ -63,7 +63,7 @@
     "adl-lrs-conformance-tests": "github:adlnet/lrs-conformance-test-suite#5bc232d349c60faded8240da698f195106091638",
     "dependency-cruiser": "^17.3.10",
     "fta-cli": "^3.0.0",
-    "oxfmt": "^0.47.0",
+    "oxfmt": "^0.57.0",
     "oxlint": "^1.62.0",
     "tsx": "^4.21.0",
     "typescript": "6.0.3",
