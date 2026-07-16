@@ -2,7 +2,7 @@ import { context, trace, SpanKind } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import type { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { poolQuery, setDbTracer } from '../../src/db.ts';
+import { poolQuery, setDbTracer, withClient } from '../../src/db.ts';
 import type { DbPool } from '../../src/db.ts';
 import type { LrsMetrics } from '../../src/metrics.ts';
 import { makeTestTracer } from './helpers/otel-test-tracer.ts';
@@ -48,6 +48,45 @@ describe('db query spans', () => {
 
   test('emits NO span when there is no active recording span (admin/data-plane gate)', async () => {
     await poolQuery(pool, metrics, { name: 'select_thing', text: 'SELECT 1' });
+    expect(exporter.getFinishedSpans()).toHaveLength(0);
+  });
+
+  test('instrumentQuery seam: a withClient transaction emits nested begin/query/commit spans', async () => {
+    const client = {
+      query: async () => ({ rows: [], rowCount: 0 }),
+      release: () => {},
+    };
+    const txPool = { connect: async () => client } as unknown as DbPool;
+
+    const parent = tracer.startSpan('parent');
+    await context.with(trace.setSpan(context.active(), parent), () =>
+      withClient(txPool, metrics, async (c) => {
+        await c.query({ name: 'select_x', text: 'SELECT 1' });
+      }),
+    );
+    parent.end();
+
+    const spans = exporter.getFinishedSpans();
+    const names = spans.map((s) => s.name);
+    // BEGIN and COMMIT flow through the same patched client.query, each a span.
+    expect(names).toContain('db.query begin');
+    expect(names).toContain('db.query select_x');
+    expect(names).toContain('db.query commit');
+
+    const querySpan = spans.find((s) => s.name === 'db.query select_x');
+    expect(querySpan!.kind).toBe(SpanKind.CLIENT);
+    expect(querySpan!.parentSpanContext?.spanId).toBe(parent.spanContext().spanId);
+  });
+
+  test('instrumentQuery seam: no spans without an active recording span (gate)', async () => {
+    const client = {
+      query: async () => ({ rows: [], rowCount: 0 }),
+      release: () => {},
+    };
+    const txPool = { connect: async () => client } as unknown as DbPool;
+    await withClient(txPool, metrics, async (c) => {
+      await c.query({ name: 'select_x', text: 'SELECT 1' });
+    });
     expect(exporter.getFinishedSpans()).toHaveLength(0);
   });
 });
