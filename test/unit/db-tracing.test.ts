@@ -3,7 +3,7 @@ import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-ho
 import type { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { poolQuery, setDbTracer, withClient } from '../../src/db.ts';
-import type { DbPool } from '../../src/db.ts';
+import type { DbPool, DbClient } from '../../src/db.ts';
 import type { LrsMetrics } from '../../src/metrics.ts';
 import { makeTestTracer } from './helpers/otel-test-tracer.ts';
 
@@ -76,6 +76,38 @@ describe('db query spans', () => {
     const querySpan = spans.find((s) => s.name === 'db.query select_x');
     expect(querySpan!.kind).toBe(SpanKind.CLIENT);
     expect(querySpan!.parentSpanContext?.spanId).toBe(parent.spanContext().spanId);
+  });
+
+  test('instrumentQuery seam: callback-form query passes through (pg-pool reuses patched clients)', async () => {
+    // node-pg clients support BOTH promise and callback forms. instrumentQuery
+    // permanently patches client.query, and a released client keeps the patch, so
+    // pool.query() later invokes it callback-style. The patch must not wrap that.
+    const rawClient = {
+      query: (_config: unknown, _values?: unknown, cb?: (e: unknown, r: unknown) => void) => {
+        if (typeof cb === 'function') {
+          cb(null, { rows: [], rowCount: 0 });
+          return undefined;
+        }
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      },
+      release: () => {},
+    };
+    const txPool = { connect: async () => rawClient } as unknown as DbPool;
+
+    let patched: DbClient | undefined;
+    await withClient(txPool, metrics, async (c) => {
+      patched = c;
+    });
+
+    // Simulate pg-pool invoking the still-patched, released client callback-style.
+    const callbackQuery = patched!.query as unknown as (...args: unknown[]) => unknown;
+    const result = await new Promise<unknown>((resolve, reject) => {
+      const ret = callbackQuery({ name: 'q', text: 'SELECT 1' }, undefined, (err: unknown, res: unknown) =>
+        err ? reject(err) : resolve(res),
+      );
+      expect(ret).toBeUndefined(); // callback form must return undefined, not a broken promise
+    });
+    expect(result).toEqual({ rows: [], rowCount: 0 });
   });
 
   test('instrumentQuery seam: no spans without an active recording span (gate)', async () => {

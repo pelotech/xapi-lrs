@@ -137,6 +137,16 @@ function instrumentQuery(client: DbClient, metrics: LrsMetrics): DbClient {
   client.query = ((...args: unknown[]) => {
     const queryName = extractQueryName(args[0]);
     const end = startTimer(metrics.dbQueryDuration, { query_name: queryName });
+    // Callback form: node-pg returns undefined and invokes the callback instead of
+    // returning a promise. pg-pool calls pooled clients this way internally, and this
+    // patch persists after a client is released back to the pool — so a later
+    // pool.query() can invoke it callback-style. Pass it straight through (no span,
+    // no `.then`) to avoid `Cannot read properties of undefined (reading 'then')`.
+    if (typeof args[args.length - 1] === 'function') {
+      const result = (originalQuery as Function)(...args);
+      end();
+      return result;
+    }
     return withDbSpan(queryName, () => (originalQuery as Function)(...args)).then(
       (res: unknown) => {
         end();
