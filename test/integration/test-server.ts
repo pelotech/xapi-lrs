@@ -8,6 +8,7 @@ import type { Server } from 'node:http';
 import type { PGlite } from '@electric-sql/pglite';
 import { serve } from '@hono/node-server';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import { trace } from '@opentelemetry/api';
 import { Hono } from 'hono';
 import pg from 'pg';
 import { pino } from 'pino';
@@ -150,6 +151,7 @@ export async function createLrsTestServer(opts?: LrsTestServerOptions): Promise<
     sessionSecret: 'test-secret',
     startedAt: new Date(),
     shutdownSignal: shutdownController.signal,
+    tracing: { enabled: false, tracer: trace.getTracer('noop'), shutdown: async () => {} },
   };
   const app = createApp(deps);
 

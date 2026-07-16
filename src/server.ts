@@ -6,6 +6,7 @@
 import { randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { serve } from '@hono/node-server';
+import { trace } from '@opentelemetry/api';
 import { Hono } from 'hono';
 import type { Logger } from 'pino';
 import {
@@ -169,6 +170,8 @@ async function main(): Promise<void> {
     sessionSecret,
     startedAt,
     shutdownSignal: shutdownController.signal,
+    // TODO(Task 7): replace with `initTracing()` + real shutdown wiring.
+    tracing: { enabled: false, tracer: trace.getTracer('noop'), shutdown: async () => {} },
   });
 
   // Log registered routes

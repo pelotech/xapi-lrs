@@ -22,12 +22,14 @@ import type { LrsMetrics } from './metrics.ts';
 import { authMiddleware } from './middleware/authentication.ts';
 import { scopeMiddleware } from './middleware/authorization.ts';
 import { rateLimitMiddleware } from './middleware/rate-limit.ts';
+import { tracingMiddleware } from './middleware/tracing.ts';
 import { createAboutApp } from './routes/about.ts';
 import { createActivitiesApp } from './routes/activities.ts';
 import { createAgentsApp } from './routes/agents.ts';
 import { createStatementsApp } from './routes/statements.ts';
 import type { Listener } from './sse/pg-listener.ts';
 import { createSseRoute } from './sse/sse-producer.ts';
+import type { TracingHandle } from './tracing.ts';
 import { parseMultipartMixed, extractBoundary } from './xapi/multipart.ts';
 import { LATEST_PATCH, LATEST_VERSION } from './xapi/versions.ts';
 import type { XapiVersion } from './xapi/versions.ts';
@@ -71,6 +73,7 @@ export interface AppDeps {
   sessionSecret: string;
   startedAt: Date;
   shutdownSignal: AbortSignal;
+  tracing: TracingHandle;
 }
 
 export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
@@ -331,6 +334,16 @@ export function createApp(deps: AppDeps): OpenAPIHono<HonoEnv> {
     c.header('X-Experience-API-Version', negotiated);
     return next();
   });
+
+  // --------------------------------------------------------------------------
+  // Tracing (xAPI data plane only, and only when enabled) — mounted after
+  // version negotiation so xapi.version is available, wrapping the rest of
+  // the chain.
+  // --------------------------------------------------------------------------
+
+  if (deps.tracing.enabled) {
+    app.use('/xapi/*', tracingMiddleware(deps.tracing.tracer));
+  }
 
   // --------------------------------------------------------------------------
   // Request body size limit — reject oversized payloads before reading
