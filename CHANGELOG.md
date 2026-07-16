@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.8.0](https://github.com/pelotech/xapi-lrs/compare/0.7.1...0.8.0) (2026-07-16)
+
+
+### Features
+
+* OpenTelemetry distributed tracing (OTLP, xAPI data plane) ([#81](https://github.com/pelotech/xapi-lrs/issues/81)) ([447fe74](https://github.com/pelotech/xapi-lrs/commit/447fe744ecf727c229e91be7735edfefc69f8d14))
+
+
+### Bug Fixes
+
+* ignore non-numeric port env vars (k8s service-link collision) ([#89](https://github.com/pelotech/xapi-lrs/issues/89)) ([4923126](https://github.com/pelotech/xapi-lrs/commit/49231262cf5276c36f1ff0044c836eda259e187f))
+
+
+### Chores
+
+* adopt stable TypeScript 7 native compiler; drop native-preview ([#88](https://github.com/pelotech/xapi-lrs/issues/88)) ([e441b8c](https://github.com/pelotech/xapi-lrs/commit/e441b8c2878b30f4b19a893ecd2bdccdf043b394))
+* **deps:** update actions/checkout digest to df4cb1c ([#84](https://github.com/pelotech/xapi-lrs/issues/84)) ([f747ba4](https://github.com/pelotech/xapi-lrs/commit/f747ba4a24c47f4362bb80a21f014332157e8610))
+* **deps:** update actions/setup-node digest to 2499707 ([#86](https://github.com/pelotech/xapi-lrs/issues/86)) ([8b3367a](https://github.com/pelotech/xapi-lrs/commit/8b3367a488fbfce4b78b9cda766e4d80f992c16b))
+* **deps:** update all npm patch dependencies ([#64](https://github.com/pelotech/xapi-lrs/issues/64)) ([3dde5c6](https://github.com/pelotech/xapi-lrs/commit/3dde5c6104e7571d012d55eac098a53d17d0c684))
+* **deps:** update dependency oxlint to v1.72.0 ([#66](https://github.com/pelotech/xapi-lrs/issues/66)) ([919c458](https://github.com/pelotech/xapi-lrs/commit/919c458f755aa33e694fd0e853aab08593485adc))
+* **deps:** update docker/build-push-action digest to 53b7df9 ([#68](https://github.com/pelotech/xapi-lrs/issues/68)) ([293064c](https://github.com/pelotech/xapi-lrs/commit/293064c229361173eb2f043a72e30cfb2f58e310))
+* **deps:** update docker/login-action digest to af1e73f ([#69](https://github.com/pelotech/xapi-lrs/issues/69)) ([a32cf56](https://github.com/pelotech/xapi-lrs/commit/a32cf56f3a58c5f16cc3fa8f3b9ff41d1d95a6a7))
+* **deps:** update docker/metadata-action digest to dc80280 ([#70](https://github.com/pelotech/xapi-lrs/issues/70)) ([4e908c5](https://github.com/pelotech/xapi-lrs/commit/4e908c55cc7d25d96a8c333e73d6c0e14ad79ef4))
+* **deps:** update oxfmt to ^0.57.0; exclude vendored assets from formatting ([#85](https://github.com/pelotech/xapi-lrs/issues/85)) ([6521481](https://github.com/pelotech/xapi-lrs/commit/652148106c56ac3da05facfde27e77f238e87dc7))
+* **deps:** update pnpm/action-setup digest to 0ebf471 ([#44](https://github.com/pelotech/xapi-lrs/issues/44)) ([ddc349f](https://github.com/pelotech/xapi-lrs/commit/ddc349f9a68ed38a6c935fbcbbf633426f5bebf3))
+* gitignore .claude/ local agent workspace ([#78](https://github.com/pelotech/xapi-lrs/issues/78)) ([509d3e1](https://github.com/pelotech/xapi-lrs/commit/509d3e14fa29a5217d68fa6aa7d5639be9c325ce))
+
 ## [0.7.1](https://github.com/pelotech/xapi-lrs/compare/v0.7.0...0.7.1) (2026-07-15)
 
 
