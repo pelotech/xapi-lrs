@@ -20,7 +20,7 @@ importers:
         version: 2.0.10(hono@4.12.30)
       '@hono/zod-openapi':
         specifier: ^1.3.0
-        version: 1.4.0(hono@4.12.30)(zod@4.4.3)
+        version: 1.5.1(hono@4.12.30)(zod@4.4.3)
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
@@ -285,17 +285,17 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hono/zod-openapi@1.4.0':
-    resolution: {integrity: sha512-AFchqR1N/NxfI4hUOSGI2/g8zLROxA1OE7Oh5JJFlTaGxhrdRyH+93gd0tIBpb0z8s9r8hUoNnaOBfHbdb4NMw==}
+  '@hono/zod-openapi@1.5.1':
+    resolution: {integrity: sha512-ZaDdEIkn6PEGjIYHXJeyByg6yhvLzI+UXn968pWtahpwcQ6HMjQYXI3zNffTl0Wl9QZ79nUnGqiN1erEIu23fA==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       hono: '>=4.10.0'
       zod: ^4.0.0
 
-  '@hono/zod-validator@0.8.0':
-    resolution: {integrity: sha512-5uS4S1/LKtZQYvD4BtpPUFkOv8d1wNxHHrChm26buMiEYc1FrHWvDUaKVBwkiVtvSExHSpLGDvcnpI2Copyj9w==}
+  '@hono/zod-validator@0.9.0':
+    resolution: {integrity: sha512-n0ZSXmCiHVIp4Y5wlOOyZCeTd/rsawA/qW1cipB8QOYKZ9N8Tk0nZUZCXho9cu374AN4JpDNKioNKBJ/W+LBug==}
     peerDependencies:
-      hono: '>=4.10.0'
+      hono: '>=4.11.2'
       zod: ^3.25.0 || ^4.0.0
 
   '@jridgewell/sourcemap-codec@1.5.5':
@@ -942,7 +942,7 @@ packages:
     hasBin: true
 
   adl-lrs-conformance-tests@https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
+    resolution: {gitHosted: true, integrity: sha512-AdXlh1Wp2uauVYtNhq2g3TsAc11yMg6ZHYPU7GeIkOCmaH0hkyzCMI02zTnc3xfST6csJ7aiWSkkmb1saJqA2Q==, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
     version: 2.0.0-1
     hasBin: true
 
@@ -2256,7 +2256,7 @@ packages:
     engines: {node: '>=4'}
 
   super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b}
+    resolution: {gitHosted: true, integrity: sha512-+2f90qQi+oeix32Z7WLzRhW+STtmoRMyRq2exS/TUVHmpZjlQLNSSEEMSi3swRzunnXqaPWSWYfOHp2oKm1tbQ==, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b}
     version: 0.0.8
 
   superagent-oauth@0.2.3:
@@ -2275,7 +2275,7 @@ packages:
       supertest: '*'
 
   supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2}
+    resolution: {gitHosted: true, integrity: sha512-qZGsSFtiKEN0mB+nPcOotgyUV2mCK+VheJzHUUyIcLJ7IKeJHtKM60sis06WAFFjsVikgzktZCKmRfj+AZy+zQ==, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2}
     version: 1.2.0
     engines: {node: '>=0.10.0'}
 
@@ -2656,15 +2656,15 @@ snapshots:
     dependencies:
       hono: 4.12.30
 
-  '@hono/zod-openapi@1.4.0(hono@4.12.30)(zod@4.4.3)':
+  '@hono/zod-openapi@1.5.1(hono@4.12.30)(zod@4.4.3)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.5.0(zod@4.4.3)
-      '@hono/zod-validator': 0.8.0(hono@4.12.30)(zod@4.4.3)
+      '@hono/zod-validator': 0.9.0(hono@4.12.30)(zod@4.4.3)
       hono: 4.12.30
       openapi3-ts: 4.6.0
       zod: 4.4.3
 
-  '@hono/zod-validator@0.8.0(hono@4.12.30)(zod@4.4.3)':
+  '@hono/zod-validator@0.9.0(hono@4.12.30)(zod@4.4.3)':
     dependencies:
       hono: 4.12.30
       zod: 4.4.3
