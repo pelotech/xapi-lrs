@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.2](https://github.com/pelotech/xapi-lrs/compare/0.8.1...0.8.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @electric-sql/pglite to ^0.5.0 ([#108](https://github.com/pelotech/xapi-lrs/issues/108)) ([323b8ec](https://github.com/pelotech/xapi-lrs/commit/323b8ec4b38c8d71a505b213d94011f9e0d990e5))
+
+
+### Chores
+
+* **deps:** update actions/checkout action to v7 ([#109](https://github.com/pelotech/xapi-lrs/issues/109)) ([ab8485c](https://github.com/pelotech/xapi-lrs/commit/ab8485ca4334a336a40cc1663009f46a401bcfc3))
+* **deps:** update actions/setup-node action to v7 ([#110](https://github.com/pelotech/xapi-lrs/issues/110)) ([e566dee](https://github.com/pelotech/xapi-lrs/commit/e566dee5bd262948bcfbc670a556e9ab88bb7769))
+* **deps:** update all npm patch dependencies ([#101](https://github.com/pelotech/xapi-lrs/issues/101)) ([5f87a81](https://github.com/pelotech/xapi-lrs/commit/5f87a817b29af3d1c2a79425598e74d44f740257))
+* **deps:** update dependency @hono/zod-openapi to v1.5.1 ([#102](https://github.com/pelotech/xapi-lrs/issues/102)) ([e551e47](https://github.com/pelotech/xapi-lrs/commit/e551e47f7c41db88979b972d3d34f0c840520602))
+* **deps:** update dependency dependency-cruiser to v18 ([#111](https://github.com/pelotech/xapi-lrs/issues/111)) ([607b6db](https://github.com/pelotech/xapi-lrs/commit/607b6db4458be0d6260d4ed0a8cf6d2d0abf28f9))
+* **deps:** update dependency oxfmt to ^0.59.0 ([#103](https://github.com/pelotech/xapi-lrs/issues/103)) ([db4fec2](https://github.com/pelotech/xapi-lrs/commit/db4fec2677f9550044cc314af65fbe4edd46c7f6))
+* **deps:** update dependency oxlint to v1.74.0 ([#104](https://github.com/pelotech/xapi-lrs/issues/104)) ([90d521d](https://github.com/pelotech/xapi-lrs/commit/90d521d878188edbe425278e2a106d00b022b615))
+* **deps:** update dependency tsx to v4.23.1 ([#105](https://github.com/pelotech/xapi-lrs/issues/105)) ([2198b27](https://github.com/pelotech/xapi-lrs/commit/2198b271255670c8e9bc4bcd5f16ec50f97a0c60))
+* **deps:** update node.js to v24.18.0 ([#106](https://github.com/pelotech/xapi-lrs/issues/106)) ([9ae76c7](https://github.com/pelotech/xapi-lrs/commit/9ae76c75a35084dd5a4526c8ccb809f021586a50))
+* **deps:** update pnpm to v10.34.4 ([#107](https://github.com/pelotech/xapi-lrs/issues/107)) ([1138769](https://github.com/pelotech/xapi-lrs/commit/11387691023ca9f90b8783c71a5fba21d9be5369))
+
 ## [0.8.1](https://github.com/pelotech/xapi-lrs/compare/0.8.0...0.8.1) (2026-07-17)
 
 
