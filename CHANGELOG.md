@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.8.1](https://github.com/pelotech/xapi-lrs/compare/0.8.0...0.8.1) (2026-07-17)
+
+
+### Chores
+
+* **deps:** update actions/attest-build-provenance action to v4.1.1 ([#92](https://github.com/pelotech/xapi-lrs/issues/92)) ([68ce218](https://github.com/pelotech/xapi-lrs/commit/68ce218f9f5827dd3881a8bbf93c9af2bfc59d0f))
+* **deps:** update dependency @hono/node-server to v2.0.8 ([#94](https://github.com/pelotech/xapi-lrs/issues/94)) ([4ef9b13](https://github.com/pelotech/xapi-lrs/commit/4ef9b13ef4c4f0fa8aad7fd475ee0fd8e8af322f))
+* **deps:** update dependency @hono/zod-openapi to v1.4.0 ([#93](https://github.com/pelotech/xapi-lrs/issues/93)) ([e46e3bc](https://github.com/pelotech/xapi-lrs/commit/e46e3bc7fd7367f9b23f1648878ddd758bf2f2ca))
+* **deps:** update dependency @types/node to v24.13.2 ([#95](https://github.com/pelotech/xapi-lrs/issues/95)) ([0d09079](https://github.com/pelotech/xapi-lrs/commit/0d090799d6affc342645ce44bfe0839d935ff32b))
+* **deps:** update dependency pg to v8.22.0 ([#96](https://github.com/pelotech/xapi-lrs/issues/96)) ([2e7f0b5](https://github.com/pelotech/xapi-lrs/commit/2e7f0b50b3b9fdc9b46065f3c35c39fe216f2511))
+* **deps:** update dependency tsx to v4.22.5 ([#99](https://github.com/pelotech/xapi-lrs/issues/99)) ([babac11](https://github.com/pelotech/xapi-lrs/commit/babac1106665ec6ac142722e4f36b59ae58e7f1c))
+* **deps:** update docker/setup-buildx-action digest to bb05f3f ([#91](https://github.com/pelotech/xapi-lrs/issues/91)) ([57cfa94](https://github.com/pelotech/xapi-lrs/commit/57cfa9400edf48f85705f6af9a83c44badcd5711))
+* **deps:** update node.js to v24.17.0 ([#100](https://github.com/pelotech/xapi-lrs/issues/100)) ([a00c5b1](https://github.com/pelotech/xapi-lrs/commit/a00c5b13826c84ab8f178ac638803179b5dddaef))
+
+
+### Tests
+
+* cover /xapi/stream SSE endpoint under the tracing middleware ([#97](https://github.com/pelotech/xapi-lrs/issues/97)) ([fb9b09c](https://github.com/pelotech/xapi-lrs/commit/fb9b09ca7c2cc49dcc5571130fad26d313445f24))
+
 ## [0.8.0](https://github.com/pelotech/xapi-lrs/compare/0.7.1...0.8.0) (2026-07-16)
 
 
