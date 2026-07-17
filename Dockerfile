@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Install ALL dependencies (dev + prod) for the build stage
 # ------------------------------------------------------------------------------
-FROM node:24.17.0-slim AS deps
+FROM node:24.18.0-slim AS deps
 
 ENV CI=true
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -38,7 +38,7 @@ RUN pnpm install --frozen-lockfile --prod
 # ------------------------------------------------------------------------------
 # Stage 4: Runtime
 # ------------------------------------------------------------------------------
-FROM node:24.17.0-slim AS runtime
+FROM node:24.18.0-slim AS runtime
 
 WORKDIR /app
 
