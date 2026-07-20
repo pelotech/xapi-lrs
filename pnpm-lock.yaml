@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
+  adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#6f960beb4d62643a6444535bb1a81c5c2f4cfde8
   adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
 
 importers:
@@ -1109,9 +1109,9 @@ packages:
     resolution: {integrity: sha512-a+UqTh4kgZg/SlGvfbzDHpgRu7AAQOmmqRHJnxhRZICKFUT91brVhNNt58CMWU9PsBbv3PDCZUHbVxuDiH2mtA==}
     engines: {node: '>=0.1.90'}
 
-  comb@0.3.6:
-    resolution: {integrity: sha512-HR4o0RzfnQSxTtKjBlZkULEuwn7GopGFGo/sNmSrJXKO9m3KPNFa5wXfQlR0y48a8xkrv4nwJ7Cp5IzXnIpQ9A==}
-    engines: {node: '>= 0.6.1'}
+  comb@1.0.1:
+    resolution: {integrity: sha512-VJ5P7M5a0JhIPaxxl1vI+oFPHHxFgXs1vlpT9VJVsnV1pwKkvK3m2iNflFtYrvMfi2Jx/QGdyxVq7zjC2svNRA==}
+    engines: {node: '>= 4.0.0'}
 
   comb@1.2.0:
     resolution: {integrity: sha512-ck46VTr9Hd5+7AbhESL/YTf83UIsm2wrSNd/1T+Tv6pOvTfNcZFQtVTSfKI0KG6a2b15W8vkzDxvKUL4QCi4UQ==}
@@ -2255,9 +2255,10 @@ packages:
     resolution: {integrity: sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==}
     engines: {node: '>=4'}
 
-  super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b:
-    resolution: {gitHosted: true, integrity: sha512-+2f90qQi+oeix32Z7WLzRhW+STtmoRMyRq2exS/TUVHmpZjlQLNSSEEMSi3swRzunnXqaPWSWYfOHp2oKm1tbQ==, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b}
-    version: 0.0.8
+  super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/6f960beb4d62643a6444535bb1a81c5c2f4cfde8:
+    resolution: {gitHosted: true, integrity: sha512-THzUSLCgVQSwbnSvEaYLH22MosJHI84t32RZhkyjQAC89qImPn/I/PDfLd3bHxfpIt/KblXrYSqQsgMXrJlXSA==, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/6f960beb4d62643a6444535bb1a81c5c2f4cfde8}
+    version: 1.1.0
+    engines: {node: '>=4.0.0'}
 
   superagent-oauth@0.2.3:
     resolution: {integrity: sha512-3Y/QAloLUq6e303Nj2pwnEF2oMXLaT2dKbyUMIJokgbgNOmaFpNORRX4AEfBL2oFoeB1rYXBrIVM3Jx9zuK7Tg==}
@@ -3126,7 +3127,7 @@ snapshots:
       request: 2.88.2
       should: 4.6.5
       string: 3.3.3
-      super-request: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b
+      super-request: https://codeload.github.com/rchadwic/super-request/tar.gz/6f960beb4d62643a6444535bb1a81c5c2f4cfde8
       superagent-oauth: 0.2.3
       supertest: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
       supertest-as-promised: 1.0.0(supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2)
@@ -3309,7 +3310,7 @@ snapshots:
 
   colors@1.4.0: {}
 
-  comb@0.3.6: {}
+  comb@1.0.1: {}
 
   comb@1.2.0: {}
 
@@ -4479,9 +4480,9 @@ snapshots:
 
   strip-bom@3.0.0: {}
 
-  super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b:
+  super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/6f960beb4d62643a6444535bb1a81c5c2f4cfde8:
     dependencies:
-      comb: 0.3.6
+      comb: 1.0.1
       methods: 0.1.0
       request: 2.34.0
 
