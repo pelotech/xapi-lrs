@@ -6,7 +6,7 @@ settings:
 
 overrides:
   adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
-  adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
+  adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#f02f699b09376ae4b3e6f0758c302b68f7733c55
 
 importers:
 
@@ -942,7 +942,7 @@ packages:
     hasBin: true
 
   adl-lrs-conformance-tests@https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638:
-    resolution: {gitHosted: true, integrity: sha512-AdXlh1Wp2uauVYtNhq2g3TsAc11yMg6ZHYPU7GeIkOCmaH0hkyzCMI02zTnc3xfST6csJ7aiWSkkmb1saJqA2Q==, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
     version: 2.0.0-1
     hasBin: true
 
@@ -2274,8 +2274,8 @@ packages:
     peerDependencies:
       supertest: '*'
 
-  supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2:
-    resolution: {gitHosted: true, integrity: sha512-qZGsSFtiKEN0mB+nPcOotgyUV2mCK+VheJzHUUyIcLJ7IKeJHtKM60sis06WAFFjsVikgzktZCKmRfj+AZy+zQ==, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2}
+  supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55:
+    resolution: {gitHosted: true, integrity: sha512-7rLKo7JKiruXuUqE7tIP/iACrCkmfWXRaoAVpwLZZAK0Ft2srSPflE9LphNfePXgmf+0n3r0stiwTsNsBnBZyA==, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55}
     version: 1.2.0
     engines: {node: '>=0.10.0'}
 
@@ -3128,8 +3128,8 @@ snapshots:
       string: 3.3.3
       super-request: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b
       superagent-oauth: 0.2.3
-      supertest: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
-      supertest-as-promised: 1.0.0(supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2)
+      supertest: https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55
+      supertest-as-promised: 1.0.0(supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55)
       uuid: 9.0.1
       validator: 5.7.0
     transitivePeerDependencies:
@@ -4503,13 +4503,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  supertest-as-promised@1.0.0(supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2):
+  supertest-as-promised@1.0.0(supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55):
     dependencies:
       bluebird: 1.2.4
       methods: 1.1.2
-      supertest: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
+      supertest: https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55
 
-  supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2:
+  supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/f02f699b09376ae4b3e6f0758c302b68f7733c55:
     dependencies:
       methods: 1.1.2
       superagent: 1.8.5
