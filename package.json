@@ -71,7 +71,7 @@
   "packageManager": "pnpm@10.34.4",
   "pnpm": {
     "overrides": {
-      "adl-lrs-conformance-tests>super-request": "github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b",
+      "adl-lrs-conformance-tests>super-request": "github:rchadwic/super-request#6f960beb4d62643a6444535bb1a81c5c2f4cfde8",
       "adl-lrs-conformance-tests>supertest": "github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2"
     }
   }
