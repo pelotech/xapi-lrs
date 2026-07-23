@@ -1,0 +1,226 @@
+{{- if and (eq .Values.database.driver "pglite") (gt (int .Values.replicaCount) 1) }}
+{{- fail "database.driver=pglite requires replicaCount=1" }}
+{{- end }}
+{{- if and (eq .Values.nodeEnv "production") .Values.cors.enabled (or (not .Values.cors.origin) (eq .Values.cors.origin "*")) }}
+{{- fail "cors.origin must be set (and not \"*\") when cors.enabled=true and nodeEnv=production" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xapi-lrs.fullname" . }}
+  labels:
+    {{- include "xapi-lrs.labels" . | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  {{- if .Values.updateStrategy }}
+  strategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- else if and (eq .Values.database.driver "pglite") .Values.persistence.enabled }}
+  strategy:
+    type: Recreate
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "xapi-lrs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "xapi-lrs.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "xapi-lrs.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.migration.enabled (eq .Values.database.driver "pg") }}
+      initContainers:
+        - name: migrate
+          image: {{ include "xapi-lrs.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command: ["node", "dist/migrate.js"]
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            {{- $migUrl := .Values.migration.postgresql.url | default .Values.database.postgresql.url }}
+            {{- if $migUrl }}
+            - name: DATABASE_URL
+              value: {{ $migUrl | quote }}
+            {{- else }}
+            - name: PGHOST
+              value: {{ .Values.database.postgresql.host | quote }}
+            - name: PGPORT
+              value: {{ .Values.database.postgresql.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: PGUSER
+              value: {{ .Values.migration.postgresql.user | default .Values.database.postgresql.user | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xapi-lrs.secretName" . }}
+                  {{- if or .Values.migration.postgresql.user .Values.migration.postgresql.password }}
+                  key: {{ .Values.auth.existingSecretKeys.migrationPostgresqlPassword }}
+                  {{- else }}
+                  key: {{ .Values.auth.existingSecretKeys.postgresqlPassword }}
+                  {{- end }}
+            {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "xapi-lrs.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: XAPI_LRS_PORT
+              value: {{ .Values.containerPorts.http | quote }}
+            - name: XAPI_LRS_ADMIN_PORT
+              value: {{ .Values.containerPorts.admin | quote }}
+            {{- if .Values.nodeEnv }}
+            - name: NODE_ENV
+              value: {{ .Values.nodeEnv | quote }}
+            {{- end }}
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: CORS_ENABLED
+              value: {{ .Values.cors.enabled | quote }}
+            {{- if .Values.cors.origin }}
+            - name: CORS_ORIGIN
+              value: {{ .Values.cors.origin | quote }}
+            {{- end }}
+            - name: XAPI_LRS_ADMIN_USER
+              value: {{ .Values.auth.adminUser | quote }}
+            - name: XAPI_LRS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xapi-lrs.secretName" . }}
+                  key: {{ .Values.auth.existingSecretKeys.adminPassword }}
+            - name: ADMIN_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xapi-lrs.secretName" . }}
+                  key: {{ .Values.auth.existingSecretKeys.sessionSecret }}
+            {{- if .Values.auth.apiKey }}
+            - name: XAPI_LRS_API_KEY_DEFAULT
+              value: {{ .Values.auth.apiKey | quote }}
+            - name: XAPI_LRS_API_SECRET_DEFAULT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xapi-lrs.secretName" . }}
+                  key: {{ .Values.auth.existingSecretKeys.apiSecret }}
+            {{- end }}
+            {{- if eq .Values.database.driver "pglite" }}
+            - name: DATABASE_DRIVER
+              value: pglite
+            {{- if .Values.persistence.enabled }}
+            - name: PGLITE_DATA_DIR
+              value: {{ .Values.persistence.mountPath | quote }}
+            {{- end }}
+            {{- else }}
+            {{- if .Values.database.postgresql.url }}
+            - name: DATABASE_URL
+              value: {{ .Values.database.postgresql.url | quote }}
+            {{- else }}
+            - name: PGHOST
+              value: {{ .Values.database.postgresql.host | quote }}
+            - name: PGPORT
+              value: {{ .Values.database.postgresql.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: PGUSER
+              value: {{ .Values.database.postgresql.user | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "xapi-lrs.secretName" . }}
+                  key: {{ .Values.auth.existingSecretKeys.postgresqlPassword }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+          envFrom:
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ .Values.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPorts.http }}
+            - name: admin
+              containerPort: {{ .Values.containerPorts.admin }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- $pgliteVol := and (eq .Values.database.driver "pglite") .Values.persistence.enabled }}
+          {{- if or $pgliteVol .Values.volumeMounts }}
+          volumeMounts:
+            {{- if $pgliteVol }}
+            - name: pglite-data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or $pgliteVol .Values.volumes }}
+      volumes:
+        {{- if $pgliteVol }}
+        - name: pglite-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "xapi-lrs.fullname" .) }}
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

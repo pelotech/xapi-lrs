@@ -1,0 +1,21 @@
+{{ template "chart.header" . }}
+
+### version: {{ template "chart.version" . }}<!-- x-release-please-version -->
+
+{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+## Installing
+
+```shell
+helm install xapi-lrs oci://ghcr.io/pelotech/xapi-lrs/charts/xapi-lrs
+```
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}

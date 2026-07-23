@@ -6,6 +6,7 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
+        exclude: ^charts/[^/]+/templates/
       - id: check-json
       - id: check-added-large-files
       - id: forbid-submodules
@@ -15,6 +16,7 @@ repos:
     hooks:
       - id: yamllint
         args: [--strict, -c=.yamllint]
+        exclude: ^charts/[^/]+/templates/
 
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.24.0
