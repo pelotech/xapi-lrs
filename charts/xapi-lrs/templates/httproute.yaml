@@ -1,0 +1,61 @@
+{{- if .Values.gateway.enabled }}
+{{- if and .Values.gateway.listenerSet.enabled (or .Values.gateway.httpRoute.gatewayName .Values.gateway.httpRoute.gatewayNamespace .Values.gateway.httpRoute.sectionName .Values.gateway.httpRoute.port) }}
+{{- fail "gateway.httpRoute.gatewayName/gatewayNamespace/sectionName/port are ignored when gateway.listenerSet.enabled is true — remove them or disable listenerSet" }}
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "xapi-lrs.fullname" . }}
+  labels:
+    {{- include "xapi-lrs.labels" . | nindent 4 }}
+  {{- if or .Values.gateway.httpRoute.annotations .Values.commonAnnotations }}
+  annotations:
+    {{- with .Values.commonAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.gateway.httpRoute.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- if .Values.gateway.listenerSet.enabled }}
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: {{ include "xapi-lrs.fullname" . }}
+    {{- else }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.gateway.httpRoute.gatewayName | required "gateway.httpRoute.gatewayName is required when gateway.enabled is true and gateway.listenerSet.enabled is false" }}
+      {{- with .Values.gateway.httpRoute.gatewayNamespace }}
+      namespace: {{ . }}
+      {{- end }}
+      {{- with .Values.gateway.httpRoute.sectionName }}
+      sectionName: {{ . }}
+      {{- end }}
+      {{- with .Values.gateway.httpRoute.port }}
+      port: {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- if or .Values.gateway.hostname .Values.gateway.httpRoute.extraHostnames }}
+  hostnames:
+    {{- with .Values.gateway.hostname }}
+    - {{ . | quote }}
+    {{- end }}
+    {{- range .Values.gateway.httpRoute.extraHostnames }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- if .Values.gateway.httpRoute.rules }}
+    {{- toYaml .Values.gateway.httpRoute.rules | nindent 4 }}
+    {{- else }}
+    - matches:
+        - path:
+            type: {{ .Values.gateway.httpRoute.pathType }}
+            value: {{ .Values.gateway.httpRoute.path }}
+      backendRefs:
+        - name: {{ include "xapi-lrs.fullname" . }}
+          port: {{ .Values.service.ports.http }}
+    {{- end }}
+{{- end }}

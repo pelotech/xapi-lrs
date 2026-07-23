@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xapi-lrs.fullname" . }}
+  labels:
+    {{- include "xapi-lrs.labels" . | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.ports.http }}
+      targetPort: {{ .Values.service.targetPort.http }}
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.http }}
+      nodePort: {{ .Values.service.nodePorts.http }}
+      {{- end }}
+    - name: admin
+      port: {{ .Values.service.ports.admin }}
+      targetPort: {{ .Values.service.targetPort.admin }}
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.admin }}
+      nodePort: {{ .Values.service.nodePorts.admin }}
+      {{- end }}
+  selector:
+    {{- include "xapi-lrs.selectorLabels" . | nindent 4 }}

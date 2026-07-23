@@ -1,0 +1,42 @@
+1. Get the xAPI endpoint:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostname }}{{ .Values.ingress.path }}
+{{- else if and .Values.gateway.enabled .Values.gateway.hostname }}
+  http{{ if .Values.gateway.listenerSet.enabled }}s{{ end }}://{{ .Values.gateway.hostname }}{{ .Values.gateway.httpRoute.path }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[?(@.name==\"http\")].nodePort}" services {{ include "xapi-lrs.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo "http://$NODE_IP:$NODE_PORT"
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "xapi-lrs.fullname" . }} -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  echo "http://$SERVICE_IP:{{ .Values.service.ports.http }}"
+{{- else }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "xapi-lrs.fullname" . }} 8081:{{ .Values.service.ports.http }}
+  # http://127.0.0.1:8081
+{{- end }}
+
+   The admin UI is served under /admin on that same endpoint.
+
+2. The admin port serves unauthenticated /healthz, /readyz, and /metrics, and is
+   not routed externally. Reach it with a port-forward:
+
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "xapi-lrs.fullname" . }} 8091:{{ .Values.service.ports.admin }}
+  # http://127.0.0.1:8091/metrics
+
+{{- if eq .Values.database.driver "pglite" }}
+
+Running in PGlite mode (embedded, single-connection); not recommended for production.
+{{- if not .Values.persistence.enabled }}
+Data is in an emptyDir and will not survive a pod restart; set persistence.enabled=true
+to keep it on a PVC.
+{{- end }}
+{{- end }}
+
+{{- if and (not .Values.auth.sessionSecret) (not .Values.auth.existingSecret) }}
+
+The admin session secret was generated automatically. It stays stable across
+`helm upgrade`, but not under GitOps tools that render with `helm template`
+(Argo CD, Flux), where it is regenerated on every sync. For those, set
+auth.sessionSecret or auth.existingSecret.
+{{- end }}

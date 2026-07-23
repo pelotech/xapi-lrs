@@ -1,0 +1,426 @@
+# Default values for xapi-lrs.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## @param replicaCount Number of xapi-lrs replicas to deploy. Must be 1 when database.driver=pglite.
+##
+replicaCount: 1
+
+## @param updateStrategy Deployment update strategy. Defaults to Recreate in pglite mode with persistence
+## (a ReadWriteOnce volume cannot attach to a new pod while the old one holds it), RollingUpdate otherwise.
+## e.g:
+## updateStrategy:
+##   type: RollingUpdate
+##   rollingUpdate:
+##     maxUnavailable: 0
+##
+updateStrategy: {}
+
+image:
+  ## @param image.registry Container image registry
+  ##
+  registry: ghcr.io
+  ## @param image.repository Container image repository
+  ##
+  repository: pelotech/xapi-lrs
+  ## @param image.tag Container image tag
+  ##
+  tag: 0.8.2
+  ## @param image.digest Image digest in the form sha256:aaaa... . When set, takes precedence over image.tag
+  ##
+  digest: 'sha256:3acf00ab8e9de12046492f25aa2cd0738c891373839876d77fadea8ba82107b2'
+  ## @param image.pullPolicy Image pull policy
+  ##
+  pullPolicy: IfNotPresent
+  ## @param image.pullSecrets Image pull secrets
+  ## e.g:
+  ## pullSecrets:
+  ##   - name: ghcr-credentials
+  ##
+  pullSecrets: []
+
+## @param nameOverride String to partially override the fullname template (release name is kept)
+##
+nameOverride: ''
+## @param fullnameOverride String to fully override the fullname template
+##
+fullnameOverride: ''
+
+serviceAccount:
+  ## @param serviceAccount.create Whether to create a ServiceAccount
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the ServiceAccount to use. If not set and create is true, a name is generated
+  ##
+  name: ''
+  ## @param serviceAccount.annotations Annotations to add to the ServiceAccount
+  ##
+  annotations: {}
+
+## @param automountServiceAccountToken Mount the ServiceAccount token in the pod. The app needs no Kubernetes API access.
+##
+automountServiceAccountToken: false
+
+## @param enableServiceLinks Inject Kubernetes service-link env vars into the pod. Kept false because the Service
+## name uppercases to XAPI_LRS_, so a link var (XAPI_LRS_PORT=tcp://...) would collide with the app's config and crash it.
+##
+enableServiceLinks: false
+
+containerPorts:
+  ## @param containerPorts.http xAPI HTTP API port (XAPI_LRS_PORT)
+  ##
+  http: 8081
+  ## @param containerPorts.admin Health and metrics port (XAPI_LRS_ADMIN_PORT). Serves unauthenticated
+  ## /healthz, /readyz, /metrics. The admin UI is on the http port at /admin, not here.
+  ##
+  admin: 8091
+
+## @param nodeEnv Sets NODE_ENV. In "production" the app requires a session secret and a non-wildcard
+## CORS origin when CORS is enabled.
+##
+nodeEnv: 'production'
+
+## @param logLevel Application log level (silent/fatal/error/warn/info/debug/trace) -> LOG_LEVEL
+##
+logLevel: info
+
+cors:
+  ## @param cors.enabled Enable CORS handling in the app (CORS_ENABLED). When false, CORS is left to the proxy.
+  ##
+  enabled: false
+  ## @param cors.origin Allowed CORS origin (CORS_ORIGIN). Required (non-"*") when cors.enabled=true and nodeEnv=production.
+  ##
+  origin: ''
+
+database:
+  ## @param database.driver Database driver: "pg" (external PostgreSQL) or "pglite" (embedded, single-connection)
+  ##
+  driver: pg
+  postgresql:
+    ## @param database.postgresql.host PostgreSQL host (PGHOST). Ignored when database.postgresql.url is set.
+    ##
+    host: postgres
+    ## @param database.postgresql.port PostgreSQL port (PGPORT)
+    ##
+    port: 5432
+    ## @param database.postgresql.database PostgreSQL database name (PGDATABASE)
+    ##
+    database: xapi_lrs
+    ## @param database.postgresql.user Runtime (DML) PostgreSQL user (PGUSER)
+    ##
+    user: xapi_lrs
+    ## @param database.postgresql.password Runtime (DML) PostgreSQL password (PGPASSWORD). Stored in the chart Secret.
+    ##
+    password: ''
+    ## @param database.postgresql.url Full connection string (DATABASE_URL). Overrides the PG* settings above.
+    ## Rendered as a plain env value, so any embedded password is visible in the pod spec.
+    ##
+    url: ''
+
+migration:
+  ## @param migration.enabled Run schema migrations in an init container before the app starts.
+  ## Skipped when database.driver=pglite.
+  ##
+  enabled: true
+  ## Credentials for the migration init container, for running migrations as a role
+  ## with DDL permissions. Each falls back to its database.postgresql counterpart when empty.
+  postgresql:
+    ## @param migration.postgresql.user PostgreSQL user for migrations
+    ##
+    user: ''
+    ## @param migration.postgresql.password PostgreSQL password for migrations
+    ##
+    password: ''
+    ## @param migration.postgresql.url Full connection string for migrations (DATABASE_URL on the init container).
+    ## Like database.postgresql.url, any embedded password is visible in the pod spec.
+    ##
+    url: ''
+
+auth:
+  ## @param auth.adminUser Bootstrap admin username (XAPI_LRS_ADMIN_USER)
+  ##
+  adminUser: admin
+  ## @param auth.adminPassword Bootstrap admin password (XAPI_LRS_ADMIN_PASSWORD). Stored in the chart Secret.
+  ##
+  adminPassword: ''
+  ## @param auth.sessionSecret Admin session secret (ADMIN_SESSION_SECRET).
+  ## If empty, a random value is generated on install and reused on upgrades via a cluster lookup.
+  ## That lookup only works with `helm install`/`helm upgrade`; under GitOps (Argo/Flux render with
+  ## `helm template`) the value is regenerated on every sync, so set this explicitly or use auth.existingSecret.
+  ##
+  sessionSecret: ''
+  ## @param auth.apiKey Bootstrap xAPI credential key (XAPI_LRS_API_KEY_DEFAULT). Leave empty to not bootstrap a credential.
+  ##
+  apiKey: ''
+  ## @param auth.apiSecret Bootstrap xAPI credential secret (XAPI_LRS_API_SECRET_DEFAULT). Stored in the chart Secret.
+  ##
+  apiSecret: ''
+  ## @param auth.existingSecret Name of an existing Secret holding the sensitive values. When set, the chart Secret is not created.
+  ## The Secret must contain the keys below for the features you use: admin-password and session-secret always;
+  ## postgresql-password in pg mode; migration-postgresql-password only if migration.postgresql.user/password is set;
+  ## api-secret only if auth.apiKey is set.
+  ##
+  existingSecret: ''
+  ## Keys to read from auth.existingSecret.
+  existingSecretKeys:
+    ## @param auth.existingSecretKeys.adminPassword Key for XAPI_LRS_ADMIN_PASSWORD
+    adminPassword: admin-password
+    ## @param auth.existingSecretKeys.sessionSecret Key for ADMIN_SESSION_SECRET
+    sessionSecret: session-secret
+    ## @param auth.existingSecretKeys.apiSecret Key for XAPI_LRS_API_SECRET_DEFAULT
+    apiSecret: api-secret
+    ## @param auth.existingSecretKeys.postgresqlPassword Key for the runtime PGPASSWORD
+    postgresqlPassword: postgresql-password
+    ## @param auth.existingSecretKeys.migrationPostgresqlPassword Key for the migration (DDL) PGPASSWORD
+    migrationPostgresqlPassword: migration-postgresql-password
+
+## @param extraEnvVars Extra environment variables to set on the container(s)
+## E.g:
+## extraEnvVars:
+##   - name: JWT_ISSUER
+##     value: https://issuer.example.com
+##
+extraEnvVars: []
+## @param extraEnvVarsCM Name of a ConfigMap with extra environment variables
+##
+extraEnvVarsCM: ''
+## @param extraEnvVarsSecret Name of a Secret with extra environment variables
+##
+extraEnvVarsSecret: ''
+
+## @param commonAnnotations Annotations to add to the Deployment
+##
+commonAnnotations: {}
+## @param podAnnotations Annotations to add to the pods
+##
+podAnnotations: {}
+## @param podLabels Extra labels to add to the pods
+##
+podLabels: {}
+## @param podSecurityContext Pod-level security context
+##
+podSecurityContext: {}
+  # fsGroup: 2000
+## @param securityContext Container-level security context
+##
+securityContext: {}
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  # readOnlyRootFilesystem: true
+
+service:
+  ## @param service.type Kubernetes Service type
+  ##
+  type: ClusterIP
+  ports:
+    ## @param service.ports.http xAPI HTTP service port
+    ##
+    http: 80
+    ## @param service.ports.admin Admin service port
+    ##
+    admin: 8091
+  targetPort:
+    ## @param service.targetPort.http Target container port name for http
+    ##
+    http: http
+    ## @param service.targetPort.admin Target container port name for admin
+    ##
+    admin: admin
+  nodePorts:
+    ## @param service.nodePorts.http NodePort for http (only when type is NodePort/LoadBalancer)
+    ##
+    http: ''
+    ## @param service.nodePorts.admin NodePort for admin (only when type is NodePort/LoadBalancer)
+    ##
+    admin: ''
+
+## Ingress and Gateway route to the http (xAPI) port only; the admin port stays on the Service.
+ingress:
+  ## @param ingress.enabled Enable Ingress record generation (targets the http/xAPI port)
+  ##
+  enabled: false
+  ## @param ingress.ingressClassName IngressClass name
+  ##
+  ingressClassName: ''
+  ## @param ingress.pathType Ingress path type
+  ##
+  pathType: ImplementationSpecific
+  ## @param ingress.hostname Default host for the ingress record
+  ##
+  hostname: xapi-lrs.local
+  ## @param ingress.path Default path for the ingress record
+  ##
+  path: /
+  ## @param ingress.annotations Additional annotations for the Ingress resource (e.g. cert-manager)
+  ##
+  annotations: {}
+  ## @param ingress.tls Enable TLS; expects a secret named "<hostname>-tls"
+  ##
+  tls: false
+  ## @param ingress.extraHosts Additional hosts: list of {name, path?, pathType?}
+  ##
+  extraHosts: []
+  ## @param ingress.extraPaths Additional arbitrary paths under the main host
+  ##
+  extraPaths: []
+  ## @param ingress.extraTls Additional TLS configuration blocks
+  ##
+  extraTls: []
+
+gateway:
+  ## @param gateway.enabled Enable Gateway API resource generation (HTTPRoute and optional ListenerSet). Targets the http/xAPI port.
+  ##
+  enabled: false
+  ## @param gateway.hostname Hostname for the HTTPRoute and ListenerSet listeners
+  ##
+  hostname: ''
+  httpRoute:
+    ## @param gateway.httpRoute.gatewayName Name of the parent Gateway. Required when listenerSet.enabled is false.
+    ##
+    gatewayName: ''
+    ## @param gateway.httpRoute.gatewayNamespace Namespace of the parent Gateway
+    ##
+    gatewayNamespace: ''
+    ## @param gateway.httpRoute.sectionName Target a specific listener on the parent Gateway
+    ##
+    sectionName: ''
+    ## @param gateway.httpRoute.port Target a specific port on the parent Gateway
+    ##
+    port: ''
+    ## @param gateway.httpRoute.annotations Annotations for the HTTPRoute
+    ##
+    annotations: {}
+    ## @param gateway.httpRoute.extraHostnames Additional hostnames for the HTTPRoute
+    ##
+    extraHostnames: []
+    ## @param gateway.httpRoute.path Default path match value
+    ##
+    path: /
+    ## @param gateway.httpRoute.pathType Default path match type
+    ##
+    pathType: PathPrefix
+    ## @param gateway.httpRoute.rules Full rules override. If set, replaces the auto-generated default rule.
+    ##
+    rules: []
+  listenerSet:
+    ## @param gateway.listenerSet.enabled Enable ListenerSet generation. When true, the HTTPRoute parents to the ListenerSet.
+    ##
+    enabled: false
+    ## @param gateway.listenerSet.gatewayName Name of the parent Gateway. Required when listenerSet.enabled is true.
+    ##
+    gatewayName: ''
+    ## @param gateway.listenerSet.gatewayNamespace Namespace of the parent Gateway
+    ##
+    gatewayNamespace: ''
+    https:
+      ## @param gateway.listenerSet.https.enabled Auto-generate an HTTPS listener
+      ##
+      enabled: true
+      ## @param gateway.listenerSet.https.secretName TLS secret name. Defaults to "<hostname>-tls" if empty.
+      ##
+      secretName: ''
+    ## @param gateway.listenerSet.annotations Annotations for the ListenerSet
+    ##
+    annotations: {}
+    ## @param gateway.listenerSet.listeners Full listeners override. If empty, auto-generates from gateway.listenerSet.https.
+    ##
+    listeners: []
+
+metrics:
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create a Prometheus Operator ServiceMonitor scraping the admin port
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace for the ServiceMonitor (defaults to the release namespace)
+    ##
+    namespace: ''
+    ## @param metrics.serviceMonitor.path Metrics path on the admin port
+    ##
+    path: /metrics
+    ## @param metrics.serviceMonitor.interval Scrape interval
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Scrape timeout
+    ##
+    scrapeTimeout: ''
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor (for Prometheus selector matching)
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.honorLabels Honor labels from the scraped metrics
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.relabelings Relabeling rules applied to samples before scraping
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings Relabeling rules applied to samples before ingestion
+    ##
+    metricRelabelings: []
+
+## @param resources Resource requests/limits for the container
+##
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  ## @param livenessProbe Liveness probe. Defaults to GET /healthz on the admin port.
+  ##
+  httpGet:
+    path: /healthz
+    port: admin
+  initialDelaySeconds: 10
+  periodSeconds: 10
+readinessProbe:
+  ## @param readinessProbe Readiness probe. Defaults to GET /readyz on the admin port.
+  ##
+  httpGet:
+    path: /readyz
+    port: admin
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+## @param volumes Additional volumes on the Deployment
+##
+volumes: []
+## @param volumeMounts Additional volumeMounts on the container
+##
+volumeMounts: []
+
+## @param nodeSelector Node labels for pod assignment
+##
+nodeSelector: {}
+## @param tolerations Tolerations for pod assignment
+##
+tolerations: []
+## @param affinity Affinity for pod assignment
+##
+affinity: {}
+
+## Storage for the embedded database in PGlite mode. Ignored when database.driver=pg.
+persistence:
+  ## @param persistence.enabled Persist the PGlite database on a PVC. If false, data is lost on pod restart.
+  ##
+  enabled: false
+  ## @param persistence.existingClaim Name of an existing PVC to use instead of creating one
+  ##
+  existingClaim: ''
+  ## @param persistence.mountPath Path where the PGlite data directory is mounted
+  ##
+  mountPath: /data/pglite
+  ## @param persistence.storageClass PVC storage class ("-" disables dynamic provisioning; "" uses the default)
+  ##
+  storageClass: ''
+  ## @param persistence.accessModes PVC access modes
+  ##
+  accessModes:
+    - ReadWriteOnce
+  ## @param persistence.size PVC storage request
+  ##
+  size: 8Gi
+  ## @param persistence.annotations Annotations for the PVC
+  ##
+  annotations: {}

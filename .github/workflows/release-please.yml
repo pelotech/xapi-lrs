@@ -16,9 +16,13 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      releases_created: ${{ steps.release.outputs.releases_created }}
+      # Root (".") package outputs are un-prefixed; keying the image jobs off
+      # releases_created would also fire them on chart-only releases.
+      app_release_created: ${{ steps.release.outputs.release_created }}
       release_version: ${{ steps.release.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      chart_release_created: ${{ steps.release.outputs['charts/xapi-lrs--release_created'] }}
+      chart_version: ${{ steps.release.outputs['charts/xapi-lrs--version'] }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
@@ -32,7 +36,7 @@ jobs:
   # single manifest list under the release version tag.
   # ----------------------------------------------------------------------------
   build-tag:
-    if: ${{ fromJSON(needs.release-please.outputs.releases_created) }}
+    if: ${{ needs.release-please.outputs.app_release_created == 'true' }}
     needs: [release-please]
     permissions:
       packages: write
@@ -91,7 +95,7 @@ jobs:
           retention-days: 1
 
   publish-tag:
-    if: ${{ fromJSON(needs.release-please.outputs.releases_created) }}
+    if: ${{ needs.release-please.outputs.app_release_created == 'true' }}
     needs: [release-please, build-tag]
     runs-on: ubuntu-latest
     permissions:
@@ -191,7 +195,7 @@ jobs:
   # `latest` manifest list.
   # ----------------------------------------------------------------------------
   build-dev:
-    if: ${{ ! fromJSON(needs.release-please.outputs.releases_created) }}
+    if: ${{ needs.release-please.outputs.app_release_created != 'true' }}
     needs: [release-please]
     permissions:
       packages: write
@@ -244,7 +248,7 @@ jobs:
           retention-days: 1
 
   publish-dev:
-    if: ${{ ! fromJSON(needs.release-please.outputs.releases_created) }}
+    if: ${{ needs.release-please.outputs.app_release_created != 'true' }}
     needs: [release-please, build-dev]
     runs-on: ubuntu-latest
     permissions:
@@ -305,3 +309,25 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.digest.outputs.digest }}
           push-to-registry: true
+
+  # ----------------------------------------------------------------------------
+  # Chart release path: packages the Helm chart and pushes it to
+  # ghcr.io/pelotech/xapi-lrs/charts/xapi-lrs on chart releases.
+  # ----------------------------------------------------------------------------
+  publish-chart:
+    if: ${{ needs.release-please.outputs.chart_release_created == 'true' }}
+    needs: [release-please]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Package and push chart
+        env:
+          VERSION: ${{ needs.release-please.outputs.chart_version }}
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "${REGISTRY}" -u ${{ github.actor }} --password-stdin
+          helm package charts/xapi-lrs --version "${VERSION}"
+          helm push "xapi-lrs-${VERSION}.tgz" "oci://${REGISTRY}/${IMAGE_NAME}/charts"

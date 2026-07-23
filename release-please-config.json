@@ -3,9 +3,20 @@
   "include-v-in-tag": false,
   "include-component-in-tag": false,
   "release-type": "node",
+  "separate-pull-requests": true,
   "packages": {
     ".": {
-      "bump-minor-pre-major": true
+      "bump-minor-pre-major": true,
+      "exclude-paths": ["charts"]
+    },
+    "charts/xapi-lrs": {
+      "release-type": "helm",
+      "component": "xapi-lrs-chart",
+      "include-component-in-tag": true,
+      "tag-separator": "/",
+      "bump-minor-pre-major": true,
+      "initial-version": "0.1.0",
+      "extra-files": ["README.md"]
     }
   },
   "changelog-sections": [
