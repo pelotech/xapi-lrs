@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/pelotech/xapi-lrs/compare/0.8.2...0.9.0) (2026-07-23)
+
+
+### Features
+
+* add xapi-lrs Helm chart ([#115](https://github.com/pelotech/xapi-lrs/issues/115)) ([2adc20b](https://github.com/pelotech/xapi-lrs/commit/2adc20bba4669fd17e82a0b0cc2ded8bba375ca3))
+
+
+### Chores
+
+* **main:** release xapi-lrs-chart 0.1.0 ([#116](https://github.com/pelotech/xapi-lrs/issues/116)) ([f4f8b73](https://github.com/pelotech/xapi-lrs/commit/f4f8b737450205487b899a1edfd1bb3a91c1a4ef))
+
 ## [0.8.2](https://github.com/pelotech/xapi-lrs/compare/0.8.1...0.8.2) (2026-07-17)
 
 
