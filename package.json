@@ -68,7 +68,7 @@
     "typescript": "7.0.2",
     "vitest": "^4.1.5"
   },
-  "packageManager": "pnpm@10.34.4",
+  "packageManager": "pnpm@11.11.0",
   "pnpm": {
     "overrides": {
       "adl-lrs-conformance-tests>super-request": "github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b",
