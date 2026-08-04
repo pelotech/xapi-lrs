@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.9.0](https://github.com/pelotech/xapi-lrs/compare/0.8.2...0.9.0) (2026-08-04)
+
+
+### Features
+
+* add xapi-lrs Helm chart ([#115](https://github.com/pelotech/xapi-lrs/issues/115)) ([2adc20b](https://github.com/pelotech/xapi-lrs/commit/2adc20bba4669fd17e82a0b0cc2ded8bba375ca3))
+
+
+### Bug Fixes
+
+* make X-Experience-API-Consistent-Through a conservative visibility bound ([#120](https://github.com/pelotech/xapi-lrs/issues/120)) ([af78f2b](https://github.com/pelotech/xapi-lrs/commit/af78f2b7e248a9563119e72b193bc76855f9ba01))
+
+
+### Chores
+
+* **main:** release xapi-lrs-chart 0.1.0 ([#116](https://github.com/pelotech/xapi-lrs/issues/116)) ([f4f8b73](https://github.com/pelotech/xapi-lrs/commit/f4f8b737450205487b899a1edfd1bb3a91c1a4ef))
+
 ## [0.8.2](https://github.com/pelotech/xapi-lrs/compare/0.8.1...0.8.2) (2026-07-17)
 
 
