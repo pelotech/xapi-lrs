@@ -157,10 +157,14 @@ export async function insertStatement(
   client: DbClient,
   statement: Record<string, unknown>,
   authority: Record<string, unknown>,
+  storedAt: Date,
 ): Promise<InsertStatementResult> {
   const statementId = statement.id as string;
   const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? '';
-  const now = new Date();
+  // DB-clock transaction time from getTransactionTime — NOT new Date(). See
+  // that function and SELECT_CONSISTENT_THROUGH: stored and the visibility
+  // bound must come from the same clock or the bound silently breaks.
+  const now = storedAt;
   const storedIso = now.toISOString();
   // xapi_statement.id is the pagination-key SQUUID (hand-rolled, v4-nibble —
   // see src/helpers/squuid.ts); statement.id (the xAPI id, statement_id
@@ -239,10 +243,14 @@ export async function insertStatements(
   client: DbClient,
   statements: Record<string, unknown>[],
   authority: Record<string, unknown>,
+  storedAt: Date,
 ): Promise<InsertStatementResult[]> {
   const results: InsertStatementResult[] = [];
   for (const stmt of statements) {
-    results.push(await insertStatement(client, stmt, authority));
+    // Every statement in the batch shares the transaction's stored time (PG's
+    // now() is transaction-fixed anyway); within-batch ordering rests on the
+    // SQUUID id, whose random low bits break ties at equal millis.
+    results.push(await insertStatement(client, stmt, authority, storedAt));
   }
   return results;
 }
@@ -282,6 +290,28 @@ const VOID_STATEMENT = {
 export async function voidStatement(client: DbClient, statementId: string): Promise<boolean> {
   const result = await client.query({ ...VOID_STATEMENT, values: [statementId] });
   return (result.rowCount ?? 0) > 0;
+}
+
+// ============================================================================
+// Transaction time
+// ============================================================================
+
+const SELECT_TRANSACTION_TIME = {
+  name: 'select_transaction_time',
+  text: `SELECT now() AS txn_now`,
+} as const satisfies Query;
+
+/**
+ * The current transaction's start time (PG `now()` = transaction_timestamp()),
+ * on the DATABASE clock. Callers stamp `stored` with this so that
+ * stored == pg_stat_activity.xact_start for the writing transaction — the
+ * invariant getConsistentThrough's bound depends on. Never stamp `stored`
+ * from the app clock: skew would let an uncommitted stored predate its own
+ * transaction's xact_start and silently break the bound.
+ */
+export async function getTransactionTime(client: DbClient): Promise<Date> {
+  const result = await client.query(SELECT_TRANSACTION_TIME);
+  return (result.rows[0] as { txn_now: Date }).txn_now;
 }
 
 // ============================================================================

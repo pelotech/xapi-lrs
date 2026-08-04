@@ -40,6 +40,7 @@ export {
   queryStatements,
   voidStatement,
   getConsistentThrough,
+  getTransactionTime,
   getActivityDefinition,
 } from './repositories/statements.ts';
 export type { XapiStatementRow, StatementQueryParams, InsertStatementResult } from './repositories/statements.ts';

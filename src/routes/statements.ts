@@ -16,6 +16,7 @@ import {
   getStatementById,
   queryStatements,
   getConsistentThrough,
+  getTransactionTime,
 } from '../repositories/statements.ts';
 import { buildMultipartResponse } from '../xapi/multipart.ts';
 import { statementsMatch } from '../xapi/statement-compare.ts';
@@ -82,6 +83,8 @@ export function createStatementsApp() {
     const authority = authorityFromAuth(auth);
 
     const ids = await withClient(pool, metrics, async (client) => {
+      const storedAt = await getTransactionTime(client);
+
       for (const stmt of validated) {
         const verbId = (stmt.verb as Record<string, unknown>)?.id as string | undefined;
         if (verbId === VOIDED_VERB_ID) {
@@ -90,7 +93,7 @@ export function createStatementsApp() {
       }
 
       metrics.statementsReceived.add(validated.length, { method: 'POST' });
-      const results = await insertStatements(client, validated, authority);
+      const results = await insertStatements(client, validated, authority, storedAt);
 
       for (let i = 0; i < results.length; i++) {
         if (!results[i].inserted) {
@@ -179,7 +182,11 @@ export function createStatementsApp() {
         await handleVoiding(client, stmt);
       }
 
-      const insertResult = await insertStatement(client, stmt, authority);
+      // Fetched here rather than at the top of the transaction so the
+      // already-exists path above skips the round trip; PG's now() is
+      // transaction-fixed, so the value is the same either way.
+      const storedAt = await getTransactionTime(client);
+      const insertResult = await insertStatement(client, stmt, authority, storedAt);
 
       // See the POST handler's comment: only insert attachments when the
       // statement row itself inserted (lrsql's attachment table has no
