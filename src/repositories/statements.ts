@@ -161,17 +161,17 @@ export async function insertStatement(
 ): Promise<InsertStatementResult> {
   const statementId = statement.id as string;
   const verbIri = ((statement.verb as Record<string, unknown>)?.id as string) ?? '';
-  // DB-clock transaction time from getTransactionTime — NOT new Date(). See
-  // that function and SELECT_CONSISTENT_THROUGH: stored and the visibility
-  // bound must come from the same clock or the bound silently breaks.
-  const now = storedAt;
-  const storedIso = now.toISOString();
+  // storedAt is the caller's transaction time from getTransactionTime, NOT a
+  // local new Date(): `stored` and the Consistent-Through bound must come from
+  // the same (database) clock or that bound silently breaks. See
+  // SELECT_CONSISTENT_THROUGH.
+  const storedIso = storedAt.toISOString();
   // xapi_statement.id is the pagination-key SQUUID (hand-rolled, v4-nibble —
   // see src/helpers/squuid.ts); statement.id (the xAPI id, statement_id
   // column) is generated as a UUIDv7 in statement-validator.ts when absent.
   // Both sort correctly against lrsql's own SQUUID-layout ids; see the plan
   // header "Verified upstream facts" — do not conflate the two id schemes.
-  const id = squuid(now.getTime());
+  const id = squuid(storedAt.getTime());
 
   const payload = buildPayload(statement, storedIso, authority);
   // registration/timestamp are explicit columns per lrsql's shape (registration
