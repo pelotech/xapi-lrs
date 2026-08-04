@@ -16,6 +16,7 @@ import {
   getStatementById,
   queryStatements,
   getConsistentThrough,
+  getTransactionTime,
 } from '../repositories/statements.ts';
 import { buildMultipartResponse } from '../xapi/multipart.ts';
 import { statementsMatch } from '../xapi/statement-compare.ts';
@@ -82,6 +83,8 @@ export function createStatementsApp() {
     const authority = authorityFromAuth(auth);
 
     const ids = await withClient(pool, metrics, async (client) => {
+      const storedAt = await getTransactionTime(client);
+
       for (const stmt of validated) {
         const verbId = (stmt.verb as Record<string, unknown>)?.id as string | undefined;
         if (verbId === VOIDED_VERB_ID) {
@@ -90,7 +93,7 @@ export function createStatementsApp() {
       }
 
       metrics.statementsReceived.add(validated.length, { method: 'POST' });
-      const results = await insertStatements(client, validated, authority);
+      const results = await insertStatements(client, validated, authority, storedAt);
 
       for (let i = 0; i < results.length; i++) {
         if (!results[i].inserted) {
@@ -179,7 +182,11 @@ export function createStatementsApp() {
         await handleVoiding(client, stmt);
       }
 
-      const insertResult = await insertStatement(client, stmt, authority);
+      // Fetched here rather than at the top of the transaction so the
+      // already-exists path above skips the round trip; PG's now() is
+      // transaction-fixed, so the value is the same either way.
+      const storedAt = await getTransactionTime(client);
+      const insertResult = await insertStatement(client, stmt, authority, storedAt);
 
       // See the POST handler's comment: only insert attachments when the
       // statement row itself inserted (lrsql's attachment table has no
@@ -206,8 +213,15 @@ export function createStatementsApp() {
     return c.body(null, 204);
   });
 
-  // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements responses
-  // (including errors). Must run before the route handler so it applies to error responses.
+  // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements
+  // responses (including errors). The header is computed BEFORE next() for two
+  // reasons: so it also covers error responses, and — ORDERING INVARIANT — so
+  // its value can never be newer than the snapshot the data query below runs
+  // against. Computing it after next() would let a write commit in between,
+  // producing a header that vouches for a statement this very response omitted;
+  // a consumer advancing an ingestion watermark to it would skip that statement
+  // forever. Do not move this after next(). See SELECT_CONSISTENT_THROUGH in
+  // repositories/statements.ts for the other half of the guarantee.
   app.use('/statements', async (c, next) => {
     if (c.req.method !== 'GET' && c.req.method !== 'HEAD') return next();
     const { pool, metrics } = c.var.deps;
