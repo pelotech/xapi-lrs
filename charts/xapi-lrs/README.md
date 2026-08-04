@@ -2,7 +2,7 @@
 
 ### version: 0.1.0<!-- x-release-please-version -->
 
-![AppVersion: 0.8.2](https://img.shields.io/badge/AppVersion-0.8.2-informational?style=flat-square)
+![AppVersion: 0.9.0](https://img.shields.io/badge/AppVersion-0.9.0-informational?style=flat-square)
 
 xapi-lrs Learning Record Store helm chart
 
@@ -66,12 +66,12 @@ helm install xapi-lrs oci://ghcr.io/pelotech/xapi-lrs/charts/xapi-lrs
 | gateway.listenerSet.https.enabled                   | bool   | `true`                                                                      |             |
 | gateway.listenerSet.https.secretName                | string | `""`                                                                        |             |
 | gateway.listenerSet.listeners                       | list   | `[]`                                                                        |             |
-| image.digest                                        | string | `"sha256:3acf00ab8e9de12046492f25aa2cd0738c891373839876d77fadea8ba82107b2"` |             |
+| image.digest                                        | string | `"sha256:7d0857364b1c2e33148c2f49963a3d488e784fe7b731d00be5ce6b6cca354355"` |             |
 | image.pullPolicy                                    | string | `"IfNotPresent"`                                                            |             |
 | image.pullSecrets                                   | list   | `[]`                                                                        |             |
 | image.registry                                      | string | `"ghcr.io"`                                                                 |             |
 | image.repository                                    | string | `"pelotech/xapi-lrs"`                                                       |             |
-| image.tag                                           | string | `"0.8.2"`                                                                   |             |
+| image.tag                                           | string | `"0.9.0"`                                                                   |             |
 | ingress.annotations                                 | object | `{}`                                                                        |             |
 | ingress.enabled                                     | bool   | `false`                                                                     |             |
 | ingress.extraHosts                                  | list   | `[]`                                                                        |             |
