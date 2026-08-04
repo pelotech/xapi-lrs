@@ -15,7 +15,10 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml carries the overrides (pnpm 11 no longer reads the `pnpm`
+# field in package.json). Omitting it here makes the config disagree with the
+# lockfile and --frozen-lockfile fails with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ------------------------------------------------------------------------------
