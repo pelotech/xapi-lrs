@@ -1,12 +1,20 @@
-# pnpm settings. Not a workspace definition — this repo is a single package,
-# but from pnpm 11 the `pnpm` field in package.json is ignored and this file is
-# where pnpm reads its settings from (https://pnpm.io/settings).
-
-# These overrides pin two transitive dependencies of the ADL conformance suite
-# to forks carrying fixes the upstream packages never released. Dropping them
-# breaks `pnpm test:conformance`, and pnpm applies overrides silently when they
-# are in a place it no longer reads — so they live here, not in package.json.
 overrides:
+  # Every comment in this file is deliberately INSIDE a mapping, never above
+  # the first key. Renovate bumps the pins below, and its YAML writeback
+  # stringifies only the document's contents node — so a comment in the
+  # document prelude (above the first key) is silently dropped on the first
+  # bump. Keep new notes indented under a key or they will not survive.
+  #
+  # This file exists because pnpm 11 no longer reads the `pnpm` field in
+  # package.json; it is pnpm's settings file now (https://pnpm.io/settings).
+  # It is not a workspace definition — this repo is a single package, and
+  # `packages:` is intentionally absent.
+  #
+  # These overrides pin two transitive dependencies of the ADL conformance
+  # suite to forks carrying fixes the upstream packages never released.
+  # Dropping them breaks `pnpm test:conformance`, and pnpm applies overrides
+  # silently when they sit somewhere it no longer reads — so they live here,
+  # not in package.json.
   adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
   adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
 
