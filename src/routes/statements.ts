@@ -213,8 +213,15 @@ export function createStatementsApp() {
     return c.body(null, 204);
   });
 
-  // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements responses
-  // (including errors). Must run before the route handler so it applies to error responses.
+  // Middleware: set X-Experience-API-Consistent-Through on ALL GET /statements
+  // responses (including errors). The header is computed BEFORE next() for two
+  // reasons: so it also covers error responses, and — ORDERING INVARIANT — so
+  // its value can never be newer than the snapshot the data query below runs
+  // against. Computing it after next() would let a write commit in between,
+  // producing a header that vouches for a statement this very response omitted;
+  // a consumer advancing an ingestion watermark to it would skip that statement
+  // forever. Do not move this after next(). See SELECT_CONSISTENT_THROUGH in
+  // repositories/statements.ts for the other half of the guarantee.
   app.use('/statements', async (c, next) => {
     if (c.req.method !== 'GET' && c.req.method !== 'HEAD') return next();
     const { pool, metrics } = c.var.deps;

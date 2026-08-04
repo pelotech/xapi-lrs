@@ -130,6 +130,21 @@ On the admin port (`XAPI_LRS_ADMIN_PORT`, default `8091`):
 
 On SIGTERM/SIGINT the server flips `/readyz` to 503, aborts long-lived SSE streams, waits for in-flight HTTP requests, stops the pg_notify listener, drains the DB pool, and exits — with a hard `SHUTDOWN_TIMEOUT_MS` deadline as a safety net.
 
+### Consistent-Through and incremental ingestion
+
+Every `GET /xapi/statements` response carries `X-Experience-API-Consistent-Through`. xapi-lrs treats it as a **conservative visibility bound**, with this guarantee:
+
+> Every statement whose `stored` is at or before the header value is committed and queryable **now**. No statement at or before it can appear later.
+
+That makes the header safe as an ingestion watermark: read statements up to it, record it, and start the next window there without risking a silently dropped statement.
+
+The guarantee needs more than reporting the current time. A statement's `stored` is stamped when its `INSERT` is issued, but the row is invisible until that transaction commits — so a header naively set to `now()` would vouch for statements no query could yet return, and a consumer advancing its watermark past them would skip them permanently. (The `more` cursor does not cover this: it guarantees a complete walk of one query's snapshot, not that a not-yet-visible statement ever enters some page.) xapi-lrs therefore stamps `stored` from the database clock and bounds the header by the oldest open write transaction, so it never advances past a write still in flight.
+
+Two operational caveats:
+
+- **Role coverage.** The bound reads `pg_stat_activity`, where PostgreSQL hides other roles' transaction times unless the reader holds `pg_read_all_stats`. The guarantee therefore covers statements written through the LRS's own database role. If another role also writes to `xapi_statement` directly, grant the LRS role `pg_read_all_stats` so those writes are covered too.
+- **Idle transactions hold it back.** A session left idle inside a transaction pins the header at its start time. The header lagging is safe by design — it only delays consumers, never skips statements — but keep `PG_IDLE_IN_TRANSACTION_TIMEOUT_MS` (default 60s) set so a stuck session cannot stall ingestion indefinitely.
+
 ### Tracing
 
 xapi-lrs emits OpenTelemetry traces for the xAPI data plane (request + DB query spans) over OTLP. Tracing is **off unless an OTLP endpoint is configured** — set the standard `OTEL_*` variables:
