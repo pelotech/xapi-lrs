@@ -320,7 +320,51 @@ export async function getTransactionTime(client: DbClient): Promise<Date> {
 
 const SELECT_CONSISTENT_THROUGH = {
   name: 'select_consistent_through',
-  text: `SELECT now() AS consistent_through`,
+  // A conservative visibility bound: every statement with stored <= this value
+  // is committed and queryable. Bare now() is WRONG here — `stored` is stamped
+  // when the INSERT is issued (see getTransactionTime), so while a write
+  // transaction is open, now() >= that statement's stored even though the row
+  // is still invisible. A consumer clamping an ingestion watermark to the
+  // header would then skip it permanently: every later window starts after it,
+  // and the `more` cursor never helps because the statement appeared in no page
+  // of any query.
+  //
+  // So bound by the oldest open transaction of this role instead: any
+  // uncommitted stored belongs to a transaction listed here, with
+  // stored == xact_start because both come from the database clock.
+  //
+  // The epsilon is 1 MILLISECOND, not 1us: stored round-trips through a JS Date
+  // (millisecond precision, truncating), so the persisted value can sit up to
+  // 1ms BEFORE its own xact_start. Subtracting 1ms keeps the bound strictly
+  // below any such stored; 1us would not.
+  //
+  // usename = current_user: without pg_read_all_stats, other roles' xact_start
+  // reads NULL, which would silently weaken the bound rather than fail loudly.
+  // Filtering to this role keeps the query honest about what it can see — the
+  // guarantee covers writes made through the app's role (the only statement
+  // writer; the Helm chart's migration role is DDL-only). Grant the app role
+  // pg_read_all_stats if other roles ever write statements.
+  //
+  // pg_stat_activity is server-wide, so this stays correct across replicas.
+  // Under PGlite the subquery matches no other backend and COALESCE degrades it
+  // to now(), which is sound there: a single connection cannot serve a read
+  // while a write transaction is open.
+  //
+  // Trade-off: a long idle-in-transaction session pins the bound backwards.
+  // That is conservative in the safe direction (the spec permits the header to
+  // lag) and PG_IDLE_IN_TRANSACTION_TIMEOUT_MS already caps our own sessions.
+  text: `SELECT LEAST(
+           now(),
+           COALESCE(
+             (SELECT min(xact_start) - interval '1 millisecond'
+                FROM pg_stat_activity
+               WHERE datname = current_database()
+                 AND usename = current_user
+                 AND backend_type = 'client backend'
+                 AND xact_start IS NOT NULL
+                 AND pid <> pg_backend_pid()),
+             now())
+         ) AS consistent_through`,
 } as const satisfies Query;
 
 export async function getConsistentThrough(client: DbClient): Promise<string> {
