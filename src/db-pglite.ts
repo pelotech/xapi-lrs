@@ -54,7 +54,15 @@ function mapResult<R extends QueryResultRow>(raw: Awaited<ReturnType<PGlite['que
 // ============================================================================
 
 class PgliteClient implements DbClient {
-  constructor(private db: PGlite) {}
+  // Explicit field + assignment rather than a `private db` parameter property:
+  // parameter properties are the one bit of non-erasable TypeScript this
+  // codebase used, and Node refuses them (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX)
+  // when running .ts directly. `erasableSyntaxOnly` in tsconfig now enforces it.
+  private readonly db: PGlite;
+
+  constructor(db: PGlite) {
+    this.db = db;
+  }
 
   async query<R extends QueryResultRow = QueryResultRow>(config: QueryConfig): Promise<QueryResult<R>> {
     const raw = await this.db.query<R>(config.text, (config.values ?? []) as unknown[]);
@@ -69,9 +77,11 @@ class PgliteClient implements DbClient {
 // ============================================================================
 
 class PglitePool implements DbPool {
+  readonly db: PGlite;
   private client: PgliteClient;
 
-  constructor(readonly db: PGlite) {
+  constructor(db: PGlite) {
+    this.db = db;
     this.client = new PgliteClient(db);
   }
 

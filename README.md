@@ -162,7 +162,7 @@ Point the endpoint at a local **OpenTelemetry Collector** in small environments,
 
 | Script                     | Description                                 |
 | -------------------------- | ------------------------------------------- |
-| `pnpm dev`                 | Start with hot reload (tsx watch)           |
+| `pnpm dev`                 | Start with hot reload (`node --watch`)      |
 | `pnpm build`               | Compile TypeScript to `dist/`               |
 | `pnpm start`               | Run compiled output                         |
 | `pnpm test`                | Run unit tests                              |

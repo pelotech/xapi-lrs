@@ -33,11 +33,16 @@ export class PgListener {
   private handlers = new Map<string, Set<NotificationHandler>>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
+  // Explicit fields rather than parameter properties: those are non-erasable
+  // TypeScript, which Node rejects when running .ts directly and which
+  // `erasableSyntaxOnly` now blocks at typecheck time.
+  private readonly config: LrsConfig;
+  private readonly logger: Logger;
 
-  constructor(
-    private config: LrsConfig,
-    private logger: Logger,
-  ) {}
+  constructor(config: LrsConfig, logger: Logger) {
+    this.config = config;
+    this.logger = logger;
+  }
 
   async start(): Promise<void> {
     this.stopped = false;

@@ -25,7 +25,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Install ALL dependencies (dev + prod) for the build stage
 # ------------------------------------------------------------------------------
-FROM reg.mini.dev/node-fips:24.18.0-dev AS deps
+FROM reg.mini.dev/node-fips:26.6.0-dev AS deps
 
 ENV CI=true
 
@@ -60,7 +60,7 @@ RUN pnpm install --frozen-lockfile --prod
 # ------------------------------------------------------------------------------
 # Stage 4: Runtime
 # ------------------------------------------------------------------------------
-FROM reg.mini.dev/node-fips:24.18.0 AS runtime
+FROM reg.mini.dev/node-fips:26.6.0 AS runtime
 
 WORKDIR /app
 
