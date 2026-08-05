@@ -64,26 +64,40 @@ jobs:
       - name: Regenerate chart README on each release PR branch
         env:
           PRS: ${{ needs.release-please.outputs.prs }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # jnorwood/helm-docs v1.14.2
           HELM_DOCS: jnorwood/helm-docs@sha256:7e562b49ab6b1dbc50c3da8f2dd6ffa8a5c6bba327b1c6335cc15ce29267979c
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
           for branch in $(jq -r '.[].headBranchName' <<< "$PRS"); do
             echo "::group::$branch"
-            git checkout -B "$branch" "origin/$branch"
+            git fetch --no-tags --quiet origin "$branch"
+            git checkout -B "$branch" "origin/$branch" --quiet
 
             docker run --rm -v "$PWD/charts:/helm-docs" -w /helm-docs \
               -u "$(id -u):$(id -g)" "$HELM_DOCS" helm-docs --chart-search-root=.
 
             if git diff --quiet -- charts; then
-              echo "README already current"
-            else
-              git commit -m 'docs(chart): regenerate README from chart metadata' -- charts
-              git push origin "$branch"
+              echo 'README already current'
+              echo "::endgroup::"
+              continue
             fi
+
+            # Commit through the API rather than `git push`. The repo requires
+            # verified signatures on every branch (ruleset "signed-commits"), and
+            # a locally-created commit has none, so a push is rejected with
+            # GH013. Commits made via the API are signed by GitHub — which is
+            # also how release-please's own release commits satisfy the rule.
+            for file in $(git diff --name-only -- charts); do
+              echo "committing $file"
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${file}" \
+                -f message='docs(chart): regenerate README from chart metadata' \
+                -f branch="$branch" \
+                -f content="$(base64 -w0 < "$file")" \
+                -f sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${file}?ref=${branch}" --jq .sha)" \
+                --jq '.commit.sha'
+            done
             echo "::endgroup::"
           done
 
