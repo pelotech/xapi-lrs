@@ -1,15 +1,18 @@
-{{/*
-  The x-release-please-version marker below belongs to the CHART package and
-  tracks the chart version. Do NOT add the same marker to the appVersion badge
-  or the values table: release-please's generic updater rewrites every marked
-  line in a file, so the root (app) package and the chart package would each
-  clobber the other's line. appVersion and image.tag are kept current in
-  Chart.yaml and values.yaml instead, via typed YAML updaters that target one
-  field each — this README's copies of them refresh on the next helm-docs run.
-*/}}
+{{- /*
+  This README is generated. Both versions below come from Chart.yaml, which
+  release-please keeps current (chart version on a chart release, appVersion on
+  an app release), and the chart-docs job in .github/workflows/release-please.yml
+  regenerates this file on the release PR branch.
+
+  Do NOT add x-release-please-version markers here. The generic updater rewrites
+  every marked line in a file, so with the app package and the chart package
+  both owning lines in this README each release would stamp its version over the
+  other's — and because only the first version on a line is replaced, the
+  appVersion badge would end up with mismatched alt text and image URL.
+*/ -}}
 {{ template "chart.header" . }}
 
-### version: {{ template "chart.version" . }}<!-- x-release-please-version -->
+### version: {{ template "chart.version" . }}
 
 {{ template "chart.appVersionBadge" . }}
 
