@@ -23,12 +23,17 @@ image:
   ## @param image.repository Container image repository
   ##
   repository: pelotech/xapi-lrs
-  ## @param image.tag Container image tag
+  ## @param image.tag Container image tag. Kept in step with the app release by
+  ## release-please (see release-please-config.json) — do not edit by hand.
   ##
-  tag: 0.9.0
-  ## @param image.digest Image digest in the form sha256:aaaa... . When set, takes precedence over image.tag
+  tag: 0.9.1 # x-release-please-version
+  ## @param image.digest Image digest in the form sha256:aaaa... . When set, takes precedence over image.tag.
+  ## Empty by default: release-please bumps image.tag when the app releases, but cannot know the digest
+  ## (the image is built after the release PR merges), and a stale digest would silently win over the new
+  ## tag — deploying the previous image under the new appVersion. Set it to pin a specific build; release
+  ## images are cosign-signed with SLSA provenance and SBOM attestations, so the tag is verifiable as-is.
   ##
-  digest: 'sha256:7d0857364b1c2e33148c2f49963a3d488e784fe7b731d00be5ce6b6cca354355'
+  digest: ''
   ## @param image.pullPolicy Image pull policy
   ##
   pullPolicy: IfNotPresent
