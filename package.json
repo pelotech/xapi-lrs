@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && cp -r src/admin/vendor dist/admin/vendor",
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --watch src/server.ts",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "lint": "oxlint",
@@ -64,7 +64,6 @@
     "fta-cli": "^3.0.0",
     "oxfmt": "^0.60.0",
     "oxlint": "^1.62.0",
-    "tsx": "^4.21.0",
     "typescript": "7.0.2",
     "vitest": "^4.1.5"
   },

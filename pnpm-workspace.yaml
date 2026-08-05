@@ -36,9 +36,11 @@ overrides:
 blockExoticSubdeps: false
 
 # pnpm 11 requires an explicit decision on every dependency lifecycle script.
-# esbuild (via vitest) is denied: pnpm 10 already ignored this build and the
-# full suite passed, because esbuild ships its platform binary as an optional
-# dependency rather than fetching it in the postinstall. Keeping it off changes
-# nothing at runtime and keeps install from executing third-party scripts.
+# esbuild is no longer in the tree at all — it was only ever pulled in as a
+# satisfied optional peer of vite alongside tsx, and vite 8 bundles rolldown
+# instead. The entry is kept as a standing decision so that if some dependency
+# reintroduces esbuild, install does not stop to ask: denying the build changes
+# nothing at runtime (esbuild ships its platform binary as an optional
+# dependency rather than fetching it in a postinstall).
 allowBuilds:
   esbuild: false

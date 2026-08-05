@@ -13,8 +13,13 @@ export class LocalListener implements Listener {
   private handlers = new Map<string, Set<NotificationHandler>>();
   private unsubs = new Map<string, () => Promise<void>>();
   private stopped = false;
+  // Explicit field rather than a parameter property — see db-pglite.ts: those
+  // are non-erasable syntax that Node rejects when running .ts directly.
+  private readonly db: PGlite;
 
-  constructor(private db: PGlite) {}
+  constructor(db: PGlite) {
+    this.db = db;
+  }
 
   async start(): Promise<void> {}
 
