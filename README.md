@@ -197,6 +197,14 @@ src/
 
 ## Supply Chain
 
+### FIPS base image
+
+Published images build on [Minimus](https://www.minimus.io/) hardened Node (`reg.mini.dev/node-fips`), a CVE-reduced base whose FIPS variant runs OpenSSL's FIPS provider. FIPS mode is active at runtime with no flag — `crypto.getFips()` returns `1` — so the cryptography this LRS performs (SHA-256 attachment digests, SHA-1 ETags, HMAC-SHA-256 admin sessions) runs through a validated module. Images run as uid 1000 and are roughly 200 MB larger than the previous `node:slim` base.
+
+> **Requirement: the database must use `scram-sha-256` password authentication.** This is the PostgreSQL 14+ default, so most deployments need no change. The FIPS provider refuses MD5, and node-postgres computes an MD5 digest to answer an `AuthenticationMD5Password` challenge — so a server configured for `md5` auth fails to connect with `Unrecognized algorithm name`. `md5` authentication is not FIPS-compliant in the first place; if you hit this, migrate the role (`ALTER ROLE … PASSWORD …` with `password_encryption = 'scram-sha-256'`) rather than downgrading the image.
+
+Two smaller consequences of FIPS mode, neither of which this application triggers today: MD5 throws wherever it is used, so a future dependency that hashes with MD5 will fail at runtime rather than silently degrade; and TLS is restricted to the NIST curves, which can affect outbound connections to endpoints offering only x25519.
+
 Container images published to `ghcr.io/pelotech/xapi-lrs` are signed with [Sigstore cosign](https://docs.sigstore.dev/) (keyless / OIDC) and carry SLSA build provenance attestations. Release images additionally have SPDX and CycloneDX SBOMs attached as Sigstore attestations and as downloadable release artifacts.
 
 Verify an image (substitute the tag):
