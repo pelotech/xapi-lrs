@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.2](https://github.com/pelotech/xapi-lrs/compare/0.9.1...0.9.2) (2026-08-05)
+
+
+### Bug Fixes
+
+* allow the ADL conformance forks under blockExoticSubdeps ([#128](https://github.com/pelotech/xapi-lrs/issues/128)) ([733b2d0](https://github.com/pelotech/xapi-lrs/commit/733b2d049f07dbef9610cbfbd0071b4a58fcf9a2))
+
+
+### Chores
+
+* bump chart appVersion and image tag automatically on app release ([#130](https://github.com/pelotech/xapi-lrs/issues/130)) ([b2cf42c](https://github.com/pelotech/xapi-lrs/commit/b2cf42cab6be1945f0966648883f6668efab4e97))
+* **deps:** lock file maintenance ([#45](https://github.com/pelotech/xapi-lrs/issues/45)) ([76fcf38](https://github.com/pelotech/xapi-lrs/commit/76fcf38610919d37f0d9ab52510cd260cdda1744))
+* **deps:** update actions/checkout digest to 3d3c42e ([#113](https://github.com/pelotech/xapi-lrs/issues/113)) ([45b5a8f](https://github.com/pelotech/xapi-lrs/commit/45b5a8f81b13b13abb7293190f1a010a16a1e76d))
+* **deps:** update dependency oxlint to v1.75.0 ([#129](https://github.com/pelotech/xapi-lrs/issues/129)) ([fe5a0c7](https://github.com/pelotech/xapi-lrs/commit/fe5a0c71b1d0cbb652a369c7ea407020363bde9b))
+* **deps:** update docker/login-action digest to dbcb813 ([#114](https://github.com/pelotech/xapi-lrs/issues/114)) ([cc0cf79](https://github.com/pelotech/xapi-lrs/commit/cc0cf7951c6257c5a5a5fb0430e3a8ec36a9c0c1))
+* **deps:** update pnpm/action-setup digest to 0977fd9 ([#119](https://github.com/pelotech/xapi-lrs/issues/119)) ([4b078a8](https://github.com/pelotech/xapi-lrs/commit/4b078a8d05d4fc95833f31b68fef1884f017e659))
+* drop tsx, upgrade to Node 26 ([#132](https://github.com/pelotech/xapi-lrs/issues/132)) ([ad77d59](https://github.com/pelotech/xapi-lrs/commit/ad77d59478bdd2c19685e5a6fec3ca426db0af99))
+
 ## [0.9.1](https://github.com/pelotech/xapi-lrs/compare/0.9.0...0.9.1) (2026-08-05)
 
 
