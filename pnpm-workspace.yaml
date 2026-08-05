@@ -18,6 +18,23 @@ overrides:
   adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
   adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
 
+# Required by the two overrides above, which are exactly what this setting
+# blocks: a transitive dependency resolved from git rather than the registry.
+# With it left at its default of true, any FRESH resolution fails with
+# ERR_PNPM_EXOTIC_SUBDEP — `pnpm install` after a dependency change, Renovate
+# regenerating the lockfile, lockfile maintenance. Installs that resolve purely
+# from the lockfile skip the check, which is why `--frozen-lockfile` in CI kept
+# passing and this only surfaced on a bump.
+#
+# pnpm offers no per-package allowlist — it is one global boolean — so this
+# does give up the guard for the whole tree, not just these two packages.
+# Accepted because the exposure is narrow and already deliberate: both are
+# dev-only test tooling pinned to immutable commit SHAs and tracked by
+# Renovate, so neither can change content without a reviewed PR. Removing the
+# need for this means retiring the forks (upstream releasing the fixes, or
+# vendoring them), at which point delete this setting rather than keep it.
+blockExoticSubdeps: false
+
 # pnpm 11 requires an explicit decision on every dependency lifecycle script.
 # esbuild (via vitest) is denied: pnpm 10 already ignored this build and the
 # full suite passed, because esbuild ships its platform binary as an optional
