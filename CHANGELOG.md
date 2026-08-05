@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.1](https://github.com/pelotech/xapi-lrs/compare/0.9.0...0.9.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **deps:** update opentelemetry-js monorepo ([#121](https://github.com/pelotech/xapi-lrs/issues/121)) ([d044c1b](https://github.com/pelotech/xapi-lrs/commit/d044c1bfa000c66b0ae5aa4de4d53033926c213f))
+
+
+### Chores
+
+* base images on Minimus hardened FIPS Node ([#125](https://github.com/pelotech/xapi-lrs/issues/125)) ([c67796f](https://github.com/pelotech/xapi-lrs/commit/c67796f2f508ab85f72896bc7b9a783925b10303))
+* **deps:** update dependency oxfmt to ^0.60.0 ([#126](https://github.com/pelotech/xapi-lrs/issues/126)) ([9ec397f](https://github.com/pelotech/xapi-lrs/commit/9ec397f3442fc263ecfaddd0f8c94de3f1d10a71))
+* **deps:** update pnpm to v11 ([#47](https://github.com/pelotech/xapi-lrs/issues/47)) ([6405439](https://github.com/pelotech/xapi-lrs/commit/64054399dfd987d72c028a1d6457f9ec95a5f773))
+* **main:** release xapi-lrs-chart 0.1.1 ([#123](https://github.com/pelotech/xapi-lrs/issues/123)) ([21b5ff0](https://github.com/pelotech/xapi-lrs/commit/21b5ff08692c0c60ca75ae7ce6abe69b5c8de0bd))
+
 ## [0.9.0](https://github.com/pelotech/xapi-lrs/compare/0.8.2...0.9.0) (2026-08-04)
 
 
