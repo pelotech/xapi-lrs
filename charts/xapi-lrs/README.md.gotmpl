@@ -1,3 +1,12 @@
+{{/*
+  The x-release-please-version marker below belongs to the CHART package and
+  tracks the chart version. Do NOT add the same marker to the appVersion badge
+  or the values table: release-please's generic updater rewrites every marked
+  line in a file, so the root (app) package and the chart package would each
+  clobber the other's line. appVersion and image.tag are kept current in
+  Chart.yaml and values.yaml instead, via typed YAML updaters that target one
+  field each — this README's copies of them refresh on the next helm-docs run.
+*/}}
 {{ template "chart.header" . }}
 
 ### version: {{ template "chart.version" . }}<!-- x-release-please-version -->
