@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.3](https://github.com/pelotech/xapi-lrs/compare/0.9.2...0.9.3) (2026-08-06)
+
+
+### Bug Fixes
+
+* **ci:** commit regenerated chart docs through the API so they are signed ([#135](https://github.com/pelotech/xapi-lrs/issues/135)) ([6adf9ac](https://github.com/pelotech/xapi-lrs/commit/6adf9ac876fa3df4cd2aa1d2bc05e8debb6687a0))
+* **ci:** reconcile every open release PR, not just this run's ([#136](https://github.com/pelotech/xapi-lrs/issues/136)) ([1966e92](https://github.com/pelotech/xapi-lrs/commit/1966e928de5e284313505762e0ff2b0cf0a5bba5))
+
+
+### Chores
+
+* regenerate the chart README from chart metadata on release PRs ([#133](https://github.com/pelotech/xapi-lrs/issues/133)) ([73caa44](https://github.com/pelotech/xapi-lrs/commit/73caa441fe84bee0ab1241e2c8c268b349237c67))
+
 ## [0.9.2](https://github.com/pelotech/xapi-lrs/compare/0.9.1...0.9.2) (2026-08-05)
 
 
