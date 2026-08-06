@@ -23,9 +23,6 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       chart_release_created: ${{ steps.release.outputs['charts/xapi-lrs--release_created'] }}
       chart_version: ${{ steps.release.outputs['charts/xapi-lrs--version'] }}
-      # JSON array of the release PRs just opened/updated, each with a
-      # headBranchName. Consumed by chart-docs below.
-      prs: ${{ steps.release.outputs.prs }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
@@ -50,27 +47,41 @@ jobs:
   # This runs on every release-please invocation, not just the first, because
   # release-please force-pushes its branch whenever it regenerates the PR —
   # which would otherwise drop the docs commit.
+  #
+  # It reconciles EVERY open release PR, not just the ones release-please
+  # touched in this run. Those are not the same set: a run only regenerates the
+  # PRs whose package the new commits affect, so an app-only commit leaves the
+  # chart's release PR untouched. Keying off the run's own output therefore let
+  # a PR that missed its update — because the job failed, or because a later run
+  # regenerated a different package — stay stale indefinitely. Reconciling all
+  # of them is idempotent (no diff, no commit) and self-healing.
   # ----------------------------------------------------------------------------
   chart-docs:
-    if: ${{ needs.release-please.outputs.prs != '' }}
     needs: [release-please]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: Regenerate chart README on each release PR branch
         env:
-          PRS: ${{ needs.release-please.outputs.prs }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # jnorwood/helm-docs v1.14.2
           HELM_DOCS: jnorwood/helm-docs@sha256:7e562b49ab6b1dbc50c3da8f2dd6ffa8a5c6bba327b1c6335cc15ce29267979c
         run: |
           set -euo pipefail
 
-          for branch in $(jq -r '.[].headBranchName' <<< "$PRS"); do
+          branches=$(gh pr list --state open --limit 100 --json headRefName \
+            --jq '.[].headRefName | select(startswith("release-please--"))')
+          if [ -z "$branches" ]; then
+            echo 'no open release PRs'
+            exit 0
+          fi
+
+          for branch in $branches; do
             echo "::group::$branch"
             git fetch --no-tags --quiet origin "$branch"
             git checkout -B "$branch" "origin/$branch" --quiet
