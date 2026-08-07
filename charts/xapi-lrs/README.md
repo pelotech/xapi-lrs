@@ -1,6 +1,6 @@
 # xapi-lrs
 
-### version: 0.1.1
+### version: 0.1.2
 
 ![AppVersion: 0.9.4](https://img.shields.io/badge/AppVersion-0.9.4-informational?style=flat-square)
 
