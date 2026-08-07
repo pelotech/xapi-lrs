@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.4](https://github.com/pelotech/xapi-lrs/compare/0.9.3...0.9.4) (2026-08-07)
+
+
+### Bug Fixes
+
+* **ci:** force checkout so every release PR gets processed ([#140](https://github.com/pelotech/xapi-lrs/issues/140)) ([7c01f24](https://github.com/pelotech/xapi-lrs/commit/7c01f24ad8afcf2e64df97eb2c3c608ab120124c))
+* **ci:** refuse to publish a single-arch release image ([#139](https://github.com/pelotech/xapi-lrs/issues/139)) ([3ca071b](https://github.com/pelotech/xapi-lrs/commit/3ca071b147ac7116c2f822d3e1c53596b141a804))
+
+
+### Chores
+
+* **deps:** update actions/attest-build-provenance action to v4.2.2 ([#137](https://github.com/pelotech/xapi-lrs/issues/137)) ([6afa982](https://github.com/pelotech/xapi-lrs/commit/6afa98216fb4c046b5b6cf1ee323122815356dcb))
+
 ## [0.9.3](https://github.com/pelotech/xapi-lrs/compare/0.9.2...0.9.3) (2026-08-06)
 
 
