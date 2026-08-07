@@ -84,7 +84,14 @@ jobs:
           for branch in $branches; do
             echo "::group::$branch"
             git fetch --no-tags --quiet origin "$branch"
-            git checkout -B "$branch" "origin/$branch" --quiet
+            # -f because the previous iteration's helm-docs output is still in
+            # the working tree: this job commits through the API, never with
+            # `git commit`, so nothing ever cleans it up locally. Without the
+            # force, switching to the SECOND branch aborts with "Your local
+            # changes would be overwritten by checkout" and every release PR
+            # after the first goes unprocessed. The edits are disposable —
+            # helm-docs regenerates them from the branch that is checked out.
+            git checkout -f -B "$branch" "origin/$branch" --quiet
 
             docker run --rm -v "$PWD/charts:/helm-docs" -w /helm-docs \
               -u "$(id -u):$(id -g)" "$HELM_DOCS" helm-docs --chart-search-root=.
