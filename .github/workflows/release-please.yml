@@ -204,6 +204,23 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Assert both per-arch digests arrived before assembling the manifest.
+      # `imagetools create` happily builds a list from whatever it is given, so
+      # a missing digest yields a SINGLE-ARCH release published without error —
+      # which is exactly how 0.9.3 shipped amd64-only after an infrastructure
+      # outage forced the two build-tag jobs to succeed in separate re-run
+      # attempts, leaving only one artifact for this job to find.
+      - name: Verify every architecture built
+        working-directory: /tmp/digests
+        run: |
+          set -euo pipefail
+          expected=2   # keep in sync with build-tag's matrix
+          actual=$(find . -type f | wc -l | tr -d ' ')
+          echo "digests: ${actual} (expected ${expected})"
+          if [ "$actual" -ne "$expected" ]; then
+            echo "::error::Expected ${expected} per-arch digests, found ${actual}. Refusing to publish a partial manifest list — re-run the whole workflow so every build-tag job succeeds in the SAME attempt (artifacts do not carry across attempts)."
+            exit 1
+          fi
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
@@ -220,6 +237,19 @@ jobs:
             "${REGISTRY}/${IMAGE_NAME}:${TAG}" \
             --format '{{json .Manifest}}' | jq -r .digest)
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          TAG: ${{ steps.meta.outputs.version }}
+      # Belt and braces: confirm what actually landed in the registry is
+      # multi-arch, not just that we fed it the right inputs.
+      - name: Verify published manifest is multi-arch
+        run: |
+          set -euo pipefail
+          arches=$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${TAG}" --raw \
+            | jq -r '[.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture)"] | sort | join(",")')
+          echo "published platforms: ${arches}"
+          [ "$arches" = "linux/amd64,linux/arm64" ] || { echo "::error::Published manifest is not multi-arch: ${arches}"; exit 1; }
         env:
           REGISTRY: ${{ env.REGISTRY }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
