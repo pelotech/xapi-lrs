@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.7](https://github.com/pelotech/xapi-lrs/compare/0.9.6...0.9.7) (2026-08-08)
+
+
+### Docs
+
+* **deps:** warn that ADL conformance fork bumps need inspection ([#145](https://github.com/pelotech/xapi-lrs/issues/145)) ([4d18e0c](https://github.com/pelotech/xapi-lrs/commit/4d18e0cad7435be03687eb67449ef0b746de7ab7))
+
 ## [0.9.6](https://github.com/pelotech/xapi-lrs/compare/0.9.5...0.9.6) (2026-08-08)
 
 
