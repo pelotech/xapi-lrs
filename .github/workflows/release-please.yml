@@ -16,13 +16,11 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      # Root (".") package outputs are un-prefixed; keying the image jobs off
-      # releases_created would also fire them on chart-only releases.
+      # One package now covers the app AND the chart — they version in lockstep,
+      # so a release publishes both and there are no chart-specific outputs.
       app_release_created: ${{ steps.release.outputs.release_created }}
       release_version: ${{ steps.release.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name }}
-      chart_release_created: ${{ steps.release.outputs['charts/xapi-lrs--release_created'] }}
-      chart_version: ${{ steps.release.outputs['charts/xapi-lrs--version'] }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
@@ -39,22 +37,15 @@ jobs:
   # honest without putting release-please markers in it.
   #
   # Markers would not work: release-please's generic updater rewrites EVERY
-  # marked line in a file, so with the app package owning the appVersion badge
-  # and the chart package owning the version heading, each release would stamp
-  # its own version over the other's line. Deriving both from Chart.yaml removes
-  # the conflict entirely.
+  # marked line in a file, and this README carries two versions. Deriving both
+  # from Chart.yaml sidesteps that entirely.
   #
   # This runs on every release-please invocation, not just the first, because
   # release-please force-pushes its branch whenever it regenerates the PR —
-  # which would otherwise drop the docs commit.
-  #
-  # It reconciles EVERY open release PR, not just the ones release-please
-  # touched in this run. Those are not the same set: a run only regenerates the
-  # PRs whose package the new commits affect, so an app-only commit leaves the
-  # chart's release PR untouched. Keying off the run's own output therefore let
-  # a PR that missed its update — because the job failed, or because a later run
-  # regenerated a different package — stay stale indefinitely. Reconciling all
-  # of them is idempotent (no diff, no commit) and self-healing.
+  # which would otherwise drop the docs commit. It reconciles every open release
+  # PR rather than only the one this run touched, so a PR that missed its update
+  # (a failed run, say) is repaired on the next push instead of staying stale.
+  # Regenerating an already-current branch is a no-op, so this is cheap.
   # ----------------------------------------------------------------------------
   chart-docs:
     needs: [release-please]
@@ -164,8 +155,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           file: Dockerfile
-          build-args: |
-            BUILD_VERSION=${{ needs.release-please.outputs.tag_name }}
+          labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,scope=${{ matrix.arch }},mode=max
@@ -340,6 +330,15 @@ jobs:
       - name: sha short
         id: sha
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      # Needed for the labels below. build-dev pushes by digest so the tags here
+      # are unused; metadata-action is present purely to compute OCI labels.
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.sha.outputs.sha_short }}
       - name: Build and push Docker image sha
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
@@ -347,8 +346,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           file: Dockerfile
-          build-args: |
-            BUILD_VERSION=${{ steps.sha.outputs.sha_short }}
+          labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,scope=${{ matrix.arch }},mode=max
@@ -433,7 +431,7 @@ jobs:
   # ghcr.io/pelotech/xapi-lrs/charts/xapi-lrs on chart releases.
   # ----------------------------------------------------------------------------
   publish-chart:
-    if: ${{ needs.release-please.outputs.chart_release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.app_release_created == 'true' }}
     needs: [release-please]
     runs-on: ubuntu-latest
     permissions:
@@ -443,7 +441,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Package and push chart
         env:
-          VERSION: ${{ needs.release-please.outputs.chart_version }}
+          VERSION: ${{ needs.release-please.outputs.release_version }}
         run: |
           set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "${REGISTRY}" -u ${{ github.actor }} --password-stdin

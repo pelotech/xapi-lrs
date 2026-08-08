@@ -11,10 +11,12 @@ keywords:
   - learning-record-store
   - tin-can
 
-# This is the chart version. This version number should be incremented each time you make changes
-# to the chart and its templates, including the app version.
-# Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.2
+# Chart version. Deliberately kept in LOCKSTEP with appVersion below: this chart
+# exists only to deploy this application, and release-please drives both from the
+# same release (see release-please-config.json). Do not edit by hand, and do not
+# split them back apart without reading the note in the workflow — two packages
+# releasing each other is what produced the release loop.
+version: 0.9.4 # x-release-please-version
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
