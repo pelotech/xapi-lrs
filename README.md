@@ -205,6 +205,14 @@ Published images build on [Minimus](https://www.minimus.io/) hardened Node (`reg
 
 Two smaller consequences of FIPS mode, neither of which this application triggers today: MD5 throws wherever it is used, so a future dependency that hashes with MD5 will fail at runtime rather than silently degrade; and TLS is restricted to the NIST curves, which can affect outbound connections to endpoints offering only x25519.
 
+Published image tags:
+
+| Tag         | Points at                                           |
+| ----------- | --------------------------------------------------- |
+| `latest`    | the most recent release                             |
+| `<version>` | that exact release, e.g. `0.9.5` (immutable)        |
+| `edge`      | the current tip of `main` — unreleased, moves often |
+
 Container images published to `ghcr.io/pelotech/xapi-lrs` are signed with [Sigstore cosign](https://docs.sigstore.dev/) (keyless / OIDC) and carry SLSA build provenance attestations. Release images additionally have SPDX and CycloneDX SBOMs attached as Sigstore attestations and as downloadable release artifacts.
 
 Verify an image (substitute the tag):
