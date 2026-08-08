@@ -7,7 +7,6 @@
   "packages": {
     ".": {
       "bump-minor-pre-major": true,
-      "exclude-paths": ["charts"],
       "extra-files": [
         {
           "type": "generic",
@@ -18,14 +17,6 @@
           "path": "charts/xapi-lrs/values.yaml"
         }
       ]
-    },
-    "charts/xapi-lrs": {
-      "release-type": "helm",
-      "component": "xapi-lrs-chart",
-      "include-component-in-tag": true,
-      "tag-separator": "/",
-      "bump-minor-pre-major": true,
-      "initial-version": "0.1.0"
     }
   },
   "changelog-sections": [
