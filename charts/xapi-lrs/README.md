@@ -1,8 +1,8 @@
 # xapi-lrs
 
-### version: 0.9.5
+### version: 0.9.6
 
-![AppVersion: 0.9.5](https://img.shields.io/badge/AppVersion-0.9.5-informational?style=flat-square)
+![AppVersion: 0.9.6](https://img.shields.io/badge/AppVersion-0.9.6-informational?style=flat-square)
 
 xapi-lrs Learning Record Store helm chart
 
@@ -71,7 +71,7 @@ helm install xapi-lrs oci://ghcr.io/pelotech/xapi-lrs/charts/xapi-lrs
 | image.pullSecrets | list | `[]` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"pelotech/xapi-lrs"` |  |
-| image.tag | string | `"0.9.5"` |  |
+| image.tag | string | `"0.9.6"` |  |
 | ingress.annotations | object | `{}` |  |
 | ingress.enabled | bool | `false` |  |
 | ingress.extraHosts | list | `[]` |  |
