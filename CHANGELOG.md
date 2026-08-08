@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.6](https://github.com/pelotech/xapi-lrs/compare/0.9.5...0.9.6) (2026-08-08)
+
+
+### Bug Fixes
+
+* **ci:** point latest at the newest release, publish dev builds as edge ([#143](https://github.com/pelotech/xapi-lrs/issues/143)) ([22ed5c7](https://github.com/pelotech/xapi-lrs/commit/22ed5c756c5703f1ffe0bcbdcf305f38caefac24))
+
 ## [0.9.5](https://github.com/pelotech/xapi-lrs/compare/0.9.4...0.9.5) (2026-08-08)
 
 
