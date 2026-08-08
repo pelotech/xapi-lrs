@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.5](https://github.com/pelotech/xapi-lrs/compare/0.9.4...0.9.5) (2026-08-08)
+
+
+### Bug Fixes
+
+* **ci:** version the chart in lockstep with the app ([#142](https://github.com/pelotech/xapi-lrs/issues/142)) ([6507454](https://github.com/pelotech/xapi-lrs/commit/650745446e7b42c2febcbdee2b33e52c25e94bc0))
+
+
+### Chores
+
+* **main:** release xapi-lrs-chart 0.1.2 ([#131](https://github.com/pelotech/xapi-lrs/issues/131)) ([2cc210e](https://github.com/pelotech/xapi-lrs/commit/2cc210e3a33956dffb03c47efd500e6901f6f144))
+
 ## [0.9.4](https://github.com/pelotech/xapi-lrs/compare/0.9.3...0.9.4) (2026-08-07)
 
 
