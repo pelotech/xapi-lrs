@@ -15,6 +15,38 @@ overrides:
   # Dropping them breaks `pnpm test:conformance`, and pnpm applies overrides
   # silently when they sit somewhere it no longer reads — so they live here,
   # not in package.json.
+  #
+  # ---------------------------------------------------------------------------
+  # DO NOT RUBBER-STAMP A DIGEST BUMP HERE. Inspect every proposed update.
+  # ---------------------------------------------------------------------------
+  # These are not maintained dependencies. Both are personal forks under a
+  # third-party account with 0 stars, last pushed January 2017, sitting ~278
+  # commits behind a healthy upstream (forwardemail/supertest, 14k stars, still
+  # released). Their entire substantive delta is ~36 lines in lib/test.js: a
+  # debug logger that serialises each request/response through
+  # process.postMessage so the ADL runner can print HTTP traffic. Benign, never
+  # upstreamed, and now load-bearing for the official conformance battery.
+  #
+  # The structural risk is the account, not the code. A takeover, force-push or
+  # revived branch changes what these SHAs' sibling refs point at, and Renovate
+  # will offer it as a routine "digest update". Both PRs it opened in Aug 2026
+  # were rejected on inspection, and neither was a normal upgrade:
+  #
+  #   * supertest (#90) proposed moving BACKWARDS — the pin tracks the `ipc`
+  #     branch, Renovate followed the stale `master` HEAD, and the "update" was
+  #     four months older, silently dropping a "try to avoid crash" commit.
+  #   * super-request (#87) broke all eight conformance cells: 0 of 1364 tests
+  #     executed, i.e. the battery failed to start at all.
+  #
+  # So: read the fork's diff and the branch it came from before merging any bump
+  # here, and confirm the conformance matrix is green — those tests are the only
+  # thing that exercises this code. Closing a bad PR is the right move; Renovate
+  # will not re-propose an unchanged digest.
+  #
+  # The durable fixes, in preference order: get the logger upstreamed (or
+  # replaced with a superagent plugin) so the forks can go entirely; failing
+  # that, mirror both forks into this org so a third-party account cannot move
+  # them underneath us.
   adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
   adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
 
