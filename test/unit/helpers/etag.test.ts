@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeEtag } from '../../../src/helpers/etag.ts';
+import { checkConcurrencyHeaders, computeEtag } from '../../../src/helpers/etag.ts';
 
 describe('computeEtag', () => {
   it('returns a hex SHA-1 hash for a buffer', () => {
@@ -17,5 +17,17 @@ describe('computeEtag', () => {
     const a = computeEtag(Buffer.from('input-a'));
     const b = computeEtag(Buffer.from('input-b'));
     expect(a).not.toBe(b);
+  });
+});
+
+describe('checkConcurrencyHeaders If-Match: *', () => {
+  it('passes when the document exists', () => {
+    expect(() => checkConcurrencyHeaders({ 'if-match': '*' }, 'abc')).not.toThrow();
+  });
+
+  it('412s when the document does not exist', () => {
+    expect(() => checkConcurrencyHeaders({ 'if-match': '*' }, undefined)).toThrow(
+      expect.objectContaining({ status: 412 }),
+    );
   });
 });

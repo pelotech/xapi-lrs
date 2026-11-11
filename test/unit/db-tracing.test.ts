@@ -110,6 +110,18 @@ describe('db query spans', () => {
     expect(result).toEqual({ rows: [], rowCount: 0 });
   });
 
+  test('instrumentQuery seam: a reused client is wrapped only once', async () => {
+    const client = {
+      query: async () => ({ rows: [], rowCount: 0 }),
+      release: () => {},
+    };
+    const txPool = { connect: async () => client } as unknown as DbPool;
+    await withClient(txPool, metrics, async () => {});
+    const firstWrapper = client.query;
+    for (let i = 0; i < 5; i++) await withClient(txPool, metrics, async () => {});
+    expect(client.query).toBe(firstWrapper);
+  });
+
   test('instrumentQuery seam: no spans without an active recording span (gate)', async () => {
     const client = {
       query: async () => ({ rows: [], rowCount: 0 }),

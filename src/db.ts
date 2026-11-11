@@ -132,7 +132,14 @@ function withDbSpan<T>(queryName: string, run: () => Promise<T>): Promise<T> {
   );
 }
 
+// Clients outlive a transaction (PGlite has one for the whole process; pg-pool
+// reuses them), so patch each only once or the wrapper chain grows until the
+// stack overflows.
+const instrumentedClients = new WeakSet<DbClient>();
+
 function instrumentQuery(client: DbClient, metrics: LrsMetrics): DbClient {
+  if (instrumentedClients.has(client)) return client;
+  instrumentedClients.add(client);
   const originalQuery = client.query.bind(client);
   client.query = ((...args: unknown[]) => {
     const queryName = extractQueryName(args[0]);
