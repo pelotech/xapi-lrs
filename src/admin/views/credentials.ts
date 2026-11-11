@@ -30,22 +30,24 @@ export function credentialsPage(
   return html`
     <h2>API Credentials</h2>
 
-    ${newCredential
-      ? html`
-          <article style="border:2px solid var(--pico-primary);margin-bottom:1em">
-            <header><strong>New Credential Created — copy the secret now!</strong></header>
-            <p>
-              <strong>API Key:</strong>
-              <code class="mono">${newCredential.apiKey}</code>
-            </p>
-            <p>
-              <strong>Secret Key:</strong>
-              <code class="secret-display">${newCredential.secretKey}</code>
-            </p>
-            <p class="text-muted">The secret will not be shown again.</p>
-          </article>
-        `
-      : false}
+    ${
+      newCredential
+        ? html`
+            <article style="border:2px solid var(--pico-primary);margin-bottom:1em">
+              <header><strong>New Credential Created — copy the secret now!</strong></header>
+              <p>
+                <strong>API Key:</strong>
+                <code class="mono">${newCredential.apiKey}</code>
+              </p>
+              <p>
+                <strong>Secret Key:</strong>
+                <code class="secret-display">${newCredential.secretKey}</code>
+              </p>
+              <p class="text-muted">The secret will not be shown again.</p>
+            </article>
+          `
+        : false
+    }
 
     <details>
       <summary role="button" class="outline">Create Credential</summary>

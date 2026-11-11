@@ -69,38 +69,40 @@ export function dashboardPage(counts: DashboardCounts, recent: RecentStatement[]
     </div>
 
     <h3>Recent Statements</h3>
-    ${recent.length === 0
-      ? html`
-          <p class="text-muted">No statements yet.</p>
-        `
-      : html`
-          <figure>
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Verb</th>
-                  <th>Actor</th>
-                  <th>Object</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${recent.map(
-                  (s) => html`
-                    <tr>
-                      <td class="text-muted">${fmtTime(s.stored)}</td>
-                      <td>
-                        <a href="/admin/statements/${s.statement_id}">${formatVerb(s.verb_iri)}</a>
-                      </td>
-                      <td>${formatActor(s.actor)}</td>
-                      <td>${formatObject(s.object)}</td>
-                    </tr>
-                  `,
-                )}
-              </tbody>
-            </table>
-          </figure>
-        `}
+    ${
+      recent.length === 0
+        ? html`
+            <p class="text-muted">No statements yet.</p>
+          `
+        : html`
+            <figure>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Verb</th>
+                    <th>Actor</th>
+                    <th>Object</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${recent.map(
+                    (s) => html`
+                      <tr>
+                        <td class="text-muted">${fmtTime(s.stored)}</td>
+                        <td>
+                          <a href="/admin/statements/${s.statement_id}">${formatVerb(s.verb_iri)}</a>
+                        </td>
+                        <td>${formatActor(s.actor)}</td>
+                        <td>${formatObject(s.object)}</td>
+                      </tr>
+                    `,
+                  )}
+                </tbody>
+              </table>
+            </figure>
+          `
+    }
 
     <h3>Server Info</h3>
     <figure>
