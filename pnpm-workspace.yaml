@@ -27,6 +27,9 @@ overrides:
   # process.postMessage so the ADL runner can print HTTP traffic. Benign, never
   # upstreamed, and now load-bearing for the official conformance battery.
   #
+  # (Continued above the second pin: pnpm 12's YAML parser rejects more than
+  # 31 consecutive comment lines before an entry.)
+  adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
   # The structural risk is the account, not the code. A takeover, force-push or
   # revived branch changes what these SHAs' sibling refs point at, and Renovate
   # will offer it as a routine "digest update". Both PRs it opened in Aug 2026
@@ -47,7 +50,6 @@ overrides:
   # replaced with a superagent plugin) so the forks can go entirely; failing
   # that, mirror both forks into this org so a third-party account cannot move
   # them underneath us.
-  adl-lrs-conformance-tests>super-request: github:rchadwic/super-request#1c8e002a3babd42b59938b4e60474cfb8886130b
   adl-lrs-conformance-tests>supertest: github:rchadwic/supertest#2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2
 
 # Required by the two overrides above, which are exactly what this setting
