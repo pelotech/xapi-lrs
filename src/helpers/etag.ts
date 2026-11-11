@@ -55,7 +55,10 @@ export function checkConcurrencyHeaders(
     throw new HttpError(400, 'If-Match or If-None-Match header required');
   }
 
-  if (ifMatch) {
+  // RFC 9110 §13.1.1: `If-Match: *` matches any existing representation.
+  if (ifMatch === '*') {
+    if (!currentEtag) throw new HttpError(412, 'Document does not exist');
+  } else if (ifMatch) {
     const expected = ifMatch.replace(/^"/, '').replace(/"$/, '');
     if (!currentEtag || expected !== currentEtag) {
       throw new HttpError(412, 'ETag mismatch');
