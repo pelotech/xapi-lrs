@@ -12,11 +12,13 @@ export function loginPage(error?: string): RawHtml {
     html`
       <article style="max-width:400px;margin:4em auto">
         <header><h2>LRS Admin Login</h2></header>
-        ${error
-          ? html`
-              <p style="color:var(--pico-del-color)">${error}</p>
-            `
-          : false}
+        ${
+          error
+            ? html`
+                <p style="color:var(--pico-del-color)">${error}</p>
+              `
+            : false
+        }
         <form method="post" action="/admin/login">
           <label>
             Username

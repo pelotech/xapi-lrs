@@ -161,18 +161,20 @@ export function statementTable(opts: {
       </table>
     </figure>
 
-    ${hasMore && cursor
-      ? html`
-          <button
-            class="outline"
-            hx-get="/admin/statements/list?cursor=${cursor}&${filters}"
-            hx-target="#statement-table"
-            hx-swap="innerHTML"
-          >
-            Load More
-          </button>
-        `
-      : false}
+    ${
+      hasMore && cursor
+        ? html`
+            <button
+              class="outline"
+              hx-get="/admin/statements/list?cursor=${cursor}&${filters}"
+              hx-target="#statement-table"
+              hx-swap="innerHTML"
+            >
+              Load More
+            </button>
+          `
+        : false
+    }
   `;
 }
 
@@ -184,11 +186,13 @@ export function statementDetail(row: XapiStatementRow, attachments: AttachmentLi
   return html`
     <h2>
       Statement Detail
-      ${row.is_voided
-        ? html`
-            <span class="badge badge-voided" style="margin-left: 0.5em">voided</span>
-          `
-        : false}
+      ${
+        row.is_voided
+          ? html`
+              <span class="badge badge-voided" style="margin-left: 0.5em">voided</span>
+            `
+          : false
+      }
     </h2>
 
     <figure>
@@ -210,56 +214,60 @@ export function statementDetail(row: XapiStatementRow, attachments: AttachmentLi
       </table>
     </figure>
 
-    ${!row.is_voided
-      ? html`
-          <div id="void-action">
-            <button
-              class="outline secondary"
-              hx-post="/admin/statements/${row.statement_id}/void"
-              hx-confirm="Void this statement? This cannot be undone."
-              hx-target="#void-action"
-              hx-swap="innerHTML"
-            >
-              Void Statement
-            </button>
-          </div>
-        `
-      : false}
+    ${
+      !row.is_voided
+        ? html`
+            <div id="void-action">
+              <button
+                class="outline secondary"
+                hx-post="/admin/statements/${row.statement_id}/void"
+                hx-confirm="Void this statement? This cannot be undone."
+                hx-target="#void-action"
+                hx-swap="innerHTML"
+              >
+                Void Statement
+              </button>
+            </div>
+          `
+        : false
+    }
 
     <h3>Payload</h3>
     <pre class="json">${JSON.stringify(row.payload, null, 2)}</pre>
 
-    ${attachments.length > 0
-      ? html`
-          <h3>Attachments</h3>
-          <figure>
-            <table>
-              <thead>
-                <tr>
-                  <th>SHA-256</th>
-                  <th>Content-Type</th>
-                  <th>Size</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${attachments.map(
-                  (a) => html`
-                    <tr>
-                      <td class="mono" style="font-size:0.75em">${a.attachment_sha.slice(0, 16)}...</td>
-                      <td>${a.content_type}</td>
-                      <td>${String(a.content_length)} bytes</td>
-                      <td>
-                        <a href="/admin/statements/${row.statement_id}/attachments/${a.attachment_sha}">Download</a>
-                      </td>
-                    </tr>
-                  `,
-                )}
-              </tbody>
-            </table>
-          </figure>
-        `
-      : false}
+    ${
+      attachments.length > 0
+        ? html`
+            <h3>Attachments</h3>
+            <figure>
+              <table>
+                <thead>
+                  <tr>
+                    <th>SHA-256</th>
+                    <th>Content-Type</th>
+                    <th>Size</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${attachments.map(
+                    (a) => html`
+                      <tr>
+                        <td class="mono" style="font-size:0.75em">${a.attachment_sha.slice(0, 16)}...</td>
+                        <td>${a.content_type}</td>
+                        <td>${String(a.content_length)} bytes</td>
+                        <td>
+                          <a href="/admin/statements/${row.statement_id}/attachments/${a.attachment_sha}">Download</a>
+                        </td>
+                      </tr>
+                    `,
+                  )}
+                </tbody>
+              </table>
+            </figure>
+          `
+        : false
+    }
 
     <p><a href="/admin/statements">&larr; Back to browser</a></p>
   `;

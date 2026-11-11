@@ -61,7 +61,7 @@ of lrsql's in-file migrations applied. Concretely:
 - lrsql's exact column types (`VARCHAR(255)` not `text`), nullability
   (`credential_to_scope.scope` nullable, `admin_account.passhash` nullable),
   added columns (`admin_account.oidc_issuer`, `xapi_statement.registration/
-timestamp/stored/reaction_id/trigger_id`), final enum value sets (including
+  timestamp/stored/reaction_id/trigger_id`), final enum value sets (including
   the prefixed profile scopes), constraints, and index/constraint **names** —
   names matter because the parity test diffs catalogs.
 - **Only lrsql's column defaults** (`xapi_statement.is_voided DEFAULT FALSE`,

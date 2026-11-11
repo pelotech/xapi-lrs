@@ -91,32 +91,34 @@ export function metricsPage(rawMetrics: string): RawHtml {
                   —
                   <span class="text-muted">${m.help}</span>
                 </summary>
-                ${m.values.length > 0
-                  ? html`
-                      <figure>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Labels</th>
-                              <th>Value</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            ${m.values.map(
-                              (v) => html`
-                                <tr>
-                                  <td class="mono">${v.labels || '(none)'}</td>
-                                  <td class="mono">${v.value}</td>
-                                </tr>
-                              `,
-                            )}
-                          </tbody>
-                        </table>
-                      </figure>
-                    `
-                  : html`
-                      <p class="text-muted">No values recorded.</p>
-                    `}
+                ${
+                  m.values.length > 0
+                    ? html`
+                        <figure>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Labels</th>
+                                <th>Value</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${m.values.map(
+                                (v) => html`
+                                  <tr>
+                                    <td class="mono">${v.labels || '(none)'}</td>
+                                    <td class="mono">${v.value}</td>
+                                  </tr>
+                                `,
+                              )}
+                            </tbody>
+                          </table>
+                        </figure>
+                      `
+                    : html`
+                        <p class="text-muted">No values recorded.</p>
+                      `
+                }
               </details>
             `,
           )}

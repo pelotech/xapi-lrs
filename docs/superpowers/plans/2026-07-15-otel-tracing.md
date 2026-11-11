@@ -137,9 +137,9 @@ Expected: FAIL — cannot find `../../src/tracing.ts`.
 
 import { createRequire } from 'node:module';
 import { trace, type Tracer } from '@opentelemetry/api';
-import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 const require = createRequire(import.meta.url);
@@ -254,11 +254,11 @@ git commit -m "refactor: extract safeRoutePath to a shared helper"
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// test/unit/middleware/tracing.test.ts
-import { describe, test, expect, beforeEach } from 'vitest';
-import { Hono } from 'hono';
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'; // re-exports the base test utilities
+import { Hono } from 'hono';
+// test/unit/middleware/tracing.test.ts
+import { describe, test, expect, beforeEach } from 'vitest';
 import { tracingMiddleware } from '../../../src/middleware/tracing.ts';
 
 function makeTestTracer() {
@@ -308,8 +308,8 @@ describe('tracingMiddleware', () => {
 ```ts
 import { context, propagation, trace, SpanKind, SpanStatusCode, type Tracer } from '@opentelemetry/api';
 import type { MiddlewareHandler } from 'hono';
-import type { HonoEnv } from '../hono-env.ts';
 import { safeRoutePath } from '../helpers/route-path.ts';
+import type { HonoEnv } from '../hono-env.ts';
 
 // TextMapGetter for a Fetch `Headers` carrier.
 const headersGetter = {
@@ -369,11 +369,11 @@ Note: adopting an incoming `traceparent` as the parent trace (spec test case) is
 - [ ] **Step 1: Write the failing test**
 
 ```ts
-// test/unit/db-tracing.test.ts
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { context, trace, SpanKind } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'; // re-exports the base test utilities
+// test/unit/db-tracing.test.ts
+import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { poolQuery, setDbTracer } from '../../src/db.ts';
 import type { DbPool } from '../../src/db.ts';
 import type { LrsMetrics } from '../../src/metrics.ts';
@@ -536,10 +536,10 @@ git commit -m "feat: gated CLIENT spans at the DB query seams"
 - [ ] **Step 1: Write the failing test** — the middleware is mounted only when `tracing.enabled`.
 
 ```ts
-// test/unit/app/tracing-mount.test.ts
-import { describe, test, expect } from 'vitest';
 import { trace } from '@opentelemetry/api';
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'; // re-exports the base test utilities
+// test/unit/app/tracing-mount.test.ts
+import { describe, test, expect } from 'vitest';
 import { createApp, type AppDeps } from '../../../src/app.ts';
 
 function makeTestTracer() {
