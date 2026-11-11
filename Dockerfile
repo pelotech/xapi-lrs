@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Install ALL dependencies (dev + prod) for the build stage
 # ------------------------------------------------------------------------------
-FROM node:26.6.0-trixie-slim AS deps
+FROM node:26.13.1-trixie-slim AS deps
 
 ENV CI=true
 
@@ -46,7 +46,7 @@ RUN pnpm install --frozen-lockfile --prod
 # ------------------------------------------------------------------------------
 # Stage 4: Runtime
 # ------------------------------------------------------------------------------
-FROM node:26.6.0-trixie-slim AS runtime
+FROM node:26.13.1-trixie-slim AS runtime
 
 WORKDIR /app
 
