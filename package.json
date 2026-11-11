@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@opentelemetry/context-async-hooks": "^2.9.0",
-    "@types/node": "^24.12.2",
+    "@types/node": "^26.0.0",
     "@types/pg": "^8.20.0",
     "adl-lrs-conformance-tests": "github:adlnet/lrs-conformance-test-suite#5bc232d349c60faded8240da698f195106091638",
     "dependency-cruiser": "^18.0.0",
