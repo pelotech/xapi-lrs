@@ -46,8 +46,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       graphile-migrate:
-        specifier: 2.0.0-rc.3
-        version: 2.0.0-rc.3
+        specifier: 2.0.0-rc.6
+        version: 2.0.0-rc.6
       hono:
         specifier: ^4.12.16
         version: 4.13.17
@@ -630,8 +630,8 @@ packages:
     resolution: {integrity: sha512-NrVug5woqbvNZ0WX+Gv4R+L4TGddtmFek2u8RtccAgFZWtS9QXF2xCXY22/M4nzkaKF0q9Fc6M/5rxLDhfwc/A==}
     deprecated: This is a stub types definition. json5 provides its own type definitions, so you do not need this installed.
 
-  '@types/node@18.19.130':
-    resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
+  '@types/node@22.20.5':
+    resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
   '@types/node@26.6.6':
     resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
@@ -799,7 +799,7 @@ packages:
     hasBin: true
 
   adl-lrs-conformance-tests@https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
+    resolution: {gitHosted: true, integrity: sha512-AdXlh1Wp2uauVYtNhq2g3TsAc11yMg6ZHYPU7GeIkOCmaH0hkyzCMI02zTnc3xfST6csJ7aiWSkkmb1saJqA2Q==, tarball: https://codeload.github.com/adlnet/lrs-conformance-test-suite/tar.gz/5bc232d349c60faded8240da698f195106091638}
     version: 2.0.0-1
     hasBin: true
 
@@ -1343,8 +1343,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  graphile-migrate@2.0.0-rc.3:
-    resolution: {integrity: sha512-pdQZ5QdoNSq0fEEd3qy+ceI9QrJTMsHnIpitaXEvOdQfAIPVQIUaqsaNcy5w8Fbhw4gz6hMS23YgNQCZSQolFg==}
+  graphile-migrate@2.0.0-rc.6:
+    resolution: {integrity: sha512-+S203kj4O+Vx1R8BYuSeI4HxrHqExe/mOV3tD2GrAHiYwKL3AJ4BpNHpbZgr75zU+xVV5jEFmwu6UEYigqDC7g==}
     hasBin: true
 
   growl@1.8.1:
@@ -2085,7 +2085,7 @@ packages:
     engines: {node: '>=4'}
 
   super-request@https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b}
+    resolution: {gitHosted: true, integrity: sha512-+2f90qQi+oeix32Z7WLzRhW+STtmoRMyRq2exS/TUVHmpZjlQLNSSEEMSi3swRzunnXqaPWSWYfOHp2oKm1tbQ==, tarball: https://codeload.github.com/rchadwic/super-request/tar.gz/1c8e002a3babd42b59938b4e60474cfb8886130b}
     version: 0.0.8
 
   superagent-oauth@0.2.3:
@@ -2104,7 +2104,7 @@ packages:
       supertest: '*'
 
   supertest@https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2}
+    resolution: {gitHosted: true, integrity: sha512-qZGsSFtiKEN0mB+nPcOotgyUV2mCK+VheJzHUUyIcLJ7IKeJHtKM60sis06WAFFjsVikgzktZCKmRfj+AZy+zQ==, tarball: https://codeload.github.com/rchadwic/supertest/tar.gz/2a2346bc82d3c7233d363c265c5bf3b1be6ee5b2}
     version: 1.2.0
     engines: {node: '>=0.10.0'}
 
@@ -2200,8 +2200,8 @@ packages:
     engines: {node: '>=16.20.0'}
     hasBin: true
 
-  undici-types@5.26.5:
-    resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
@@ -2712,9 +2712,9 @@ snapshots:
     dependencies:
       json5: 2.2.3
 
-  '@types/node@18.19.130':
+  '@types/node@22.20.5':
     dependencies:
-      undici-types: 5.26.5
+      undici-types: 6.21.0
 
   '@types/node@26.6.6':
     dependencies:
@@ -3411,11 +3411,11 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graphile-migrate@2.0.0-rc.3:
+  graphile-migrate@2.0.0-rc.6:
     dependencies:
       '@graphile/logger': 0.2.0
       '@types/json5': 2.2.0
-      '@types/node': 18.19.130
+      '@types/node': 22.20.5
       '@types/pg': 8.23.1
       chalk: 4.1.2
       chokidar: 3.6.0
@@ -4308,7 +4308,7 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  undici-types@5.26.5: {}
+  undici-types@6.21.0: {}
 
   undici-types@8.9.0: {}
 
