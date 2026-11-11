@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.9.7](https://github.com/pelotech/xapi-lrs/compare/0.9.6...0.9.7) (2026-11-11)
+
+
+### Bug Fixes
+
+* **deps:** update dependency graphile-migrate to v2.0.0-rc.6 ([#150](https://github.com/pelotech/xapi-lrs/issues/150)) ([219511f](https://github.com/pelotech/xapi-lrs/commit/219511f42b7626a9d87da1f1d1dda00374932e1b))
+* **deps:** update opentelemetry-js monorepo to ^0.300.0 ([#170](https://github.com/pelotech/xapi-lrs/issues/170)) ([c5a9c32](https://github.com/pelotech/xapi-lrs/commit/c5a9c32922c63d63eff549ba6cb4999aa4ebd978))
+* **deps:** update opentelemetry-js monorepo to v3 ([#174](https://github.com/pelotech/xapi-lrs/issues/174)) ([e32306f](https://github.com/pelotech/xapi-lrs/commit/e32306fbc8a81d67fae7cfd684851b9d92a9b482))
+* stop query re-wrapping stack overflow; honor If-Match: * ([#158](https://github.com/pelotech/xapi-lrs/issues/158)) ([3748e6c](https://github.com/pelotech/xapi-lrs/commit/3748e6c2fa400b94bcf7aec764ede8bd09ad13cf))
+
+
+### Chores
+
+* **deps:** lock file maintenance ([#147](https://github.com/pelotech/xapi-lrs/issues/147)) ([b62d959](https://github.com/pelotech/xapi-lrs/commit/b62d9594237d0bab1e4c8e217430054818af5453))
+* **deps:** update actions/download-artifact digest to 9000827 ([#159](https://github.com/pelotech/xapi-lrs/issues/159)) ([b07ee32](https://github.com/pelotech/xapi-lrs/commit/b07ee3229c5dbff2829d99948f47617853ae71f3))
+* **deps:** update actions/setup-node digest to 949feb2 ([#160](https://github.com/pelotech/xapi-lrs/issues/160)) ([3f9fa01](https://github.com/pelotech/xapi-lrs/commit/3f9fa01e538c5a6701ffceb0c28252b0fc98eeef))
+* **deps:** update actions/upload-artifact digest to cf430e0 ([#161](https://github.com/pelotech/xapi-lrs/issues/161)) ([3f79426](https://github.com/pelotech/xapi-lrs/commit/3f79426109807e3f1946a4cf368013d569e0beab))
+* **deps:** update anchore/sbom-action action to v0.24.3 ([#155](https://github.com/pelotech/xapi-lrs/issues/155)) ([9f0c891](https://github.com/pelotech/xapi-lrs/commit/9f0c89157875490d0d041a0ede2502cd4d4581d2))
+* **deps:** update dependency @types/node to v24.19.2 ([#166](https://github.com/pelotech/xapi-lrs/issues/166)) ([5a5eb98](https://github.com/pelotech/xapi-lrs/commit/5a5eb98c96477b7c2bd08b7b8e14b41ae22051a0))
+* **deps:** update dependency @types/node to v26 ([#171](https://github.com/pelotech/xapi-lrs/issues/171)) ([7863755](https://github.com/pelotech/xapi-lrs/commit/7863755c6508d3795e765ce1d045a979d45a5c9d))
+* **deps:** update dependency fta-cli to v3.1.0 ([#167](https://github.com/pelotech/xapi-lrs/issues/167)) ([ea5a8b2](https://github.com/pelotech/xapi-lrs/commit/ea5a8b2f00b958319a3d25e1c9c260369806579a))
+* **deps:** update dependency oxfmt to ^0.75.0 ([#148](https://github.com/pelotech/xapi-lrs/issues/148)) ([8199453](https://github.com/pelotech/xapi-lrs/commit/8199453d87cb1ca8ad72e1b8461901a11159976f))
+* **deps:** update dependency pino to v10.4.0 ([#168](https://github.com/pelotech/xapi-lrs/issues/168)) ([8d600a0](https://github.com/pelotech/xapi-lrs/commit/8d600a0cf3531c0bbe41ce504c7dbb7099664a50))
+* **deps:** update dependency vitest to v5 ([#172](https://github.com/pelotech/xapi-lrs/issues/172)) ([2688e83](https://github.com/pelotech/xapi-lrs/commit/2688e83e603cb8c12f0270133caddee1ded2cc60))
+* **deps:** update dependency zod to v4.6.7 ([#169](https://github.com/pelotech/xapi-lrs/issues/169)) ([9084647](https://github.com/pelotech/xapi-lrs/commit/9084647c5d7ad463ca62bcd22ba264f98f2c59fb))
+* **deps:** update docker/build-push-action digest to c3c9e26 ([#162](https://github.com/pelotech/xapi-lrs/issues/162)) ([e7ea345](https://github.com/pelotech/xapi-lrs/commit/e7ea3452901ff2f7d00b4a37fe9453cf4fe71f56))
+* **deps:** update docker/login-action digest to 8aa5831 ([#163](https://github.com/pelotech/xapi-lrs/issues/163)) ([3dfd20b](https://github.com/pelotech/xapi-lrs/commit/3dfd20b681ead08096f3f86c095fd25e77295685))
+* **deps:** update docker/setup-buildx-action digest to f87e599 ([#149](https://github.com/pelotech/xapi-lrs/issues/149)) ([a5d55bc](https://github.com/pelotech/xapi-lrs/commit/a5d55bc959aa7b4b5742442be06bb85fa0a4ec72))
+* **deps:** update pnpm to v11.28.9 ([#152](https://github.com/pelotech/xapi-lrs/issues/152)) ([6b34e03](https://github.com/pelotech/xapi-lrs/commit/6b34e03b4e8f511333bc779b4d9ff97983e90b26))
+* **deps:** update pnpm to v12 ([#173](https://github.com/pelotech/xapi-lrs/issues/173)) ([5a30118](https://github.com/pelotech/xapi-lrs/commit/5a30118341251680bbe4089b155fc9ab2e18fbd1))
+* **deps:** update pnpm/action-setup digest to 73e4699 ([#164](https://github.com/pelotech/xapi-lrs/issues/164)) ([ea357e9](https://github.com/pelotech/xapi-lrs/commit/ea357e9243ad9545b96d12af8fc0c4c0eac6be0f))
+* **deps:** update sigstore/cosign-installer action to v4.1.3 ([#165](https://github.com/pelotech/xapi-lrs/issues/165)) ([3a2e76d](https://github.com/pelotech/xapi-lrs/commit/3a2e76dd245f85a67564fa3b311a6901792ea14d))
+* move images off Minimus to the official node image ([#157](https://github.com/pelotech/xapi-lrs/issues/157)) ([cbedcf1](https://github.com/pelotech/xapi-lrs/commit/cbedcf139c81aa381a6949bef3ea05ec03c4b45c))
+* reformat for oxfmt 0.75 ([#175](https://github.com/pelotech/xapi-lrs/issues/175)) ([0788ae7](https://github.com/pelotech/xapi-lrs/commit/0788ae73f2cffc2d7beedb4268482223ab953f77))
+
+
+### Docs
+
+* **deps:** warn that ADL conformance fork bumps need inspection ([#145](https://github.com/pelotech/xapi-lrs/issues/145)) ([4d18e0c](https://github.com/pelotech/xapi-lrs/commit/4d18e0cad7435be03687eb67449ef0b746de7ab7))
+
 ## [0.9.6](https://github.com/pelotech/xapi-lrs/compare/0.9.5...0.9.6) (2026-08-08)
 
 
